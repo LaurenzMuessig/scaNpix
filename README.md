@@ -1,6 +1,6 @@
 # scaNpix
 # General remarks:
-•	This is a Matlab package to load either dacq or neuropixel data into Matlab for inspection in a GUI and further analysis 
+•	This is a [Matlab package](https://uk.mathworks.com/help/matlab/matlab_oop/scoping-classes-with-packages.html) to load either dacq or neuropixel data into Matlab for inspection in a GUI and further analysis
 
 •	You will probably need to use at least MATLAB 2017, but I coded most of it in 2019, so no guarantees that all will work with older versions than that
 
