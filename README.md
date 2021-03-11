@@ -6,7 +6,7 @@
 
 •	If you do find a bug or have a request to improve something, please [raise an issue in Github](https://docs.github.com/en/github/managing-your-work-on-github/creating-an-issue) rather than email me about it. 
 
-•	Use this code at your own risk; it will hopefully help you get that Nature paper, but equally likely some bug will screw up your analysis 
+•	Use this code at your own risk; it will hopefully help you get that _Nature_ paper, but equally likely some bug will screw up your analysis 
 
 
 # Extra toolboxes required:
