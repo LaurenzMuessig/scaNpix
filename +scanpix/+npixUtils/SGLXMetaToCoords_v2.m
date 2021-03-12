@@ -5,6 +5,7 @@
 % 
 % I made a few edits to make function usable for calling inside scripts
 % (LM, 2020)
+% package: scanpix.npixUtils
 
 function newName = SGLXMetaToCoords_v2(path)
 

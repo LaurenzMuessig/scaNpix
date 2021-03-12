@@ -1,4 +1,5 @@
-
+% From: https://github.com/cortex-lab/spikes
+% package: scanpix.npixUtils
 
 function syncDat = extractSyncChannel(folder, numChans, syncChanIndex)
 % extraChanIndices are 1-indexed

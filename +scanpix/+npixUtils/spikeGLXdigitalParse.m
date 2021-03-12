@@ -9,6 +9,9 @@ function eventTimes = spikeGLXdigitalParse(digitalChannel, Fs)
 %
 % Fs is optional input argument - if supplied, output will be in units of
 % seconds, otherwise samples
+%
+% From: https://github.com/cortex-lab/spikes
+% package: scanpix.npixUtils
 
 digitalChannel = digitalChannel(:); % column
 

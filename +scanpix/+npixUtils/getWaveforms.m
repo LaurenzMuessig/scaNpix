@@ -20,6 +20,7 @@ function [waveforms, channels] = getWaveforms(path2raw,spikeTimes, clu_Channel, 
 %
 %% TO DO:
 % add handling of using the drift corrected joined file
+% add HP filtering and CAR of raw file
 
 %% PARAMS
 p = parseParams(varargin);
@@ -44,7 +45,7 @@ chanMap        = load(fullfile(binFileStruct.folder,chanMapFName));
 bankBoundaries = find(abs(diff(chanMap.ycoords)) > p.Results.chanspace) + [0 1];
 
 if p.Results.unwhite
-    winv = readNPY(fullfile(binFileStruct.folder,'whitening_mat_inv.npy')); %%%%%%%%%%%%%%%%%%%
+    winv = readNPY(fullfile(binFileStruct.folder,'whitening_mat_inv.npy')); 
 else
     winv = 1;  
 end
@@ -124,18 +125,18 @@ end
 function p = parseParams(varargs)
 
 defaultChanIgnore    = [192 385]; % 192: reference channel; 385: sync channel
-defaultPrecision     = 'int16'; % Data type of file
-defaultNCh           = 385; % Number of channels in file
-defaultNChWaves      = 5;
-defaultNWaves        = 250;
-defaultNSamplesWf    = 40;
-defaultPropSampPre   = 0.375;
-defaultFs            = 30000;
-defaultGain          = 500;
-defaultBitResolution = 1.2/2^10; % in V/bit
-defaultChanSpaceVert = 20;
-defaultApplyCAR      = false;
-defaultUnWhitedata   = false;
+defaultPrecision     = 'int16';   % Data type of file
+defaultNCh           = 385;       % Number of channels in file
+defaultNChWaves      = 5;         % grab +/- this many channels around peak channel of cluster
+defaultNWaves        = 250;       % this many waveforms/cluster (if [] we'll grab all)
+defaultNSamplesWf    = 40;        % this many samples/AP (40 = 1.3ms)
+defaultPropSampPre   = 0.375;     % relative amount of samples pre peak (0.375 @ 40 samples = 15 samples pre peak and 34 samples post peak
+defaultFs            = 30000;     % sampleing rate
+defaultGain          = 500;       % gain
+defaultBitResolution = 1.2/2^10;  % in V/bit
+defaultChanSpaceVert = 20;        % vertical channel spacing in um
+defaultApplyCAR      = false;     % do common average referencing
+defaultUnWhitedata   = false;     % unwhiten data - important if using KS2.5 or higher as drift corrected file is whitened  
 
 p = inputParser;
 addParameter(p,'remchans', defaultChanIgnore);

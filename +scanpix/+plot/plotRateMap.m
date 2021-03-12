@@ -1,7 +1,22 @@
 function plotRateMap(map,varargin)
+% plotRateMap - plot a standard rate map
+% package: scanpix.plot
 %
+%  Usage:   scanpix.plot.plotRateMap( dirMap ) 
+%           scanpix.plot.plotRateMap( dirMap, hAx )
+%           scanpix.plot.plotRateMap( __ ,'name',value,.... )
 %
-% parse input
+%  Inputs:  
+%           map      - rate map
+%           varargin - optional inputs
+%                    - axis handle and/or
+%                    - Name-Value pairs for 'colmap' (Matlab color map)
+%                      and/or 'nsteps' (how many steps in colour map)
+%
+% LM 2021
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% parse input
 defaultColMap = 'jet';
 defaultNSteps = 11;
 defaulthAx    = [];
@@ -19,7 +34,7 @@ else
     hAx = p.Results.ax;
 end
 
-% plot
+%% plot
 [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, p.Results.nsteps); % bin rate map
 % plot heat map
 imagesc(hAx, rMapBinned);

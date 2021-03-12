@@ -1,4 +1,21 @@
 function plotWaveform(waveforms,varargin)
+% plotWaveform - plot wave form of a cell. ATM will only plot the waveform
+% on max channel
+% package: scanpix.plot
+%
+%  Usage:   scanpix.plot.plotWaveform( waveforms ) 
+%           scanpix.plot.plotWaveform( waveforms, hAx )
+%           scanpix.plot.plotWaveform( __ ,'name',value,.... )
+%
+%  Inputs:  
+%           waveforms - array of raw waveform samples (nSamples-by-nSamplesPerWaveform-by-nChannels)
+%           varargin  - optional inputs
+%                     - axis handle and/or
+%                     - Name-Value pairs for 'maxWaves' (plot this many waveform samples)
+%                       and/or 'plotIndWFs' (flag to plot individual waveforms)
+%
+% LM 2021
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %% parse input
 defaultMaxWaves         = 250;
@@ -22,6 +39,7 @@ if isempty(waveforms)
     return;
 end
 
+%% plot
 meanWFs = squeeze(nanmean(waveforms,1));
 if size(meanWFs,1) == 1; meanWFs = meanWFs'; end
 

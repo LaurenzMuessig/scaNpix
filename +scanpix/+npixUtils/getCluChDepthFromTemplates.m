@@ -1,6 +1,6 @@
 function [templateDepths, maxChan] = getCluChDepthFromTemplates(templates, wInv, chanPos)
 % determine depth of template as well as closest channel. Adopted from
-% 'templatePositionsAmplitudes' by N. Steinmetz (in Spikes repo)
+% 'templatePositionsAmplitudes' by N. Steinmetz (https://github.com/cortex-lab/spikes)
 % package: scanpix.npixUtils
 %
 % Usage:
