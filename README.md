@@ -54,7 +54,7 @@ obj.load(loadMode, varargin);
 ### Examples:
 ```
 obj.load;                           % load all files indicated in obj.trialNames. Types of data to be loaded will be collected with UI dialogue
-obj.load({‘pos’,’eeg’});            % load position and eeg data for all files indicated in obj.trialNames.
+obj.load({‘pos’,’lfp’});            % load position and eeg data for all files indicated in obj.trialNames.
 obj.load({‘all},’SomeSetFileName’); % load all types data for trial ’SomeSetFileName’
 ```
 
