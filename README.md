@@ -44,9 +44,9 @@ obj.load(loadMode, varargin);
 ### Inputs (type):
    
 * _loadMode_ (cell array)
-   
-      *	controls what part(s) of the data will be loaded into object. Either _{‘all’}_ or any combination of _{‘pos’,’spikes’,’lfp’}_
-    
+
+     * controls what part(s) of the data will be loaded into object. Either _{‘all’}_ or any combination of _{‘pos’,’spikes’,’lfp’}_
+  
 *	_varargin_ (comma separated list of strings)
    
       *	comma separated list of set file names (ommit extensions) to be loaded. Useful when you might want to reload only some particular part of the data
