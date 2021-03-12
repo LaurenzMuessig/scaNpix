@@ -21,9 +21,10 @@
 ## 1. Some general remarks about the syntax
 •	Functions get called the following way: _scanpix.FunctionName_ or _scanpix.SubPackage.FunctionName_, e.g.if you want to call the function _makeRateMaps_ from the _+maps_ subpackage you would do:
 ```
-scanpix.maps.makeRateMap(_SomeInput_);
+scanpix.maps.makeRateMap(someInput);
 ```
 •	You can use Tab to autocomplete for subpackage and/or function name
+
 
 
 ## 2. Create a class object and load some data:
@@ -32,8 +33,8 @@ We first create the object by grabbing some basic parameters (see also section a
 
 ### Syntax: 
 ```
-obj = scanpix.dacq(_SomeInput_);
-obj = scanpix.npix(_SomeInput_);
+obj = scanpix.dacq(someInput);
+obj = scanpix.npix(someInput);
 ```
 Then we can use the class's load method to load the actual data, like so:
 
@@ -44,11 +45,11 @@ obj.load(loadMode, varargin);
    
 * _loadMode_ (cell array)
    
-     *	controls what part(s) of the data will be loaded into object. Either _{‘all’}_ or any combination of _{‘pos’,’spikes’,’lfp’}_
+      *	controls what part(s) of the data will be loaded into object. Either _{‘all’}_ or any combination of _{‘pos’,’spikes’,’lfp’}_
     
 *	_varargin_ (comma separated list of strings)
    
-     *	comma separated list of set file names (ommit extensions) to be loaded. Useful when you might want to reload only some particular part of the data
+      *	comma separated list of set file names (ommit extensions) to be loaded. Useful when you might want to reload only some particular part of the data
     
 ### Examples:
 ```
@@ -57,7 +58,9 @@ obj.load({‘pos’,’eeg’});            % load position and eeg data for all
 obj.load({‘all},’SomeSetFileName’); % load all types of DACQ data for trial ’SomeSetFileName’
 ```
 
+
 ## 3. Do something exciting with the data you loaded into Matlab
+
 
 ### 3A Inspect data in GUI
 
@@ -83,15 +86,15 @@ mainGUI(classType);
 
 *	_GUIType_ (string) 
 
-   *	_‘mainGUI’_ – start main GUI to inspect data
+      *	_‘mainGUI’_ – start main GUI to inspect data
    
-   *	_‘lfpBrowser’_ – start GUI to browse EEG data (Note: Not implemented yet!)
+      *	_‘lfpBrowser’_ – start GUI to browse EEG data (Note: Not implemented yet!)
 
 *	classType (string) 
 
-   *	_‘dacq’_ – start to inspect DACQ data
+      *	_‘dacq’_ – start to inspect DACQ data
    
-   *	_‘npix’_ – start GUI to inspect neuropixel data
+      *	_‘npix’_ – start GUI to inspect neuropixel data
 
 
 #### Examples:      
@@ -127,6 +130,7 @@ _some more details should go here_
 #### plot package
 
 • _more detail goes here_
+
 
 
 
@@ -212,6 +216,7 @@ If you want to use your own custom values by default you should edit them within
    * _gradThrForJumpSmooth_ - gradient of the smoothed linear positions in the jump window in cm/s (_default=2.5_);
    * _runDimension_ – will be estimated from data if left empty (_default=[ ]_). Only used for linear track data (somewhat historic parameter as could generally be estimated from data)
    * _dirTolerance_ - Tolerance for heading direction in degrees, relative to arm direction, for calculating run direction on track (_default=70_)
+
 
 
 # C) Class properties ( property(format) ):
