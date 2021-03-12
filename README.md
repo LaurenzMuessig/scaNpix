@@ -92,7 +92,7 @@ mainGUI(classType);
 
 *	classType (string) 
 
-      *	_‘dacq’_ – start to inspect DACQ data
+      *	_‘dacq’_ – start GUI to inspect DACQ data
    
       *	_‘npix’_ – start GUI to inspect neuropixel data
 
@@ -100,7 +100,7 @@ mainGUI(classType);
 #### Examples:      
 ```
 obj.startGUI;                   % open UI dialogue to choose which GUI to launch
-obj.startGUI(‘mainGUI’,'dacq'); % start GUI to inspect (a) DACQ dataset(s)
+obj.startGUI(‘mainGUI’,'dacq'); % start main GUI to inspect (a) DACQ dataset(s)
 ```
 
 #### Main GUI:
@@ -140,14 +140,14 @@ There are two different parameter spaces that are used within the scaNpix
 
 ## 1.	General 
 Parameters that are used when loading data and doing some basic pre-processing (e.g. position smoothing). Typically, you will not need to change the majority of these and they are stored in obj.params as a [map container](https://www.mathworks.com/help/matlab/map-containers.html). You can access values by using the name of the individual parameter as the key (e.g. _obj.params(‘posFS’)_ will give you the position sample rate and _obj.params.keys_ will give you a list of all parameters in the container).
-The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (scanpix.helpers.saveParams(obj,‘container’)_ can write current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\+scanpix\files\YourFile.mat'_ 
+The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (scanpix.helpers.saveParams(obj,‘container’)_ can write the current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\+scanpix\files\YourFile.mat'_ 
 
 ### Full List DACQ:
 * _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
 * _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
 *	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their tracking 
 *	_posMaxSpeed_ – speed > posMaxSpeed will be assumed tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
-*	_posSmooth_ – smooth position data over this many s (_default=0.4_)
+*	_posSmooth_ – smooth position data over this many seconds (_default=0.4_)
 *	_posHead_ – relative position of head to headstage LEDs (_default=0.5_) 
 *	_posFs_ – position data sampling rate in Hz; leave empty as will be read from pos file (50Hz)
 *	_cutFileType_ – type of cut file, i.e. ‘cut’ (Tint) or ‘clu’ (KlustaKwik); _default=’cut’_
@@ -247,7 +247,7 @@ If you want to use your own custom values by default you should edit them within
    * _gains_ – nTetrodes x 4 array of channel gains (Note up to 32 tetrodes (128 channels) possible)
    * _fullscale_ – nTetrodes x 4 array of scale max in µV (Note up to 32 tetrodes (128 channels) possible)
    * _eeg_channel_ – nEEGs x 1 array of channels that EEGs were recorded from
-   * _eeg_recordingChannel_ – nEEGs x 1 array of channels that were set to EEG in DACQ (this will be same as above if EEG was recorded in mode SIGNAL but differ it was REF)
+   * _eeg_recordingChannel_ – nEEGs x 1 array of channels that were set to EEG in DACQ (this will be same as above if EEG was recorded in mode SIGNAL but different if it was REF)
    * _eeg_slot_ – nEEGs x 1 array of EEG number in DACQ (so .eeg, .eeg2, … , .eegN)
    * _eeg_scalemax_ – nEEGs x 1 array of scale max for EEG channels
    * _eeg_filter_ – nEEGs x 1 array of filter type for EEG (0=DIRECT, 1=DIRECT+NOTCH, 2=HIGHPASS, 3=LOWPASS, 4=LOWPASS+NOTCH)
