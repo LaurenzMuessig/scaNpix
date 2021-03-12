@@ -4,7 +4,7 @@
 
 •	You will probably need to use at least MATLAB 2017, but I coded most of it in 2019
 
-•	If you do find a bug or have a request to improve something, please [raise an issue in Github](https://docs.github.com/en/github/managing-your-work-on-github/creating-an-issue) rather than email me about it. 
+•	If you do find a bug or have a request to improve something, please [raise an issue in Github](https://docs.github.com/en/github/managing-your-work-on-github/creating-an-issue) rather than emailing me personally about it. 
 
 •	Use this code at your own risk; it will hopefully help you get that _Nature_ paper, but equally likely some bug will screw up your analysis 
 
@@ -16,38 +16,27 @@
  
 # A) Getting Started
 
+•	Download/Clone/Photocopy the package and add to your Matlab path (note that Matlab won’t let you add the _+scanpix_ folder itself, but rather only the parent directory)
 
-## 1. Create the class object:
+## 1. Some general remarks about the syntax
+•	Functions get called the following way: _scanpix.FunctionName_ or _scanpix.SubPackage.FunctionName_, e.g.if you want to call the function _makeRateMaps_ from the _+maps_ subpackage you would do:
+```
+scanpix.maps.makeRateMap(_SomeInput_);
+```
+•	You can use Tab to autocomplete for subpackage and/or function name
 
-We first create the object by grabbing some basic parameters (see also section about the parameter space) and then       typically open a UI dialogue to fetch which data to load. This will initialise the object, but not load any data from disk yet
+
+## 2. Create a class object and load some data:
+
+We first create the object by grabbing some basic parameters (see also section about the parameter space) and then       typically open a UI dialogue to fetch which data to load. This will initialise the object, but not load any data from disk yet. To select what data to load we first choose a parent directory. Then we will get a list of all data files within any sub directories and from this list we select which data to load. This data will then be treated as one experiment. 
 
 ### Syntax: 
 ```
-obj = dacq(prmsMode, uiFlag);
+obj = scanpix.dacq(_SomeInput_);
+obj = scanpix.npix(_SomeInput_);
 ```
-   
-### Inputs (type):
-  
-*	_prmsMode_ (string) controls how parameters for loading and pre-processing are collected
-  
-    * _‘default’_: use default values (default case when no arguments are supplied)
-  
-    *	_‘ui’_: opens UI dialogue to let user edit values
-  
-    *	_‘file’_: load params from file (opens UI dialogue as well)
-    
-* _uiFlag_ (logical) is optional flag (_default=true_) that if false will skip UI dialogues for data selection
-  
-    *	if _uiFlag=true_ we’ll use a UI dialogue to collect dataset(s) that are to be loaded (however, we won’t load any data from disk just yet).
-    
-### Examples:
-   ```
-   obj = dacq;                   % create object and use default parameters
-   obj = dacq(‘ui’);             % create object and collect parameters with UI dialogue
-   obj = dacq(‘default’, false); % create object using default parameter and skip UI dialogue for set file selection
-   ```
-## 2. Load the data from disk:
-### Syntax:
+Then we can use the class's load method to load the actual data, like so:
+
 ```
 obj.load(loadMode, varargin);
 ```
@@ -55,7 +44,7 @@ obj.load(loadMode, varargin);
    
 * _loadMode_ (cell array)
    
-     *	controls what part(s) of the data will be loaded into object. Either _{‘all’}_ or any combination of _{‘pos’,’spikes’,’eeg’}_
+     *	controls what part(s) of the data will be loaded into object. Either _{‘all’}_ or any combination of _{‘pos’,’spikes’,’lfp’}_
     
 *	_varargin_ (comma separated list of strings)
    
@@ -63,139 +52,128 @@ obj.load(loadMode, varargin);
     
 ### Examples:
 ```
-obj.load;                           % load all trials indicated in obj.trialNames. Types of data to be loaded will be collected with UI dialogue
-obj.load({‘pos’,’eeg’});            % load position and eeg data for all trials indicated in obj.trialNames.
+obj.load;                           % load all files indicated in obj.trialNames. Types of data to be loaded will be collected with UI dialogue
+obj.load({‘pos’,’eeg’});            % load position and eeg data for all files indicated in obj.trialNames.
 obj.load({‘all},’SomeSetFileName’); % load all types of DACQ data for trial ’SomeSetFileName’
 ```
 
-## 3. Add meta data:
-  
-Usually we want to add some metadata to be associated with data in object that can’t be directly retrieved from DACQ data files (e.g. age of animal). In the object this will be stored in _obj.metaData_ as a scalar structure with values for each trial (so even global metadata like age will need to be set for each trial). Values are stored in cell arrays to allow for flexibility in input type. 
-  
-### Syntax:  
-```
-obj.addMetaData(name, varargin);
-```
-### Inputs (type):
-*	_name_ (string/cell array of strings)
-  
-     *	Name(s) of field(s) to be added to _obj.metaData_. Note that fields in _obj.defaultMetaDataFields_ are initialised upon loading data into object. 
-    
-* _varargin_ - optional argument to add values for field(s). 
+## 3. Do something exciting with the data you loaded into Matlab
 
-     * Note that you need to supply values for each trial in object. If a single field is added to obj with just single trial, just supply value directly. For other cases (multiple trials and/or fields) format is _{value field1, value field2,…,value fieldN}_ (multiple trials, but single field) or _{{{values field1},{values field2},…,{ values fieldN}}_ (multiple trials and multiple fields).
+### 3A Inspect data in GUI
 
-### Examples:         
+• The GUI(s) were all made with the [app designer](https://uk.mathworks.com/products/matlab/app-designer.html), so if you want to look at the code or edit something you need to open it in there
+
+• You can start (a) GUI(s) by using a wrapper function (_scanpix.GUI.startGUI_) or by calling it directly (e.g. _mainGUI_)
+
+• When Launching a GUI, we will check if there are any class objects in the base workspace and ask user if he wants to import these. Or just load the data from within the GUI
+
+• In the GUI you can load and inspect multiple datasets/data from multiple experiments
+
+
+#### Syntax:
 ```
-obj.addMetaData;                                                         % open UI dialogue to indicate which field and value(s) to add
-obj.addMetaData(name);                                                   % initialise metadata field obj.metaData.(name)  with empty cells (e.g. default fields)
-obj.addMetaData(name,{values for obj.metaData.(name)-1 for each trial}); % add obj.metaData.(name) to obj and set values=varargin
+scanpix.GUI.startGUI(GUIType,classType);
+```
+or
+```
+mainGUI(classType);
 ```
 
-## 4. Make rate maps
-  
-Making rate maps comes with a fairly large number of possible parameters for which the default values are stored in defaultParamsRateMap.m. If you prefer to use your own combination here is how to (best) do it: 
-
-* Change values as you like in _obj.mapParams.(name)_ and then run _obj.saveParams(‘maps’)_ to store your version as a .mat file in _'PathOnDisk\@dacq\files\'_. 
-
-* Set _obj.params('myRateMapParams')='FilenameYouStoredRateMapParamsAs'_ (no extention). 
-
-* Now when you make maps, we’ll use your version unless specified differently (even though that might sound cumbersome, this makes reverting to defaults straight-forward and you only have to do this once if you also change _obj.params('myRateMapParams')='FilenameOfYourDefaults'_ permanently).
-
-Rate maps will be stored in _obj.maps.(mapsType)_ (2D maps) and _obj.linMaps.(mapType)_ (1D maps), respectively. For details of making different types of firing rate maps, see the respective functions: _makeRateMaps.m, makeDirMaps.m, makeLinRMaps.m_
-
-### Syntax:  
-```
-obj.makeMaps(mapType, trialInd, varargin );
-```
-### Inputs:
-
-* _mapType_ (string) 
-  
-    * _‘rate’_ – make standard 2D rate maps (see _makeRateMaps.m_ for more details). This option will also make spike and position maps. Output is a cell(nCells,1) array of rate/spike/pos maps for each trial (note that if you use _‘boxcar’_ smoothing there is only one position map/trial)
-    
-    *	_‘dir’_ – make standard directional rate maps (see makeDirMaps.m for more details). Output is a cell(nCells,1) array of directional maps for each trial
-    
-    *	_‘lin’_ – make rate maps for 1D environments. We will linearise position first and then make the maps (see _makeLinRMaps.m_ and _linearisePosData.m_ for more details). The output format is different to 2D maps – we will get a structure with fields:
-    
-         * _linRate_: for each trial there will be cell(3,1) array with an nCells-by-position array of firing rates for {1,1} all data or CW {2,1} and CCW {3,1} runs, respectively. 
-
-         * _linPos_: same as _linRate_, but for position only (i.e. pos map)
-
-         * _linRateNormed_: cell(3,2) array with e.g. {1,1} same as _linRate{1}_, but maps normalized by their peak rates and ordered according to their position on the track. {1,2} is index which indicates cell order in {1,1} (so _linRate{1} = linRateNormed{1,1}(linRateNormed{1,2}_)  
-
-*	_trialInd_ (double); index for trial(s) for which you want to make maps (default: all trials)
-  
-*	_varargin_ - optional argument to control parameter selection (see also section about the parameter space)
-  
-    *	_'load'_: load parameter file from disk
-    
-    *	_'ui'_: open UI dialogue for parameter collection
-    
-    *	_prmsStruct_: structure with parameter fields to be changed from defaults
-    
-    *	_‘Name’, Value_ pairs: comma separated list of ‘Name’, Value pairs
-
-### Examples:        
-```
-obj.makeMaps;                              % make maps for all trials with default params and open UI dialogue to choose which type of map to make
-obj.makeMaps(‘rate’);                      %  make rate maps for all trials with defaults params
-obj.makeMaps(‘lin’, 2);                    % make linearised rate maps with defaults params for trial 2
-obj.makeMaps(‘dir’,[], 'ui' );             % make directional rate maps for all trials and open UI dialogue to specify parameter space
-obj.makeMaps(‘rate’,1,’ smooth’,’boxcar’); % make rate maps for trial 1, using defaults params, except setting prms.smooth=’boxcar’
-```            
-
-## 5. Launch GUI elements
-
-### Syntax:
-```
-obj.startGUI(GUIType);
-```
-
-### Inputs:
+#### Inputs:
 
 *	_GUIType_ (string) 
 
-   *	_‘CluCheck’_ – start GUI to inspect properties of individual clusters after spike sorting. E.g. plot all possible cross-correlograms or directly compare properties of 2 clusters (waveform, cross- and auto-correlograms)
+   *	_‘mainGUI’_ – start main GUI to inspect data
    
-   *	_‘eegBrowser’_ – start GUI to browse EEG data (Note: Not implemented yet!)
+   *	_‘lfpBrowser’_ – start GUI to browse EEG data (Note: Not implemented yet!)
 
-   *	_‘mapGUI’_ – start GUI to look at rate maps and properties of individual cells in more detail 
+*	classType (string) 
 
-### Examples:      
+   *	_‘dacq’_ – start to inspect DACQ data
+   
+   *	_‘npix’_ – start GUI to inspect neuropixel data
+
+
+#### Examples:      
 ```
-obj.startGUI;             % open UI dialogue to indicate which GUI to launch
-obj.startGUI(‘clucheck’); % start GUI to inspect quality of spike sorting
+obj.startGUI;                   % open UI dialogue to choose which GUI to launch
+obj.startGUI(‘mainGUI’,'dacq'); % start GUI to inspect (a) DACQ dataset(s)
 ```
+
+#### Main GUI:
+
+_some more details should go here_
+
+
+### 3B Use the code to edit/analyse the data in objects from command window
+
+#### helpers package
+
+• _more detail goes here_
+
+#### maps package
+
+• _more detail goes here_
+
+#### analysis package
+
+• _more detail goes here_
+
+#### dacq/npix Utils packages
+
+• _more detail goes here_
+
+
+#### plot package
+
+• _more detail goes here_
+
 
 
 # B) Parameter space:
 
-There are two different parameter spaces that are used within the MATLAB class.
+There are two different parameter spaces that are used within the scaNpix
 
 ## 1.	General 
 Parameters that are used when loading data and doing some basic pre-processing (e.g. position smoothing). Typically, you will not need to change the majority of these and they are stored in obj.params as a [map container](https://www.mathworks.com/help/matlab/map-containers.html). You can access values by using the name of the individual parameter as the key (e.g. _obj.params(‘posFS’)_ will give you the position sample rate and _obj.params.keys_ will give you a list of all parameters in the container).
-The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (_obj.saveParams(‘container’)_ can write current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\Scan_v2\@dacq\files\YourFile.mat'_ 
+The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (scanpix.helpers.saveParams(obj,‘container’)_ can write current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\+scanpix\files\YourFile.mat'_ 
 
-### Full List:
-* _pix/m_: pixel/m – leave empty as will be read from set file
+### Full List DACQ:
+* _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
+* _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
 *	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their tracking 
 *	_posMaxSpeed_ – speed > posMaxSpeed will be assumed tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
-*	_posSmooth_ – smooth position data over this many ms (_default=400_)
+*	_posSmooth_ – smooth position data over this many s (_default=0.4_)
 *	_posHead_ – relative position of head to headstage LEDs (_default=0.5_) 
 *	_posFs_ – position data sampling rate in Hz; leave empty as will be read from pos file (50Hz)
 *	_cutFileType_ – type of cut file, i.e. ‘cut’ (Tint) or ‘clu’ (KlustaKwik); _default=’cut’_
 *	_cutTag1_ – cut file tag that follows base filename but precedes \_tetrodeN in filename (_default=’’_); this is something historic (and idiosyncratic) for the data of the original pup replay study, so chances are you can just ignore this 
 *	_cutTag2_ – cut file tag that follows \_tetrodeN in filename (_default=’’_)
-*	_eegFs_ – low sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (250Hz)
-*	_egfFs_ – high sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (4800Hz)
+*	_lfpFs_ – low sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (250Hz)
+*	_lfpHighFs_ – high sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (4800Hz)
 *	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='PathToThe@dacqCodeOnYourDisk'_)
 *	_myRateMapParams_ – _'FileNameOfYourRateMapParams.mat'_ (_default=’’_)
-                
+  
+  
+### Full List neuropixel data:
+* _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
+* _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
+*	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their tracking 
+*	_posMaxSpeed_ – speed > posMaxSpeed will be assumed tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
+*	_posSmooth_ – smooth position data over this many s (_default=0.4_)
+*	_posHead_ – relative position of head to headstage LEDs (_default=0.5_) 
+*	_posFs_ – position data sampling rate in Hz; leave empty as will be read from pos file (50Hz)
+*	_APFs_ –  sampling rate for single unit neuropixel data (30000Hz)
+*	_lfpFs_ – sampling rate for lfp from neuropixel data (2500Hz)
+*	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='PathToThe@dacqCodeOnYourDisk'_)
+*	_myRateMapParams_ – _'FileNameOfYourRateMapParams.mat'_ (_default=’’_)
+
+
+
 ## 2.	Parameters for rate maps. 
-These are stored as a scalar MATLAB structure in _obj.mapParams_ (note that _obj.mapParams_ is a hidden property) and the default values are generated with _defaultParamsRateMaps.m_ – again do not edit anything in there. 
+These are stored as a scalar MATLAB structure in _obj.mapParams_ (note that _obj.mapParams_ is a hidden property) and the default values are generated with _sapix.maps.defaultParamsRateMaps.m_ – again do not edit anything in there. 
 You can edit these parameters on the fly when generating different kinds of rate maps.
-If you want to use your own custom values by default you should edit them within object and then save them to disk using _obj.saveParams(‘maps’)_ to _PathOnYourDisk\Scan_v2\@dacq\files\YourFile.mat_. Then go and set _obj.params(‘myRateMapParams’)='YourFile’_. 
+If you want to use your own custom values by default you should edit them within object and then save them to disk using _scanpix.helpers.saveParams(obj,‘maps’)_ to _PathOnYourDisk\+scanpix\files\YourFile.mat_. Then go and set _obj.params(‘myRateMapParams’)='PathToYourFile’_. 
 
 ### Full list:
 
@@ -241,14 +219,16 @@ If you want to use your own custom values by default you should edit them within
 ## General:
 
 * _params_ (containers.Map) – map container with general params
+*  _chanMap_ (struct) – Kilosort channel map (_scanpix.npix_ only)
 * _dataPath_ (char) – _FullPathToDataOnDisk_
-* _dataSetName_ (char) – not used at the moment, but thought as unique identifier for dataset (when and if we can store multiple dacq objects together)
+* _dataSetName_ (char) – unique identifier for dataset (note that for DACQ this will generate a non-decript name as we don't have a metadata file for Axona data where we could get this information from)
 * _trialNames_ (string array) – list of filenames in dataset
-* _trial_duration_ (double) – array of trial durations in seconds
-* _cellNTetN_ (double) – (nCells,3) array of cell_ID (column 1) and tetrode_ID (column 2) ID for cells. 3rd column contains simple numeric index (1:nCells)
+* _cellID_ (double) – (nCells,3) array. For DACQ this contains cell_ID (column 1), tetrode_ID (column 2) and simple numeric index (column 3). For neuropixel data this is cluster_ID (column 1), cluster depth (column 2) and channnel closest to centre of mass of cluster (column 3)
+* _cellLabel_ (string) – (nCells,1) string array that contains label for clusters from Kilosort ('good' or 'mua') or Phy ('good', 'mua' or 'noise') (_scanpix.npix_ only)
 * _metaData_ (struct) – store metadata in fields _metaData.(someString)_    
 
-* _setFileData_ (struct) – non-scalar structure that contains various things from _.set_ file with fields:
+* _trialMetaData_ (struct) – non-scalar structure that contains various trial specific meta data (from e.g. _.set_ or _.meta_ files :
+ * DACQ:  
    * _tracked_spots_ – n of LEDs
    * _xmin_ – min of camera window X
    * _xmax_ – max of camera window X
@@ -272,27 +252,32 @@ If you want to use your own custom values by default you should edit them within
    * _eeg_filtfreq2_ – upper bound for user defined bandpass filter (_default=7kHz_)
    * _eeg_filtripple_ – mystery parameter of user defined filter (should be left at 0.1 according to manual) 
    
+ * Neuropixel data: 
+   
 * _posData_ (struct) – scalar structure with position data, with fields:
    * _XY_raw_ – cell arrays of raw animal position in pixels (xy-coordinates)
    * _XY_ – cell arrays of binned (i.e. integers) animal position in pixels (xy-coordinates)
    * _direction_ – cell arrays of head direction of animal in degrees
    * _speed_ – cell arrays of running speed of animal in cm/s
    * _linXY_ – cell arrays of linerised position (will only be generated when making linear rate maps)
+   * _sampleT_ - sample times of position frames grabbed off Bonsai data. Not really used for anything (_scanpix.npix_ only)
    
 * spikeData (struct) – scalar structure with spike data, with fields:
    * _spk_times_ – cell arrays of spike times (in seconds)
-   * _spk_waveforms_ – cell arrays of waveforms (in µV); format for each cell is nSpikes-by-nSample-by-nChannel (i.e. nSpikesx50x4) 
+   * _spk_waveforms_ – cell arrays of waveforms (in µV); format for each cell is nSpikes-by-nSample-by-nChannel (i.e. nSpikesx50x4 for DACQ) 
+   * _sampleT_ - timestamps for position frames in neuropixel time. only relevant for _scanpix.npix_
 
-* _eegData_ (struct) – scalar structure with eeg data, with fields:
-   * _rawEEG_ – cell arrays of low sample rate (250Hz) EEG data (in µV)
-   * _rawEGF_ – cell arrays of high sample rate (4800Hz) EEG data (in µV)
-   * _eegTet_ – cell array of tetrode IDs EEGs were recorded from  
+* _lfpData_ (struct) – scalar structure with eeg data, with fields:
+   * _lfp_ – cell arrays of low sample rate (250Hz) EEG data (in µV)
+   * _lfpHigh_ – cell arrays of high sample rate (4800Hz) EEG data (in µV) (_scanpix.dacq_ only) 
+   * _lfpTet_ – cell array of tetrode IDs EEGs were recorded from (_scanpix.dacq_ only) 
     
 * _maps_ (struct) – scalar structure with rate maps
    * _rate_ – cell arrays of standard 2D rate maps
    * _spike_ – cell arrays of 2D spike maps
    * _pos_ – cell arrays of 2D position maps
    * _dir_ – cell arrays of directional maps
+   * _sACs_ – cell arrays of spatial autocorellograms
    
 * _linMaps_ (struct) – scalar structure with linearised rate maps
    * _linRate_ – cell(3,1) arrays of linearised rate maps. Format is full rate maps ({1}), rate map for CW ({2}) and CCW ({3}) runs
@@ -302,15 +287,12 @@ _linRate{1}=linRateNormed{1,1}(linRateNormed{1,2}_)
 
 ## Hidden properties:
 
-* _uniqueCellIndex_ (logical) – logical index to indicate unique cells (_default=true(nCells,1)_). This is used when calling _obj.findCrossRecCells_ which will set index for those cells which are deemed duplicates to _false_. Then you can either remove them from object or exclude them from further analyses using the index 
-* _fields2spare_ (cell array) – cell array of fields that will not be changed when e.g. deleting data from object. Typically, fields that contain only 1 value/dataset (_default={'params','dataPath','dataSetName','cellNTetN'}_)
-* _defaultMetaDataFields_ (cell array) – metadata fields that will initialised by default when loading data into object. Will be initialized as empty cells (_default={'age','env'}_)
+* _fileType_ (char) - identifier for data file type (i.e. _.set_ for DACQ and _.ap.bin_ for neuropixel data)
+* _fields2spare_ (cell array) – cell array of fields that will not be changed when e.g. deleting data from object. Typically, fields that contain only 1 value/dataset (_default DACQ={'params','dataSetName','cell_ID'}_; _default NPIX={'params','dataSetName','cell_ID','cell_Label'}_)
 * _mapParams_ (struct) – stores default rate map params (as in _defaultRateMapParams.m_) 
 * _loadFlag_ (logical) – flag to indicate if any data has been loaded into object (_default=false_)
    
  
-## D) Class methods:
 
-* to be finished....
 
 
