@@ -55,7 +55,7 @@ obj.load(loadMode, varargin);
 ```
 obj.load;                           % load all files indicated in obj.trialNames. Types of data to be loaded will be collected with UI dialogue
 obj.load({‘pos’,’eeg’});            % load position and eeg data for all files indicated in obj.trialNames.
-obj.load({‘all},’SomeSetFileName’); % load all types of DACQ data for trial ’SomeSetFileName’
+obj.load({‘all},’SomeSetFileName’); % load all types data for trial ’SomeSetFileName’
 ```
 
 
