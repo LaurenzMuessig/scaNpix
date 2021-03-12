@@ -56,7 +56,7 @@ classdef dacq < handle
         fileType              char    = '.set';
         uniqueCellIndex(:,1)  logical
         fields2spare          cell    = {'params','dataSetName','cell_ID'};  % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
-        defaultMetaDataFields cell    = {'age','env'};                       % (usually those who have just 1 entry for whole dataset)
+%         defaultMetaDataFields cell    = {'age','env'};                       % (usually those who have just 1 entry for whole dataset)
         mapParams             struct  = scanpix.maps.defaultParamsRateMaps; 
         loadFlag              logical = false;                               % flag so we know something has been loaded into object
     end

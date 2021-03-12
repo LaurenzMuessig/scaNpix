@@ -7,7 +7,7 @@ function startGUI(GUIType,classType)
 %
 % Inputs:
 %    GUIType - string; no argument opens UI dialogue to grab info on what GUI type to start
-%            - 'main' - open main GUI (see scanpix.GUI.mainGUI)
+%            - 'main'       - open main GUI (see scanpix.GUI.mainGUI)
 %            - 'lfpBrowser' - open LFP browser GUI (see scanpix.GUI.lfpBrowserGUI)
 %
 % Outputs:
