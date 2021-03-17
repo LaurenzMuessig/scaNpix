@@ -7,8 +7,10 @@ function [rMapBinned, cMapBinned] = binAnyRMap(rMap,cMap,nSteps,RGB4nans,binVals
 % package: scanpix.maps
 %
 %
-% Usage:    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(rMap,cMap,nSteps,RGB4nans,binVals)
+% Usage:    
+%           [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(rMap,cMap,nSteps)
 %           [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(rMap,cMap,nSteps,RGB4nans)
+%           [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(rMap,cMap,nSteps,RGB4nans,binVals)
 %
 %
 % Inputs:   rMap     - rate map
@@ -42,7 +44,7 @@ switch lower(cMap)
         cMap = colormap(temp(ind,:));    
     otherwise
         try
-            cMap = eval([cMap '(nSteps)']);
+            cMap = feval( str2func(cMap), nSteps );
         catch
             error(['''' cMap ''' not yet supported as colormap. Why don''t you add it yourself?']);
         end

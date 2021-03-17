@@ -207,7 +207,7 @@ classdef dacq < handle
                 obj.cell_ID = [ allCellN ( 1:size(allCellN,1) )' ]; % also add a numerical index for cells (which is sometimes useful to have)
             end
             
-            scanpix.helpers.addMetaData(obj,obj.defaultMetaDataFields); % add the default meta data fields
+%             scanpix.helpers.addMetaData(obj,obj.defaultMetaDataFields); % add the default meta data fields
             scanpix.helpers.preallocEmpty(obj,true,{'posData','spikeData','lfpData'});
             
             obj.loadFlag = true; % flag loading

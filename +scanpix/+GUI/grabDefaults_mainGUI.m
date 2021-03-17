@@ -24,6 +24,7 @@ function [field, value] = grabDefaults_mainGUI(defType)
 %
 switch lower(defType)
     case 'fig'
+        % overview tab
         defStruct.ac_bSz_shortLag = 0.001;
         defStruct.ac_lag_shortLag = 0.02;
         defStruct.ac_bSz_longLag  = 0.005;
@@ -32,6 +33,10 @@ switch lower(defType)
         defStruct.rMapColNSteps   = 11;
         defStruct.nWaveForms      = 250;
         defStruct.sACColMap       = 'jet';
+        % compare cells tab
+%         defStruct.ac_bSz_shortLag = 0.001;
+%         defStruct.ac_bSz_shortLag = 0.02;
+        % linearise tab
     case 'gui'
         defStruct.outputDir       = [cd filesep];
         defStruct.filename_suffix = datestr(now,'yymmdd');
