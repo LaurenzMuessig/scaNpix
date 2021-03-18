@@ -1,4 +1,4 @@
-function [ lin_rMaps, lin_pMaps, linPos, lin_rMaps_normed ] = makeLinRMaps(spikeTimes,positions,sampleTimes,direction,speed,trackType,varargin)
+function [ lin_rMaps, lin_pMaps, linPos, lin_rMaps_normed ] = makeLinRMaps(spikeTimes,positions,sampleTimes,direction,speed,trackProps,varargin)
 % makeLinRMaps - Make linear rate map
 % Function will do the position linearisation as well
 % package: scanpix.maps
@@ -21,7 +21,9 @@ function [ lin_rMaps, lin_pMaps, linPos, lin_rMaps_normed ] = makeLinRMaps(spike
 %    direction   - numeric array of head directions in degrees
 %    speed       - (optional) nPosSamplesx1 array of running speeds in cm/s
 %                  (ommit/leave empty if no speed filtering)  
-%    trackType   - 'sqtrack' or 'lintrack'
+%    trackProps  - struct with track propereties. needs to include fields 'type' ('sqtrack' or 'lintrack'), 
+%                  'length' (length in cm; for sq track length of 1 arm), 'ppm' (pix/m from tracking) 
+%                  and 'posFs' (position sample rate)
 %    varargin    - prmsStruct: structure with parameter fields to be changed from defaults
 %                - name-value: comma separated list of name-value pairs
 %
@@ -39,10 +41,7 @@ function [ lin_rMaps, lin_pMaps, linPos, lin_rMaps_normed ] = makeLinRMaps(spike
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% params
-prms.PosFs                = 50;
-prms.ppm                  = 400;
 % Parameters for linearisation of position data 
-prms.trackLength          = 250; % in pixels; for square track it should be length for 1 arm 
 prms.minDwellForEdge      = 1; % in s
 prms.durThrCohRun         = 2; % In seconds
 prms.filtSigmaForRunDir   = 3;  % Units=sec. Sigma of the Gaussian filter to pre-filter the data before finding CW and CCW runs. Kernel is 2*sigma in length.
@@ -75,12 +74,12 @@ end                                                                             
 % convert to radians
 prms.dirTolerance = prms.dirTolerance * pi/180; 
 
-if ~isempty(regexp(lower(trackType),'sq','once'))
+if ~isempty(regexp(lower(trackProps.type),'sq','once'))
     prms.posIsCircular = 1;
 end
 
 %% linearise position
-[linPos, dirInd ] = scanpix.maps.linearisePosData(positions,direction,trackType, prms);
+[linPos, dirInd ] = scanpix.maps.linearisePosData(positions,direction,trackProps, prms);
 dirInd = [dirInd == 1, dirInd == 2]; % make logical
 
 linPos = repmat(linPos,1,3);
@@ -99,7 +98,7 @@ if prms.speedFilterFlagLMaps && ~isempty(speed)
 end
   
 % bin pos
-binSizePix   = floor( (prms.ppm/100) * prms.binSizeLinMaps ); % is floor the right thing here? 
+binSizePix   = floor( (trackProps.ppm/100) * prms.binSizeLinMaps ); % is floor the right thing here? 
 linPosBinned = ceil(linPos(:,1)./binSizePix);
 nBins        = max(linPosBinned);  % 
 binList      = 0 : nBins;
@@ -121,13 +120,13 @@ binList      = 0 : nBins;
 
 % Make position maps %
 lin_pMaps      = nan(3, length(binList) - 1);
-lin_pMaps(1,:) = histcounts(linPosBinned,binList) ./ prms.PosFs ;
-lin_pMaps(2,:) = histcounts(linPosBinned(dirInd(:,1)),binList) ./ prms.PosFs ;
-lin_pMaps(3,:) = histcounts(linPosBinned(dirInd(:,2)),binList) ./ prms.PosFs ;
+lin_pMaps(1,:) = histcounts(linPosBinned,binList) ./ trackProps.posFs ;
+lin_pMaps(2,:) = histcounts(linPosBinned(dirInd(:,1)),binList) ./ trackProps.posFs ;
+lin_pMaps(3,:) = histcounts(linPosBinned(dirInd(:,2)),binList) ./ trackProps.posFs ;
 
 % Smooth pos maps %
 if prms.smoothFlagLinMaps    
-    if strcmpi(trackType,'sqtrack')
+    if strcmpi(trackProps.type,'sqtrack')
         lin_pMaps     = imfilter(lin_pMaps, kernel, 'conv', 'circular');
     else
         smMap         = imfilter(lin_pMaps, kernel, 'conv', 0);
@@ -147,7 +146,7 @@ for s = 1:length(spikeTimes)
         spkMaps = nan(size(lin_pMaps));
         % Convert spike times to pos bin values %
         if isempty(sampleTimes)
-            temp_ST           = ceil(spikeTimes{s} .* prms.PosFs ); 
+            temp_ST           = ceil(spikeTimes{s} .* trackProps.posFs ); 
         else
             temp_ST = arrayfun(@(x) find(sampleTimes - x > 0,1,'first'), spikeTimes{s}, 'UniformOutput', 0); % as sample times can be somewhat irregular we can't just bin by sample rate
             temp_ST = cell2mat(temp_ST);
@@ -173,7 +172,7 @@ for s = 1:length(spikeTimes)
     end
     
     if prms.smoothFlagLinMaps
-        if strcmpi(trackType,'sqtrack')
+        if strcmpi(trackProps.type,'sqtrack')
             spkMaps = imfilter(spkMaps, kernel, 'conv', 'circular');
         else
             smMap   = imfilter(spkMaps, kernel, 'conv', 0);

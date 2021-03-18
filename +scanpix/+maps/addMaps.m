@@ -127,7 +127,7 @@ end
 
 % these params get set from general data params container
 prms.PosFs               = obj.params('posFs');
-prms.ppm                 = obj.params('ppm');
+% prms.ppm                 = obj.params('ppm');
 prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -135,7 +135,7 @@ prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
 switch mapType
     case 'rate'
         for i = trialInd
-            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.params('ppm'), obj.posData.speed{i}, prms );
+            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
         end
         
         % pad maps so size is the same for all maps is set
@@ -161,26 +161,43 @@ switch mapType
     case 'lin'
         % map making a bit more involved mostly because we need some extra parameters we can't infer from data alone - should check if we
         % can solve this more elegantly
+        skipNextUI = false;
         for i = trialInd
-            % we need the length of the track for the pos scaling to work
-            % %%%% THIS NEEDS A RETHINK _ USE XML TO COLLECT THIS METADATA AUTOMATICALLY?
-            if isempty(prms.trackLength)
-                if any(strcmpi(fieldnames(obj.metaData),'tracklength'))
-                    f = fieldnames(obj.metaData);
-                    fInd = strcmpi(f,'tracklength');
-                    prms.trackLength = obj.metaData.(f{fInd}){i};
-                else
-                    warning('scaNpix: You need to indicate the length of the track (lin. tracks) or 1 arm (square track) in pixels. Either add a field to the metaData called ''trackLength'' or set the defaultRateMap parameter accordingly).');
+            % we need the type of the track (for how smoothing is done)
+            if any(strcmpi(fieldnames(obj.trialMetaData(trialInd)),'trialtype'))
+                f = fieldnames(obj.trialMetaData(trialInd));
+                fInd = strcmpi(f,'trialtype');
+                trackProps.type = obj.trialMetaData(trialInd).(f{fInd}){i};
+            else
+                uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
+                if isempty(uiInput)
+                    warning('scaNpix::Maps::addMaps:No track properties, no linear rate maps...');
                     return;
+                else
+                    trackProps.type = uiInput{1};
+                    trackProps.length = str2double(uiInput{2});
+                    skipNextUI = true;
                 end
             end
-            % we need the type of the track (for how smoothing is done)
-            if isempty(prms.trackType)
-                prms.trackType = obj.metaData.env{i}; % we need this meta data here (could have a proper check as range of square track will be similar in x and y)?
-            end
             
+            % we need the length of the track for the pos scaling to work
+            if any(strcmpi(fieldnames(obj.trialMetaData(trialInd)),'tracklength'))
+                f = fieldnames(obj.trialMetaData(trialInd));
+                fInd = strcmpi(f,'tracklength');
+                trackProps.length= obj.trialMetaData(trialInd).(f{fInd}){i};
+            elseif ~skipNextUI
+                uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
+                if isempty(uiInput)
+                    warning('scaNpix::Maps::addMaps:No track length, no linear rate maps...');
+                    return;
+                else
+                    trackProps.length = str2double(uiInput{1});
+                end
+            end
+            trackProps.ppm   = obj.trialMetaData(i).ppm;
+            trackProps.posFs = obj.params('posFs'); 
             [obj.linMaps(1).linRate{i},obj.linMaps(1).linPos{i},obj.posData(1).linXY{i},obj.linMaps(1).linRateNormed{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i},...
-                                                                                                                                obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, prms.trackType, prms );
+                                                                                                                                obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
         end
         
     otherwise

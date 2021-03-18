@@ -325,6 +325,8 @@ classdef dacq < handle
                     
                 end
             end
+            setFile.ppm = [];
+            setFile.ppm_org = [];
             % output
             if isempty(obj.trialMetaData)
                 obj.trialMetaData = setFile;
@@ -406,13 +408,16 @@ classdef dacq < handle
             led_pix(led_pos==1023) = NaN;   % expecting this.
             
             % scale pos data to specific PPM
-            obj.params('ppm_org') = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
+%             obj.params('ppm_org') = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
+            obj.trialMetaData(trialIterator).ppm_org = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
+
             if ~isempty(obj.params('ScalePos2PPM'))
                 led_pos = floor( led_pos .* (obj.params('ScalePos2PPM') / str2double(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'))) );
                 posHeader{strcmp(posHeader(:,1),'pixels_per_metre'),2} = num2str(obj.params('ScalePos2PPM'));
             end
-            obj.params('ppm') = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
-            
+%             obj.params('ppm') = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
+            obj.trialMetaData(trialIterator).ppm = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
+
             % post process
             posFile.header  = posHeader; % For mTint function compatibility.
             posFile.led_pos = led_pos;

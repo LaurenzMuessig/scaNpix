@@ -1,4 +1,4 @@
-function [linPos, dirInd, cohRunInd] = linearisePosData(xy,direction,trackType,varargin)
+function [linPos, dirInd, cohRunInd] = linearisePosData(xy,direction,trackProps,varargin)
 % linearisePosData - linearise postion data from linear track recordings.
 % Atm square track or classic linear track is supported.
 % package: scanpix.maps
@@ -10,11 +10,13 @@ function [linPos, dirInd, cohRunInd] = linearisePosData(xy,direction,trackType,v
 %       [linPos, dirInd, cohRunInd] = scanpix.maps.linearisePosData(xy,direction,trackType, Name-Value comma separated list);
 %
 %
-% Inputs:   xy        - array of xy positions
-%           direction - array of head directions
-%           trackType - 'sqtrack' or 'lintrack'
-%           varargin  - prmsStruct: structure with parameter fields to be changed from defaults
-%                     - name-value: comma separated list of name-value pairs     
+% Inputs:   xy          - array of xy positions
+%           direction   - array of head directions
+%           trackProps  - struct with track propereties. needs to include fields 'type' ('sqtrack' or 'lintrack'), 
+%                         'length' (length in cm; for sq track length of 1 arm), 'ppm' (pix/m from tracking)
+%                         and 'posFs' (position sample rate)
+%           varargin    - prmsStruct: structure with parameter fields to be changed from defaults
+%                       - name-value: comma separated list of name-value pairs     
 %
 % Outputs:  linPos    - lineraised positions
 %           dirInd    - index to separate runs in different directions (1=CW and 2=CCW)
@@ -27,9 +29,7 @@ function [linPos, dirInd, cohRunInd] = linearisePosData(xy,direction,trackType,v
 
 %% params
 % general
-prms.trackLength          = 250; % in pixels; for square track it should be length for 1 arm
 prms.minDwellForEdge      = 1; % in s
-prms.PosFs = 50;
 prms.durThrCohRun         = 2; % In seconds
 % sq track
 prms.filtSigmaForRunDir   = 3;  % Units=sec. Sigma of the Gaussian filter to pre-filter the data before finding CW and CCW runs. Kernel is 2*sigma in length.
@@ -41,7 +41,7 @@ prms.dirTolerance         = 70;  % Tolerance for heading direction, relative to 
 % unused atm
 % prms.cornerExtent       = 10; % As a percent of the whole arm. Value refers to each corner on each arm, so value of 5% means in the end 90% of arm is used for data.
 % prms.debug              = 0;
-prms.ppm = 400;  % should try and remove necessity to declare ppm here
+
 % ---------------------------------------------------------------------------------- %
 
 if ~isempty(varargin)                                                                %
@@ -54,10 +54,12 @@ if ~isempty(varargin)                                                           
 end                                                                                  %
 % ---------------------------------------------------------------------------------- %
 
-prms.dirTolerance = prms.dirTolerance * pi/180; % radians
+prms.dirTolerance = prms.dirTolerance * pi/180;   % radians
+trackLength = trackProps.ppm * (trackProps.length/100); % in pix
+
 %%
 
-if strcmpi(trackType,'sqtrack')
+if strcmpi(trackProps.type,'sqtrack')
     % 1) Linearise the positions %
     % 1a. First need a good estimate of env edges, for radial-isation routine to work well. Use the same as for box scaling,
     %     i.e. the first camera pixel in each dimension with >=1 sec of summed dwell.
@@ -65,11 +67,11 @@ if strcmpi(trackType,'sqtrack')
     for i = 1:2
         d              = xy(:,i);
         dHist          = histcounts( d, 0:1:ceil(max(d)) );
-        goodD          = dHist >= prms.minDwellForEdge * prms.PosFs;
+        goodD          = dHist >= prms.minDwellForEdge * trackProps.posFs;
         envEdges(:,i)  = [find(goodD,1,'first'); find(goodD,1,'last')];
     end
     % 1b. Radialise square.
-    [linPos, armDims]  = radialLineariseSquare_v2(xy,envEdges,prms.trackLength);
+    [linPos, armDims]  = radialLineariseSquare_v2(xy,envEdges,trackLength);
     linPos             = linPos + 1;  % Convert from 0-based to 1-based
     %     armDims            = armDims + 1; % for ease of indexing etc later on.
     
@@ -110,18 +112,18 @@ if strcmpi(trackType,'sqtrack')
     % 3a. Smooth the path (to look for larger scale dir trends) %
     linPosRad  = ( linPos ./ max(armDims(:)) ) .* (2*pi);
     linPosUW   = ( unwrap(linPosRad) ./ (2*pi) ) .* max(armDims(:));
-    k          = fspecial('gaussian',[ prms.filtSigmaForRunDir * prms.PosFs * 3, 1], prms.filtSigmaForRunDir * prms.PosFs);
+    k          = fspecial('gaussian',[ prms.filtSigmaForRunDir * trackProps.posFs * 3, 1], prms.filtSigmaForRunDir * trackProps.posFs);
     linPosUWSm = imfilter(linPosUW,k,'replicate');
     % 3b. Now remove the jumps %
     stateChangeInd    = diff( dirInd == 1 ) ~= 0;
     stateChangeNumInd = find(stateChangeInd)';
     epochLengths      = [stateChangeNumInd(1),  diff( stateChangeNumInd )];   % List of lengths (in samples)
-    isEpochJumpNumInd = find( epochLengths < (prms.durThrJump * prms.PosFs) );
+    isEpochJumpNumInd = find( epochLengths < (prms.durThrJump * trackProps.posFs) );
     isEpochJumpNumInd = isEpochJumpNumInd( isEpochJumpNumInd~=1 );  % Don't attempt to remove the first epoch, even if it is small.
     for j=isEpochJumpNumInd
         ind = (stateChangeNumInd(j-1)+1) : stateChangeNumInd(j);
         gr  = mean(diff(linPosUWSm(ind)));  % gr is the gradient of the smoothed linear positions in the jump window.
-        gr  = (gr * prms.PosFs) / (prms.ppm / 100);  % Change units to cm/s
+        gr  = (gr * trackProps.posFs) / (trackProps.ppm / 100);  % Change units to cm/s
         if dirInd(ind(1)) == 2  && gr > prms.gradThrForJumpSmooth
             dirInd(ind) = 1;
         elseif dirInd(ind(1)) == 1  && gr < -prms.gradThrForJumpSmooth
@@ -135,7 +137,7 @@ if strcmpi(trackType,'sqtrack')
         stateChangeInd    = diff( dirInd == 1 ) ~= 0;
         stateChangeNumInd = find(stateChangeInd)';
         epochLengths      = [stateChangeNumInd(1),  diff( stateChangeNumInd )];   % List of lengths (in samples)
-        isCohRunNumInd    = find( epochLengths > ( prms.durThrCohRun * prms.PosFs ) );
+        isCohRunNumInd    = find( epochLengths > ( prms.durThrCohRun * trackProps.posFs ) );
 %             cohRunInd         = zeros(size(xy,1),1);
         cohRunInd         = false(size(xy,1),1);
         
@@ -160,7 +162,7 @@ if strcmpi(trackType,'sqtrack')
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-elseif ~isempty(regexp(lower(trackType),'lintrack','once'))
+elseif ~isempty(regexp(lower(trackProps.type),'lintrack','once'))
     
     if isempty(prms.runDimension)
         [ ~, prms.runDimension ] =  max(range(xy)); % estimate run dimension
@@ -171,16 +173,16 @@ elseif ~isempty(regexp(lower(trackType),'lintrack','once'))
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Find ends of track %
     pHist  = histcounts( linPos, 0:1:ceil(max(linPos)) );
-    goodP  = pHist >= prms.minDwellForEdge * prms.PosFs;
+    goodP  = pHist >= prms.minDwellForEdge * trackProps.posFs;
     trEnds = [find(goodP,1,'first'); find(goodP,1,'last')];
     % remove data form beyond ends of track %
     linPos(linPos < trEnds(1)) = nan;
     linPos(linPos > trEnds(2)) = nan;
     % Scale %
     linPos  = linPos - trEnds(1);
-    SF = prms.trackLength / diff(trEnds);
+    SF = trackLength / diff(trEnds);
     linPos  = linPos .* SF;
-    linPos(linPos > prms.trackLength) = prms.trackLength;    % Have checked that when this happens, it is a many decimal places rounding error.
+    linPos(linPos > trackLength) = trackLength;    % Have checked that when this happens, it is a many decimal places rounding error.
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Make an index of which direction on the track the rat was running %
@@ -205,7 +207,7 @@ elseif ~isempty(regexp(lower(trackType),'lintrack','once'))
             stateChangeInd    = diff( [0; dirInd == i; 0] );
             stateChangeNumInd = find( stateChangeInd );
             epochLengths      = diff( stateChangeNumInd );       % List of lengths (in samples)
-            isCohRunNumInd    = find( epochLengths > (prms.durThrCohRun*prms.PosFs) );
+            isCohRunNumInd    = find( epochLengths > (prms.durThrCohRun*trackProps.posFs) );
             for j=1:length(isCohRunNumInd)
                 ind = (stateChangeNumInd( isCohRunNumInd(j)) ) : (stateChangeNumInd( isCohRunNumInd(j)+1 ) - 1);
 %                 if dirInd(ind(1)) == 1

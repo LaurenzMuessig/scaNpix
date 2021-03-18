@@ -232,6 +232,8 @@ classdef npix < handle
             fclose(fidMeta);
             obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
+            obj.trialMetaData(trialIterator).ppm = [];
+            obj.trialMetaData(trialIterator).ppm_org = [];
             %%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
             
             % load channel map
@@ -392,12 +394,12 @@ classdef npix < handle
             obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
             
             % pos data
-            obj.posData(1).XYraw{trialIterator}   = xy;
-            obj.posData(1).XY{trialIterator}      = [double( floor(xy(:,1)) + 1 ), double( floor(xy(:,2)) + 1 )];
-            obj.posData(1).sampleT{trialIterator} = sampleT; % this is redundant (I think)
+            obj.posData(1).XYraw{trialIterator}        = xy;
+            obj.posData(1).XY{trialIterator}           = [double( floor(xy(:,1)) + 1 ), double( floor(xy(:,2)) + 1 )];
+            obj.posData(1).sampleT{trialIterator}      = sampleT; % this is redundant (I think)
             
-            obj.params('ppm')     = ppm(1);
-            obj.params('ppm_org') = ppm(2);
+            obj.trialMetaData(trialIterator).ppm       = ppm(1);
+            obj.trialMetaData(trialIterator).ppm_org   = ppm(2);
 
             fprintf('  DONE!\n');
             
