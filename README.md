@@ -2,7 +2,7 @@
 # General remarks:
 •	This is a [Matlab package](https://uk.mathworks.com/help/matlab/matlab_oop/scoping-classes-with-packages.html) to either load DACQ or neuropixel data into Matlab for inspection in a GUI and further analysis
 
-•	You will probably need to use at least MATLAB 2017, but I coded most of it in 2019
+•	You will need to use at least MATLAB 2017b, but I coded most of it in 2019
 
 •	If you do find a bug or have a request to improve something, please [raise an issue in Github](https://docs.github.com/en/github/managing-your-work-on-github/creating-an-issue) rather than emailing me personally about it. 
 
@@ -233,31 +233,31 @@ If you want to use your own custom values by default you should edit them within
 * _metaData_ (struct) – store metadata in fields _metaData.(someString)_    
 
 * _trialMetaData_ (struct) – non-scalar structure that contains various trial specific meta data (from e.g. _.set_ or _.meta_ files :
- * DACQ:  
-   * _tracked_spots_ – n of LEDs
-   * _xmin_ – min of camera window X
-   * _xmax_ – max of camera window X
-   * _ymin_ – min of camera window Y
-   * _ymax_ – max of camera window Y
-   * _sw_version_ – software version
-   * _trial_time_ – start of recording in time of day (as set on machine)
-   * _ADC_fullscale_mv_ – scale max for channels at gain=1 in mV (for USB systems should be 1.5V)
-   * _lightBearing_ – direction of LEDs in degrees (up to 4 lights)
-   * _colactive_ – logic index of active LEDs (probably only relevant if using multi-colour LED tracking in DACQ)
-   * _gains_ – nTetrodes x 4 array of channel gains (Note up to 32 tetrodes (128 channels) possible)
-   * _fullscale_ – nTetrodes x 4 array of scale max in µV (Note up to 32 tetrodes (128 channels) possible)
-   * _eeg_channel_ – nEEGs x 1 array of channels that EEGs were recorded from
-   * _eeg_recordingChannel_ – nEEGs x 1 array of channels that were set to EEG in DACQ (this will be same as above if EEG was recorded in mode SIGNAL but different if it was REF)
-   * _eeg_slot_ – nEEGs x 1 array of EEG number in DACQ (so .eeg, .eeg2, … , .eegN)
-   * _eeg_scalemax_ – nEEGs x 1 array of scale max for EEG channels
-   * _eeg_filter_ – nEEGs x 1 array of filter type for EEG (0=DIRECT, 1=DIRECT+NOTCH, 2=HIGHPASS, 3=LOWPASS, 4=LOWPASS+NOTCH)
-   * _eeg_filtresp_ – filter type of user defined filter (lowpass, highpass, bandpass, bandstop)
-   * _eeg_filtkind_ – filter kind for user defined filter (most likely Butterworth)
-   * _eeg_filtfreq1_ – lower bound for user defined bandpass filter (_default=300Hz_)
-   * _eeg_filtfreq2_ – upper bound for user defined bandpass filter (_default=7kHz_)
-   * _eeg_filtripple_ – mystery parameter of user defined filter (should be left at 0.1 according to manual) 
+   * DACQ:  
+     * _tracked_spots_ – n of LEDs
+     * _xmin_ – min of camera window X
+     * _xmax_ – max of camera window X
+     * _ymin_ – min of camera window Y
+     * _ymax_ – max of camera window Y
+     * _sw_version_ – software version
+     * _trial_time_ – start of recording in time of day (as set on machine)
+     * _ADC_fullscale_mv_ – scale max for channels at gain=1 in mV (for USB systems should be 1.5V)
+     * _lightBearing_ – direction of LEDs in degrees (up to 4 lights)
+     * _colactive_ – logic index of active LEDs (probably only relevant if using multi-colour LED tracking in DACQ)
+     * _gains_ – nTetrodes x 4 array of channel gains (Note up to 32 tetrodes (128 channels) possible)
+     * _fullscale_ – nTetrodes x 4 array of scale max in µV (Note up to 32 tetrodes (128 channels) possible)
+     * _eeg_channel_ – nEEGs x 1 array of channels that EEGs were recorded from
+     * _eeg_recordingChannel_ – nEEGs x 1 array of channels that were set to EEG in DACQ (this will be same as above if EEG was recorded in mode SIGNAL but different if it was REF)
+     * _eeg_slot_ – nEEGs x 1 array of EEG number in DACQ (so .eeg, .eeg2, … , .eegN)
+     * _eeg_scalemax_ – nEEGs x 1 array of scale max for EEG channels
+     * _eeg_filter_ – nEEGs x 1 array of filter type for EEG (0=DIRECT, 1=DIRECT+NOTCH, 2=HIGHPASS, 3=LOWPASS, 4=LOWPASS+NOTCH)
+     * _eeg_filtresp_ – filter type of user defined filter (lowpass, highpass, bandpass, bandstop)
+     * _eeg_filtkind_ – filter kind for user defined filter (most likely Butterworth)
+     * _eeg_filtfreq1_ – lower bound for user defined bandpass filter (_default=300Hz_)
+     * _eeg_filtfreq2_ – upper bound for user defined bandpass filter (_default=7kHz_)
+     * _eeg_filtripple_ – mystery parameter of user defined filter (should be left at 0.1 according to manual) 
    
- * Neuropixel data: 
+   * Neuropixel data: 
    
 * _posData_ (struct) – scalar structure with position data, with fields:
    * _XY_raw_ – cell arrays of raw animal position in pixels (xy-coordinates)

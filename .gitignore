@@ -68,7 +68,7 @@ Temporary Items
 *.mex*
 # Packaged app and toolbox files
 *.mlappinstall
-*.mlapp.bak2
+*.bak2
 *.mltbx
 # Generated helpsearch folders
 helpsearch*/
