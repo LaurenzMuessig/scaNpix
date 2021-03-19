@@ -325,8 +325,12 @@ classdef dacq < handle
                     
                 end
             end
-            setFile.ppm = [];
-            setFile.ppm_org = [];
+            % need to initialise here
+            setFile.ppm         = []; % will be populated when loading pos data
+            setFile.ppm_org     = []; % will be populated when loading pos data
+            setFile.trialType   = []; % no method yet for dacq data to gather that
+            setFile.trackLength = []; % no method yet for dacq data to gather that
+            
             % output
             if isempty(obj.trialMetaData)
                 obj.trialMetaData = setFile;

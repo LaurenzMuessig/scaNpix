@@ -224,7 +224,9 @@ classdef npix < handle
                     obj.trialMetaData(trialIterator).(f{i}) = metaXMLFile.(f{i});
                 end
             end
-            
+            obj.trialMetaData(trialIterator).ppm = [];
+            obj.trialMetaData(trialIterator).ppm_org = [];
+            obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
             % spikeGLX meta data %
             metaDataFile = dir(fullfile(obj.dataPath{trialIterator},'*.ap.meta'));
             fidMeta  = fopen(fullfile(metaDataFile.folder,metaDataFile.name),'r');
@@ -232,8 +234,6 @@ classdef npix < handle
             fclose(fidMeta);
             obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
-            obj.trialMetaData(trialIterator).ppm = [];
-            obj.trialMetaData(trialIterator).ppm_org = [];
             %%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
             
             % load channel map

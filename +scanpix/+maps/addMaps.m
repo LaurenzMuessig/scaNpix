@@ -164,10 +164,8 @@ switch mapType
         skipNextUI = false;
         for i = trialInd
             % we need the type of the track (for how smoothing is done)
-            if any(strcmpi(fieldnames(obj.trialMetaData(trialInd)),'trialtype'))
-                f = fieldnames(obj.trialMetaData(trialInd));
-                fInd = strcmpi(f,'trialtype');
-                trackProps.type = obj.trialMetaData(trialInd).(f{fInd}){i};
+            if ~isempty(obj.trialMetaData(trialInd).trialType)
+                trackProps.type = obj.trialMetaData(trialInd).trialType;
             else
                 uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
                 if isempty(uiInput)
@@ -175,16 +173,16 @@ switch mapType
                     return;
                 else
                     trackProps.type = uiInput{1};
+                    obj.trialMetaData(trialInd).trialType = uiInput{1};
                     trackProps.length = str2double(uiInput{2});
+                    obj.trialMetaData(trialInd).trackLength = str2double(uiInput{2});
                     skipNextUI = true;
                 end
             end
             
             % we need the length of the track for the pos scaling to work
-            if any(strcmpi(fieldnames(obj.trialMetaData(trialInd)),'tracklength'))
-                f = fieldnames(obj.trialMetaData(trialInd));
-                fInd = strcmpi(f,'tracklength');
-                trackProps.length= obj.trialMetaData(trialInd).(f{fInd}){i};
+            if ~isempty(obj.trialMetaData(trialInd).trackLength)
+                trackProps.length= obj.trialMetaData(trialInd).trackLength;
             elseif ~skipNextUI
                 uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
                 if isempty(uiInput)
@@ -192,6 +190,7 @@ switch mapType
                     return;
                 else
                     trackProps.length = str2double(uiInput{1});
+                    obj.trialMetaData(trialInd).trackLength = str2double(uiInput{1});
                 end
             end
             trackProps.ppm   = obj.trialMetaData(i).ppm;
