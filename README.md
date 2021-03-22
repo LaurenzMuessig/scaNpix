@@ -158,6 +158,7 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
 *	_posSmooth_ – smooth position data over this many s (_default=0.4_)
 *	_posHead_ – relative position of head to headstage LEDs (_default=0.5_) 
 *	_posFs_ – position data sampling rate in Hz; leave empty as will be read from pos file (50Hz)
+*	_lodFromPhy_ – logical flag to indicate what sorting results to use. If _true_ we'll try Phy otherwise we'll use the raw kilosort results
 *	_APFs_ –  sampling rate for single unit neuropixel data (30000Hz)
 *	_lfpFs_ – sampling rate for lfp from neuropixel data (2500Hz)
 *	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='PathToThe@dacqCodeOnYourDisk'_)
