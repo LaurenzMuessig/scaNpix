@@ -431,14 +431,20 @@ classdef npix < handle
             cd(obj.dataPath{trialIterator});
             syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag); %% WHAT ABOUT PARAMS - AT LEAST NCHAN SHOULD BE GRABBED FROM OBJ
             
-            %%% NOT SURE THIS IS OPTIMAL WAY OF DECISION FOR USING PHY OR NOT
-            if exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
-                loadFromPhy = true;
+            % decide what to load - phy or kilosort          
+            if obj.params('loadFromPhy')
+                if exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
+                    loadFromPhy = true;
+                else
+                    warning('scaNpix::npix::loadSpikes:Can''t find ''cluster_info'' from phy output. Will try using kilosort data instead!');
+                    loadFromPhy = false;
+                end
             else
                 loadFromPhy = false;
             end
             
-            %% load kilosort resuts
+            
+            %% load sorting resuts
             % load spike times
             spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
             spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
@@ -498,6 +504,7 @@ classdef npix < handle
             OtherClusters(good_clusts) = false;
             indEmpty       = cellfun('isempty',spikeTimesFin) & OtherClusters;
             spikeTimesFin  = spikeTimesFin(~indEmpty);
+            
             %%%%%%%% I SHOULD CHECK WHETHER THIS WORKS FOR ALL CIRCUMSTANCES!!!!!!!
             if ~loadFromPhy
                 clu_Ch         = clu_Ch(~indEmpty);
@@ -574,7 +581,7 @@ classdef npix < handle
                 
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
-                    warning('scaNpix: Wave form loading aborted. That lacks class mate...');
+                    warning('scaNpix::npix::loadWaves:Wave form loading aborted. That lacks class mate...');
                     return;
                 end
                 

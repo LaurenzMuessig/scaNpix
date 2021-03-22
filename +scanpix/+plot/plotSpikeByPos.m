@@ -1,4 +1,4 @@
-function plotSpikeByPos(xy,spikeT,varargin)
+function plotSpikeByPos(xy,spikeT, varargin)
 % plotSpikeByPos - plot location of spikes of a given cell on top of path
 % of animal during trial
 % package: scanpix.plot
@@ -8,20 +8,27 @@ function plotSpikeByPos(xy,spikeT,varargin)
 %           scanpix.plot.plotSpikeByPos( __ ,'srate',value,)
 %
 %  Inputs:  
-%           xy      - xy positions (nSamples-by-2)
-%           spikeT  - spike times (in seconds)
-%           varargin - optional inputs
+%           xy       - xy positions (nSamples-by-2)
+%           spikeT   - spike times (in seconds)
+%           varargin - optional inputs - see parse inputs section
 %                    - axis handle and/or
-%                    - Name-Value pairs for 'srate' (positional sampling rate)
+%                    - Name-Value pairs for 'srate' (positional sampling
+%                      rate), 'msize' (marker size) and/or 'axvis' (flag for
+%                      axis on/off)
 %
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+%
+%% To-Do:
+% Add using sample times for binning spikes (or make binned spike times the
+% input?
+
 %% parse input
 defaultPosSR    = 50;
 defaulthAx      = [];
-defaultMarkerSz = 2.5;
-axisVisible     = 0;
+defaultMarkerSz = 2.5;   % marker size'
+axisVisible     = false; % axis on/off
 % 
 p = inputParser;
 checkAx = @(x) ishghandle(x, 'axes') || @isempty;
@@ -38,7 +45,7 @@ else
 end
 
 %% plot
-spikeInd = ceil(spikeT .* p.Results.srate); % bin spikjes
+spikeInd = ceil(spikeT .* p.Results.srate); % bin spikes
 
 % plot
 plot(hAx,xy(:,1),xy(:,2),'k-','linewidth',0.5);

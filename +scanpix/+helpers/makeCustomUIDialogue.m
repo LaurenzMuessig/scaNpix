@@ -33,6 +33,9 @@ if length(prompts) ~= length(defaultVals)
     error('Length of field names and default values doesn''t match mate');
 end
 
+logInd = cellfun(@islogical,defaultVals);
+defaultVals{logInd} = double(defaultVals{logInd});
+
 %% create the dialogue
 nLines   = 20;
 lineSz1 = [120 20]; % need to check if this scales well on e.g. laptop!
@@ -88,7 +91,7 @@ for i = 2*length(prompts):-2:2
     end
     cnt = cnt + 1;
 end
+output{logInd,2} =  logical(output{logInd,2});
 
 close(fH);
-
 end

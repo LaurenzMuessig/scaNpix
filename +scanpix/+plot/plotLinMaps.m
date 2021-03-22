@@ -6,8 +6,8 @@ function plotLinMaps( linMap, varargin )
 
 %% parse
 defaultMapType = 'rate';
-defaultColMap = 'parula';
-defaulthAx    = [];
+defaultColMap  = 'parula';
+defaulthAx     = [];
 
 p = inputParser;
 checkAx = @(x) ishghandle(x, 'axes') || @isempty;
@@ -39,13 +39,12 @@ switch lower(p.Results.type)
         %     plot( [1 1].*c(k), get(gca,'ylim') , 'k:' ,'linewidth',2);
         % end
         % hold off
-    case 'spikepos'
     case 'cellpos'
         imagesc(hAx,linMap);
         eval(['colormap(hAx,' p.Results.colmap ')']);
         set(hAx,'xTick',[0.5 size(linMap,2)+0.5],'xticklabel',[],'ytick',[0.5 size(linMap,1)-0.5],'yticklabel',[0,size(linMap,1)],'ylim',[0.5 size(linMap,1)+0.5],'xlim',[0.5 size(linMap,2)+0.5]);
     otherwise
-        error(['scaNpix::plot::plotLinMap:'  p.Results.type ' is not a valid option for plotting linearised rate maps. Try ''rate'', ''spikepos'' or ''cellpos''.' ]);
+        error(['scaNpix::plot::plotLinMap:'  p.Results.type ' is not a valid option for plotting linearised rate maps. Try ''rate''  or ''cellpos''.' ]);
 end
 
 

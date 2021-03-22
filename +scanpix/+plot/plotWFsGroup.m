@@ -18,8 +18,11 @@ function plotWFsGroup(waveForms,cell_IDs)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% TO DO:
-% check it works with neuropixel data
 % add plot as individual waveforms + mean?
+% dynamically change position of cell ID label - for npix better in bottom
+% of plot
+% for npix could use actual channel ID in title rather than just numeric
+% count
 
 plotSize       = [100 90]; % Pixel
 plotSep        = [20 30]; % Pixel
@@ -50,26 +53,26 @@ hScroll       = scanpix.plot.createScrollPlot(figSize); % open scrollable figure
 offsets       = offsetBase;
 for i = 1:length(waveForms)
     % mean +/- STD
-    meanWF    = squeeze(mean(waveForms{i},1));
-    stdWFs    = squeeze(std(waveForms{i},[],1));   
+    meanWF    = squeeze(nanmean(waveForms{i},1));
+    stdWFs    = squeeze(nanstd(waveForms{i},[],1));   
     maxVal    = ceil((1.05 * ceil( max(meanWF(:)) + max(stdWFs(:)) ))/10)*10; % for plot axis limits
     minVal    = floor((1.05 * floor( min(meanWF(:)) - max(stdWFs(:)) ))/10)*10; % for plot axis limits
     for j = 1:size(meanWF,2)
         % add axis
-        scanpix.plot.addAxisScrollPlot( hScroll,[offsets plotSize], plotSep );
-        
+        hAx = scanpix.plot.addAxisScrollPlot( hScroll,[offsets plotSize], plotSep );
+        axes(hAx);
         % plot waveforms
         scanpix.fxchange.shadedErrorBar([],meanWF(:,j),stdWFs(:,j),{'r-','linewidth',2,});
-        if i == 1
-            set(gca,'xlim',[0 50],'xtick',[],'ylim',[minVal maxVal]);
+        if i == 1 && length(waveForms) ~= 1
+            set(gca,'xlim',[0 size(meanWF,1)],'xtick',[],'ylim',[minVal maxVal]);
         elseif i == length(waveForms)  
-            set(gca,'xlim',[0 50],'xtick',[],'xticklabel',{''},'ylim',[minVal maxVal]);
+            set(gca,'xlim',[0 size(meanWF,1)],'xtick',[],'xticklabel',{''},'ylim',[minVal maxVal]);
             text(0.1*max(xlim), 1.3*max(ylim),['Channel_' num2str(j)],'FontSize',12,'Interpreter','none'); 
         else
-            set(gca,'xlim',[0 50],'xtick',[],'xticklabel',{''},'ylim',[minVal maxVal]);
+            set(gca,'xlim',[0 size(meanWF,1)],'xtick',[],'xticklabel',{''},'ylim',[minVal maxVal]);
         end
         text(0.45*max(xlim),0.8*max(ylim),cell_IDs{i},'FontSize',12,'Interpreter','none');
-        
+
         if j == 1
             set(gca,'ytick',[floor(min(meanWF(:))) 0 ceil(max(meanWF(:)))],'yticklabel',[floor(min(meanWF(:))),0,ceil(max(meanWF(:)))]);
         else

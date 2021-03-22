@@ -113,14 +113,18 @@ offset     = get(hSlider, 'Value');
 p          = get(hPan, 'Position');
 orgPanelSz = get(hPan, 'UserData');
 
-% how much has slider moved 
-relSlidPos = offset/p(4);
+% % how much has slider moved 
+% relSlidPos = offset/p(3);
 % update panel position
 switch sliderType
     case 'X'
+        % how much has slider moved 
+        relSlidPos = offset/p(3);
         newVal = -relSlidPos * (p(3)-orgPanelSz(1)); % subtract original canvas size so we don't scroll beyond panel size
         set(hPan,'Position',[newVal p(2:4)]);
     case 'Y'
+        % how much has slider moved 
+        relSlidPos = offset/p(4);
         newVal = -relSlidPos * (p(4)-orgPanelSz(2));
         set(hPan,'Position',[p(1) newVal p(3:4)]);    
 end  
