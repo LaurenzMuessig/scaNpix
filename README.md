@@ -21,7 +21,7 @@
 ## 1. Some general remarks about the syntax
 •	Functions get called the following way: _scanpix.FunctionName_ or _scanpix.SubPackage.FunctionName_, e.g.if you want to call the function _makeRateMaps_ from the _+maps_ subpackage you would do:
 ```
-scanpix.maps.makeRateMap(someInput);
+scanpix.maps.makeRateMaps(someInput);
 ```
 •	You can use Tab to autocomplete for subpackage and/or function name
 
@@ -29,7 +29,7 @@ scanpix.maps.makeRateMap(someInput);
 
 ## 2. Create a class object and load some data:
 
-We first create the object by grabbing some basic parameters (see also section about the parameter space) and then       typically open a UI dialogue to fetch which data to load. This will initialise the object, but not load any data from disk yet. To select what data to load we first choose a parent directory. Then we will get a list of all data files within any sub directories and from this list we select which data to load. This data will then be treated as one experiment. 
+We first create the object by grabbing some basic parameters (see also section about the parameter space) and then opening a UI dialogue to fetch which data to load. This will initialise the object, but not load any data from disk yet. We select what data to load we first select a parent directory. Then we will get a list of all data files within any sub directories and from this list we select which data to load (so if your parent directory contains a lot of data the list will be long). This data will then be treated as one experiment. 
 
 ### Syntax: 
 ```
@@ -68,7 +68,7 @@ obj.load({‘all},’SomeSetFileName’); % load all types data for trial ’Som
 
 • You can start (a) GUI(s) by using a wrapper function (_scanpix.GUI.startGUI_) or by calling it directly (e.g. _mainGUI_)
 
-• When Launching a GUI, we will check if there are any class objects in the base workspace and ask user if he wants to import these. Or just load the data from within the GUI
+• When Launching a GUI, we will check if there are any class objects in the base workspace and ask user if he wants to import these, but you can also simply load the data from within the GUI
 
 • In the GUI you can load and inspect multiple datasets/data from multiple experiments
 
@@ -90,18 +90,12 @@ mainGUI(classType);
    
       *	_‘lfpBrowser’_ – start GUI to browse EEG data (Note: Not implemented yet!)
 
-*	classType (string) 
+*	_classType_ (string) 
 
       *	_‘dacq’_ – start GUI to inspect DACQ data
    
       *	_‘npix’_ – start GUI to inspect neuropixel data
 
-
-#### Examples:      
-```
-obj.startGUI;                   % open UI dialogue to choose which GUI to launch
-obj.startGUI(‘mainGUI’,'dacq'); % start main GUI to inspect (a) DACQ dataset(s)
-```
 
 #### Main GUI:
 
@@ -143,8 +137,6 @@ Parameters that are used when loading data and doing some basic pre-processing (
 The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (scanpix.helpers.saveParams(obj,‘container’)_ can write the current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\+scanpix\files\YourFile.mat'_ 
 
 ### Full List DACQ:
-* _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
-* _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
 *	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their tracking 
 *	_posMaxSpeed_ – speed > posMaxSpeed will be assumed tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
 *	_posSmooth_ – smooth position data over this many seconds (_default=0.4_)
@@ -160,13 +152,13 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
   
   
 ### Full List neuropixel data:
-* _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
-* _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
+
 *	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their tracking 
 *	_posMaxSpeed_ – speed > posMaxSpeed will be assumed tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
 *	_posSmooth_ – smooth position data over this many s (_default=0.4_)
 *	_posHead_ – relative position of head to headstage LEDs (_default=0.5_) 
 *	_posFs_ – position data sampling rate in Hz; leave empty as will be read from pos file (50Hz)
+*	_lodFromPhy_ – logical flag to indicate what sorting results to use. If _true_ we'll try Phy otherwise we'll use the raw kilosort results
 *	_APFs_ –  sampling rate for single unit neuropixel data (30000Hz)
 *	_lfpFs_ – sampling rate for lfp from neuropixel data (2500Hz)
 *	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='PathToThe@dacqCodeOnYourDisk'_)
@@ -198,7 +190,6 @@ If you want to use your own custom values by default you should edit them within
    * _dirSmoothKern_ – size of smoothing kernel for directional maps in degrees (_default=5_) 
    
 * linear rate maps:
-   * _trackType_ – (_default=[]_);
    * _binSizeLinMaps_ – bin size for linear rate maps in cm (_default=2.5_)
    * _smoothFlagLinMaps_ – logical flag if maps should be smoothed (_default=true_)
    * _smoothKernelSD_ – SD of Gaussian smoothing kernel in bins (_default=2_). Kernel is 5\*SD in length (should we make this smaller?)
@@ -208,7 +199,6 @@ If you want to use your own custom values by default you should edit them within
    * _normSort_ – make normalized and sorted (by rate map peak on track) map array (_default=1_)
 
 * Parameters for linearisation of position data: 
-   * _trackLength_ – track length in pixels (_default=[ ]_); as will differ for each type of track). For square track it should be length for 1 arm only. This is crucial to make rate map size match across datasets.
    * _minDwellForEdge_ – minimum dwell of animal in bin at edge of environment in seconds (_default=1_)
    * _durThrCohRun_ – threshold for minimum duration of run in one direction in seconds (_default=2_); set to 0 if you don’t want to remove position data of run periods < threshold
    * _filtSigmaForRunDir_ – SD of the Gaussian filter to pre-filter the data before finding CW and CCW runs in seconds (default=3); Kernel is 2*SD in length.
@@ -256,8 +246,19 @@ If you want to use your own custom values by default you should edit them within
      * _eeg_filtfreq1_ – lower bound for user defined bandpass filter (_default=300Hz_)
      * _eeg_filtfreq2_ – upper bound for user defined bandpass filter (_default=7kHz_)
      * _eeg_filtripple_ – mystery parameter of user defined filter (should be left at 0.1 according to manual) 
+     * _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
+     * _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
+     * _trackType_ – 'sqtrack or 'linear' (_default=[]_);      
+     * _trackLength_ – track length in cm (_default=[ ]_); as will differ for each type of track). For square track it should be length for 1 arm only. This is crucial to make rate map size match across datasets.
+
+
    
    * Neuropixel data: 
+     * _PARAMETERS GO HERE_
+     * _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
+     * _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
+     * _trackType_ – 'sqtrack or 'linear' (_default=[]_);      
+     * _trackLength_ – track length in cm (_default=[ ]_); as will differ for each type of track). For square track it should be length for 1 arm only. This is crucial to make rate map size match across datasets.
    
 * _posData_ (struct) – scalar structure with position data, with fields:
    * _XY_raw_ – cell arrays of raw animal position in pixels (xy-coordinates)
