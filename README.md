@@ -246,18 +246,18 @@ If you want to use your own custom values by default you should edit them within
      * _eeg_filtfreq1_ – lower bound for user defined bandpass filter (_default=300Hz_)
      * _eeg_filtfreq2_ – upper bound for user defined bandpass filter (_default=7kHz_)
      * _eeg_filtripple_ – mystery parameter of user defined filter (should be left at 0.1 according to manual) 
-     * _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
-     * _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
-     * _trackType_ – 'sqtrack or 'linear' (_default=[]_);      
+     * _ppm_: pixel/m – This will contain the final ppm for the position data, i.e. will be different to original when scaling data to common ppm value
+     * _ppm__org_: pixel/m – We store the actual raw data pix/m value here
+     * _trackType_ – 'sqtrack or 'linear' (_default=''_);      
      * _trackLength_ – track length in cm (_default=[ ]_); as will differ for each type of track). For square track it should be length for 1 arm only. This is crucial to make rate map size match across datasets.
 
 
    
    * Neuropixel data: 
      * _PARAMETERS GO HERE_
-     * _ppm_: pixel/m – leave empty as will be read from set file. This will contain the final ppm, i.e. will be different to original when scaling data 
-     * _ppm__org_: pixel/m – leave empty as will be read from set file. We store the actual pix/m value here
-     * _trackType_ – 'sqtrack or 'linear' (_default=[]_);      
+     * _ppm_: pixel/m – This will contain the final ppm for the position data, i.e. will be different to original when scaling data to common ppm value
+     * _ppm__org_: pixel/m – We store the actual raw data pix/m value here
+     * _trackType_ – 'sqtrack or 'linear' (_default=''_);      
      * _trackLength_ – track length in cm (_default=[ ]_); as will differ for each type of track). For square track it should be length for 1 arm only. This is crucial to make rate map size match across datasets.
    
 * _posData_ (struct) – scalar structure with position data, with fields:
