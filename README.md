@@ -157,7 +157,7 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
 *	_posMaxSpeed_ – speed > posMaxSpeed will be assumed tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
 *	_posSmooth_ – smooth position data over this many s (_default=0.4_)
 *	_posHead_ – relative position of head to headstage LEDs (_default=0.5_) 
-*	_posFs_ – position data sampling rate in Hz; leave empty as will be read from pos file (50Hz)
+*	_posFs_ – position data sampling rate in Hz (_default=50Hz_)
 *	_lodFromPhy_ – logical flag to indicate what sorting results to use. If _true_ we'll try Phy otherwise we'll use the raw kilosort results
 *	_APFs_ –  sampling rate for single unit neuropixel data (30000Hz)
 *	_lfpFs_ – sampling rate for lfp from neuropixel data (2500Hz)
