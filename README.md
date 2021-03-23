@@ -274,7 +274,7 @@ If you want to use your own custom values by default you should edit them within
    * _sampleT_ - timestamps for position frames in neuropixel time. only relevant for _scanpix.npix_
 
 * _lfpData_ (struct) – scalar structure with eeg data, with fields:
-   * _lfp_ – cell arrays of low sample rate (250Hz) EEG data (in µV)
+   * _lfp_ – cell arrays of low sample rate (250Hz) EEG data for DACQ data or the standard lfp data (2.5kHz)for neuropixel recordings (respectively in µV)
    * _lfpHigh_ – cell arrays of high sample rate (4800Hz) EEG data (in µV) (_scanpix.dacq_ only) 
    * _lfpTet_ – cell array of tetrode IDs EEGs were recorded from (_scanpix.dacq_ only) 
     
