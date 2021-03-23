@@ -136,7 +136,7 @@ for i = 1:length(spkTimes)
             [rMaps{i}, sm_spkMaps{i}, sm_pMaps{i}] = scanpix.maps.adaptiveSmooth(posMapRaw,spkMapRaw,prms.alpha); % SCAN function  
         otherwise
             error([prms.smooth ' is not a valid option for smoothing rate maps']);
-    end    
+    end 
 end
 
 end

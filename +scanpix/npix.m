@@ -152,6 +152,10 @@ classdef npix < handle
                 end
             end
             
+            if ~iscell(loadMode)
+                loadMode  = {loadMode};
+            end
+            
             if nargin < 3
                 loadStr = obj.trialNames;
             else
@@ -429,7 +433,12 @@ classdef npix < handle
             
             %% grab sync channel data
             cd(obj.dataPath{trialIterator});
-            syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag); %% WHAT ABOUT PARAMS - AT LEAST NCHAN SHOULD BE GRABBED FROM OBJ
+            if ~isfield(obj.trialMetaData,'BonsaiCorruptFlag')
+                syncTTLs = scanpix.npixUtils.loadSyncData();
+            else
+                syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag); %% WHAT ABOUT PARAMS - AT LEAST NCHAN SHOULD BE GRABBED FROM OBJ
+            end
+           
             
             % decide what to load - phy or kilosort          
             if obj.params('loadFromPhy')
@@ -520,7 +529,7 @@ classdef npix < handle
             
             %% output
             obj.spikeData(1).spk_Times{trialIterator} = spikeTimesFin;
-            endIdxNPix                                = find(syncTTLs < obj.trialMetaData(trialIterator).duration + syncTTLs(1),1,'last') + 1;
+            endIdxNPix                                = min( [ length(syncTTLs), find(syncTTLs < obj.trialMetaData(trialIterator).duration + syncTTLs(1),1,'last') + 1]);
             obj.spikeData(1).sampleT{trialIterator}   = syncTTLs(1:endIdxNPix) - syncTTLs(1);
             % we'll only need to grab this once - this assumes data was clustered together, but wouldn't make much sense otherwise?
             % what about reload?
@@ -530,7 +539,7 @@ classdef npix < handle
             end
             
             % also keep only tracking data within trial times
-            if ~isempty(obj.posData.XYraw{trialIterator})
+            if ~isempty(obj.posData.XYraw) && ~isempty(obj.posData.XYraw{trialIterator})
                 obj.posData.XYraw{trialIterator}     = obj.posData.XYraw{trialIterator}(1:endIdxNPix,:);
                 obj.posData.XY{trialIterator}        = obj.posData.XY{trialIterator}(1:endIdxNPix,:);
                 obj.posData.speed{trialIterator}     = obj.posData.speed{trialIterator}(1:endIdxNPix,:);

@@ -38,17 +38,8 @@ switch lower(GUIType)
         % TO DO %
     
     case 'phyhelp'
-        [fileN,path] = uigetfile(fullfile(cd ,'*.ap.bin'),'Select a neuropixel data file');
-        if isnumeric(path)
-            warning('scaNpix::GUI:startGUI: Aborted starting phy helper GUI. That''s lame.?');
-            return
-        end
-        
-        npixObj = scanpix.analysis.npix_Loader('dataPath',path,'Tnames',fileN);
-        scanpix.maps.addMaps(npixObj,'rate',[],'smooth','boxcar','speedFilterFlagRMaps',1);
-        scanpix.maps.addMaps(npixObj,'dir',[]);
         % start UI
-        scanpix.GUI.phyHelpGUI(npixObj);
+        scanpix.GUI.phyHelpGUI;
         
     otherwise
         ME = MException('scaNpix:startGUI:InvalidGUIType', ['''' GUIType ''' is not a valid GUI type. You need to write that one yourself I am afraid...' ]);
