@@ -76,7 +76,7 @@ switch prms.mode
         NPixObj            = scanpix.npix('ui');    
 end
 % load
-str = {'pos','spikes','eeg'};
+str = {'pos','spikes','lfp'};
 str = str([prms.loadPos prms.loadSpikes prms.loadEEG]);
 NPixObj.load(str, NPixObj.trialNames);
 

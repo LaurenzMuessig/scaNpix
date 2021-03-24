@@ -39,7 +39,7 @@ function addMaps(obj, mapType, trialInd, varargin )
 
 % quite a lot of input parsing/checking to do here %%%%%%%%
 if ~obj.loadFlag
-    warning('scaNpix: You need to load some data first before you can make any maps... Fairly obvious if you ask me.');
+    warning('scaNpix::maps::addMaps: You need to load some data first before you can make any maps... Fairly obvious if you ask me.');
     return;
 end
 
@@ -47,7 +47,7 @@ if nargin < 2
     str = {'rate','dir','lin','ego'};
     [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
     if ~loadCheck
-        warning('scaNpix: No data selected. No maps will be created. Boring...');
+        warning('scaNpix::maps::addMaps: No data selected. No maps will be created. Boring...');
         return;
     else
         mapType = str{select};
@@ -68,12 +68,12 @@ if nargin < 4 || isempty(varargin{1})
         try
             temp    = load( fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) ); %
         catch
-            ME = MException('scaNpix:addMaps:''rateMapParamsNotFound', ['' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) ''' doesn''t exist buddy... ']);
+            ME = MException('scaNpix::maps::addMaps:''rateMapParamsNotFound', ['' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) ''' doesn''t exist buddy... ']);
             throw(ME);
         end
         f            = fieldnames(temp);
         prms         = temp.(f{1});
-        warning(['scaNpix: Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
+        warning(['scaNpix::maps::addMaps: Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
     end
 end
 
@@ -87,7 +87,7 @@ if nargin == 4 && ischar(varargin{1})
         [fName, dataDir] = uigetfile(fullfile(classFolder.path,'files', '*.mat'), 'Select map params to load.');
         % fail gracefully
         if isnumeric(fName)
-            warning('scaNpix: Loading Map Params aborted. Will use defaults instead!');
+            warning('scaNpix:maps:addMaps: Loading Map Params aborted. Will use defaults instead!');
             prms         = obj.mapParams;
         else
             temp         = load( fullfile(dataDir, fName) );
@@ -103,7 +103,7 @@ if nargin == 4 && ischar(varargin{1})
         output           = scanpix.helpers.makeCustomUIDialogue(prompts, defaultVals);
         % exit gracefully
         if isempty(output)
-            warning('scaNpix: Aborted changing parameters for rate map generation - will use those currently set in object.');
+            warning('scaNpix::maps::addMaps: Aborted changing parameters for rate map generation - will use those currently set in object.');
             prms         = obj.mapParams;
         else
             % format as structure
@@ -169,7 +169,7 @@ switch mapType
             else
                 uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
                 if isempty(uiInput)
-                    warning('scaNpix::Maps::addMaps:No track properties, no linear rate maps...');
+                    warning('scaNpix::maps::addMaps:No track properties, no linear rate maps...');
                     return;
                 else
                     trackProps.type = uiInput{1};
@@ -186,7 +186,7 @@ switch mapType
             elseif ~skipNextUI
                 uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
                 if isempty(uiInput)
-                    warning('scaNpix::Maps::addMaps:No track length, no linear rate maps...');
+                    warning('scaNpix::maps::addMaps:No track length, no linear rate maps...');
                     return;
                 else
                     trackProps.length = str2double(uiInput{1});
@@ -200,7 +200,7 @@ switch mapType
         end
         
     otherwise
-        ME = MException('scaNpix:addMaps:invalidMapType', ['' mapType ''' is not yet a supported map type. You need to invent that one yourself I am afraid... ']);
+        ME = MException('scaNpix::maps::addMaps:invalidMapType', ['' mapType ''' is not yet a supported map type. You need to invent that one yourself I am afraid... ']);
         throw(ME);
 end
 

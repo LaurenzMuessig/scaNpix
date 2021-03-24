@@ -483,7 +483,7 @@ classdef npix < handle
                 templates          = readNPY(fullfile(obj.dataPath{trialIterator},'templates.npy'));
                 Winv               = readNPY(fullfile(obj.dataPath{trialIterator},'whitening_mat_inv.npy'));
                 chanPos            = readNPY(fullfile(obj.dataPath{trialIterator},'channel_positions.npy'));
-                chanMapKS          = double(readNPY(fullfile(obj.dataPath{trialIterator},'channel_map.npy'))) + 1;  % Not sure this is necessary in KS 2.5 anymore - in fact might be more complicated than that due to drift corr file missing some channels
+                chanMapKS          = double(readNPY(fullfile(obj.dataPath{trialIterator},'channel_map.npy'))) + 1;  % 
                 [clu_Depth,clu_Ch] = scanpix.npixUtils.getCluChDepthFromTemplates(templates, Winv, [chanMapKS(:) chanPos(:,2)]);
             end
             

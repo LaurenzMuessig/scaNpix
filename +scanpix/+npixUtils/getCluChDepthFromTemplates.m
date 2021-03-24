@@ -15,7 +15,6 @@ function [templateDepths, maxChan] = getCluChDepthFromTemplates(templates, wInv,
 %
 % LM 2020
 
-%% TO DO: FIX ISSUE WITH KS2_5 ChanMap - First entry depth=NaN?
 
 % unwhiten all the templates
 tempsUnW = zeros(size(templates));
