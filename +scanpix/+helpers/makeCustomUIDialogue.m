@@ -92,7 +92,7 @@ for i = 2*length(prompts):-2:2
     cnt = cnt + 1;
 end
 
-if any(logInd); output{logInd,2} =  logical(output{logInd,2}); end
+if any(logInd); output{logInd,2} = logical(output{logInd,2}); end
 
 close(fH);
 end
