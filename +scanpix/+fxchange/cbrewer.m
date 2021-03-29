@@ -109,7 +109,7 @@ if (ncol>length(colorbrewer.(ctype).(cname)))
 %     disp('----------------------------------------------------------------------')
 %     disp(' ')
     cbrew_init=colorbrewer.(ctype).(cname){length(colorbrewer.(ctype).(cname))};
-    colormap=interpolate_cbrewer(cbrew_init, interp_method, ncol);
+    colormap=scanpix.fxchange.interpolate_cbrewer(cbrew_init, interp_method, ncol); %%%
     colormap=colormap./255;
     return
 end

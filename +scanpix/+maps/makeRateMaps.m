@@ -121,7 +121,11 @@ for i = 1:length(spkTimes)
         spkPosBinInd = arrayfun(@(x) find(sampleTimes - x > 0,1,'first'), spkTimes{i}, 'UniformOutput', 0); 
         spkPosBinInd = cell2mat(spkPosBinInd);
     end
+    try
     spkPosBinned     = posBinned(spkPosBinInd,:);
+    catch
+        t=1;
+    end
     spkMapRaw        = accumarray(spkPosBinned(~isnan(spkPosBinned(:,1)),:), 1, nBins);
     
     % smooth

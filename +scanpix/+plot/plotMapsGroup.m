@@ -5,7 +5,7 @@ function plotMapsGroup(maps,type,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% To DO
-% ADD PLOT AS GRID IF ONLY 1 TRIAL
+% add case where you might want to plot e.g. sac's along rate maps 
 %%
 
 
@@ -43,19 +43,28 @@ if figWidth > 0.7*screenSz(3)
     figWidth = 0.7*screenSz(3);
 end
 figSize     = [0.1*screenSz(3) 0.1*screenSz(4) figWidth 0.7*screenSz(4)]; % 
-% open plot
-hScroll     = scanpix.plot.createScrollPlot(figSize); % open scrollable figure
-hScroll.hFig.Name = p.Results.figname;
 
+% gather plot tiling
+if length(maps) == 1 
+    nPlotsPerRow = 6; % in case just 1 trial, we want to make a compact plot...
+else
+    nPlotsPerRow = length(maps); % ...if it's several trials, we plot nCells across trials
+%     nPlotsPerRow = nPlotsPerRow + nPlotsPerRow*prms.plot_sAC;
+end
+% open plot
 offsets   = p.Results.offsetbase;
+hScroll = scanpix.plot.createScrollPlot( [figSize(1:2) nPlotsPerRow*p.Results.plotsize(1)+nPlotsPerRow*p.Results.plotsep(1)+3*offsets(1) figSize(4) ]  );
+hScroll.hFig.Name = p.Results.figname;
 % open a waitbar
 nPlots    = length(maps)*length(maps{1});
 plotCount = 1;
 hWait     = waitbar(0); 
 
-for i = 1:length(maps)
+nRowPlots = 0;
+
+for i = 1:length(maps{1})
     
-    for j = 1:length(maps{i})
+    for j = 1:length(maps)
         
         waitbar(plotCount/nPlots,hWait,'Plotting rate maps, just bare with me!');
         
@@ -63,30 +72,38 @@ for i = 1:length(maps)
         hAx = scanpix.plot.addAxisScrollPlot( hScroll, [offsets p.Results.plotsize], p.Results.plotsep );
         
         if strcmp(type,'rate') || strcmp(type,'spike') || strcmp(type,'pos')
-            scanpix.maps.plotRateMap(maps{i}{j},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps)
-        elseif  strcmp(mapType,'dir')
-            scanpix.maps.plotDirMap(maps{i}{j},hAx);
+            scanpix.plot.plotRateMap(maps{j}{i},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps)
+        elseif  strcmp(type,'dir')
+            scanpix.plot.plotDirMap(maps{j}{i},hAx);
         end
         
         % plot peak rate
         t = text(hAx);
-        set(t,'Units','pixels','position',[8 -6],'String',sprintf('fRate=%.1f',nanmax(maps{i}{j}(:)) ),'FontSize',8 ); % harcoded text pos
+        set(t,'Units','pixels','position',[8 -6],'String',sprintf('fRate=%.1f',nanmax(maps{j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
         % plot cell ID string
-        if i == 1
+        if j == 1
             t = text(hAx);
-            set(t,'Units','pixels','position',[-40 hAx.Position(4)/2],'String',p.Results.cellIDStr{j},'FontSize',8,'Interpreter','none' ); % harcoded text pos
+            set(t,'Units','pixels','position',[-40 hAx.Position(4)/2],'String',p.Results.cellIDStr{i},'FontSize',8,'Interpreter','none' ); % harcoded text pos
         end
         % update
-        offsets(2) = offsets(2) + p.Results.plotsize(2) + p.Results.plotsep(2);
+        offsets(1) = offsets(1) + p.Results.plotsize(1) + 1.5*p.Results.plotsep(1);
+        nRowPlots = nRowPlots + 1; %+ prms.plot_sAC;
         
-        if j == length(maps{i})
-            title(hAx,['Trial_' num2str(i)],'Interpreter','none');
+        if nRowPlots >= nPlotsPerRow
+            offsets(1) = p.Results.offsetbase(1);
+            offsets(2) = offsets(2) + p.Results.plotsize(2) + p.Results.plotsep(2);
+            nRowPlots = 0;
+        end
+%         offsets(2) = offsets(2) + p.Results.plotsize(2) + p.Results.plotsep(2);
+        
+        if i == length(maps{1})
+            title(hAx,['Trial_' num2str(j)],'Interpreter','none');
         end
         plotCount = plotCount + 1;
     end
     % update and reset
-    offsets(1) = i * (p.Results.plotsize(1)+p.Results.plotsep(1)) + p.Results.offsetbase(1);
-    offsets(2) = p.Results.offsetbase(2);
+%     offsets(1) = i * (p.Results.plotsize(1)+p.Results.plotsep(1)) + p.Results.offsetbase(1);
+%     offsets(2) = p.Results.offsetbase(2);
 end
 close(hWait);
 

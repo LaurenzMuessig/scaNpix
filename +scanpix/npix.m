@@ -167,7 +167,7 @@ classdef npix < handle
             for i = 1:length(loadStr)
                 
                 obj.loadMeta(trialInd(i)); % load some meta data
-                
+                               
                 for j = 1:length(loadMode)
                     
                     switch lower(loadMode{j})
@@ -181,7 +181,10 @@ classdef npix < handle
                         case 'spikes'
                             obj.loadSpikes(trialInd(i));
                         case 'lfp'
+                            
                             %                             obj.loadLFPs(trialInd(i));
+                        case 'meta'
+                            % already loaded!
                         otherwise
                             ME = MException('scaNpix:load:invalidInput', ['' loadMode{j} ''' is not a valid data type selector. Try ''all'', ''pos'', ''spikes'' and/or ''eeg'' instead. ']);
                             throw(ME);

@@ -34,7 +34,7 @@ if length(prompts) ~= length(defaultVals)
 end
 
 logInd = cellfun(@islogical,defaultVals);
-defaultVals{logInd} = double(defaultVals{logInd});
+if any(logInd); defaultVals{logInd} = double(defaultVals{logInd}); end
 
 %% create the dialogue
 nLines   = 20;
@@ -91,7 +91,8 @@ for i = 2*length(prompts):-2:2
     end
     cnt = cnt + 1;
 end
-output{logInd,2} =  logical(output{logInd,2});
+
+if any(logInd); output{logInd,2} =  logical(output{logInd,2}); end
 
 close(fH);
 end
