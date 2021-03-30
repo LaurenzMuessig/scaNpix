@@ -15,11 +15,12 @@ function plotWaveDistByLocOnShank(meanWaveforms,coords,chanMap)
 %
 % LM 2021
 
-% hard coded at the moment - should make it scale on different screens
-scalingFact = 100;
+% 
+scalingFact = (max(coords(:,2)) - min(coords(:,2)) ) / 6; % dividing by 6 seems to yield good size for waveforms, irrespective of length of probe that is plotted
+
 figSz  = [200 850];
 screenSz = get(0,'ScreenSize');
-hFig = figure('Units','pixels','Position',[0.1*screenSz(3) 0.1*screenSz(4) figSz]);
+hFig = figure('Name','Waveform Dist. on Shank','Units','pixels','Position',[0.1*screenSz(3) 0.1*screenSz(4) figSz]);
 hAx = axes(hFig,'position',[0.25 0.05 0.7 0.9]);
 
 % need overall of max of waveform to scale data properly
@@ -31,15 +32,15 @@ xBase  = [11 43 27 59; [0 2 1 3] .* (nSamplesWaveform/2)];
 
 % if channel map is supplied we plot probe recording sites in background,
 % otherwise just line as indication
-if nargin == 3
-    plot(hAx,[xBase(2,:)+nSamplesWaveform/2;xBase(2,:)+nSamplesWaveform/2],[min(coords(:,2))*ones(1,4);max(coords(:,2))*ones(1,4)],'k:');
+if nargin < 3
+    plot(hAx,[xBase(2,:)+nSamplesWaveform/2;xBase(2,:)+nSamplesWaveform/2],[min(coords(:,2))*ones(1,4);max(coords(:,2))*ones(1,4)],'k-');
 else
     chanMap = sortrows(chanMap,2);
     startInd = find(chanMap(:,2) < min(coords(:,2)) ,1,'last' );
     endInd = find(chanMap(:,2) > max(coords(:,2)) ,1,'first' );
     tempChanMap = chanMap(startInd:endInd,:);
     [~,idx] = ismember(tempChanMap(:,1), xBase(1,:));
-    plot(hAx,xBase(2,idx)+nSamplesWaveform/2,tempChanMap(:,2),'ks','MarkerFaceColor','k');
+    plot(hAx,xBase(2,idx)+nSamplesWaveform/2,tempChanMap(:,2),'ks','MarkerFaceColor','k','MarkerSize',4);
 end
 
 col    = scanpix.fxchange.cbrewer('qual', 'Set1', max([length(meanWaveforms), 3]), 'PCHIP' ); % cbrewer makes nice colormaps
@@ -54,5 +55,5 @@ for j = 1:length(meanWaveforms)
 end
 hold(hAx,'off');
 
-set(hAx,'xlim',[-3 xBase(2,4)+nSamplesWaveform+3],'xtick',sort(xBase(2,:))+nSamplesWaveform/2,'xticklabel',sort(xBase(1,:)),'ylim',[min(coords(:,2))-scalingFact/4 max(coords(:,2))+scalingFact],'ytick',[min(coords(:,2)) max(coords(:,2))],'yticklabel',round([min(coords(:,2)),max(coords(:,2))]));  
+set(hAx,'xlim',[-3 xBase(2,4)+nSamplesWaveform+3],'xtick',sort(xBase(2,:))+nSamplesWaveform/2,'xticklabel',sort(xBase(1,:)),'ylim',[min(coords(:,2))-scalingFact/4 max(coords(:,2))+scalingFact/2],'ytick',[min(coords(:,2)) max(coords(:,2))],'yticklabel',round([min(coords(:,2)),max(coords(:,2))]));  
 end

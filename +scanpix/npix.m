@@ -89,11 +89,11 @@ classdef npix < handle
             
             if nargin == 0
                 obj.params = scanpix.helpers.getParams(obj,'default');
-                uiFlag         = true;
+                uiFlag     = true;
             else
                 obj.params = scanpix.helpers.getParams(obj,prmsMode);
                 if nargin < 2
-                    uiFlag     = true;
+                    uiFlag = true;
                 end
             end
             
