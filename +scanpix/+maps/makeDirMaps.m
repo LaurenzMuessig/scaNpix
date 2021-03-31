@@ -44,6 +44,7 @@ prms.binSizeDir           = 6;         % in degrees
 prms.speedFilterFlagDMaps = 0;  % y/n
 prms.speedFilterLimits    = [2.5 400]; % in cm/s
 prms.PosFs                = 50;        % in Hz
+prms.showWaitBar          = false;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -91,6 +92,8 @@ occMapRaw               = accumarray(HDBinned(~isnan(HDBinned)),1,[nBins 1]) ./ 
 kernel           = ones(prms.dirSmoothKern,1) ./ prms.dirSmoothKern;
 sm_occMaps       = imfilter(occMapRaw,kernel,'circular');
  
+if prms.showWaitBar; hWait = waitbar(0); end
+
 % pre-allocate
 dirMaps          = cell(length(spkTimes),1);
 for i = 1:length(spkTimes)
@@ -109,9 +112,12 @@ for i = 1:length(spkTimes)
     sm_spkDirMap    = imfilter(spkMapRaw,kernel,'circular');
     % dir map
     dirMaps{i}      = sm_spkDirMap ./ sm_occMaps;
+        
+    if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Dir Maps... %i/%i done.',i,length(spkTimes))); end
 
 end
 
+if prms.showWaitBar; close(hWait); end
 
 end
 

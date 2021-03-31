@@ -142,10 +142,10 @@ classdef npix < handle
             end
             
             if nargin < 2
-                str = {'all','pos','spikes','lfp'};
+                str = {'all','meta','pos','spikes','lfp'};
                 [select, loadCheck] = listdlg('PromptString','Select what data to load:','ListString',str,'ListSize',[160 100]);
                 if ~loadCheck
-                    warning('scaNpix: No data selected. Nothing is loaded. Boring...');
+                    warning('scaNpix::load: No data selected. Nothing is loaded. Boring...');
                     return;
                 else
                     loadMode = str(select);
@@ -523,7 +523,7 @@ classdef npix < handle
                 clu_Depth      = clu_Depth(~indEmpty);
             end
             % sort by depth
-            [clu_Depth, indSort] = sort(clu_Depth,'descend');
+            [clu_Depth, indSort] = sort(clu_Depth,'ascend');
             spikeTimesFin        = spikeTimesFin(indSort);
             good_clusts          = good_clusts(indSort);
             cluLabel             = cluLabel(indSort);

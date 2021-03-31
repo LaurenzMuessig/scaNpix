@@ -16,6 +16,7 @@ function prms = defaultParamsRateMaps
 % general
 prms.speedFilterLimitLow  = 2.5;
 prms.speedFilterLimitHigh = 400;
+prms.showWaitBar          = false;
 
 % rate maps
 prms.speedFilterFlagRMaps = 1;    % y/n

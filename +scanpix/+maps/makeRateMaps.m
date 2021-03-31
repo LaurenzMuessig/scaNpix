@@ -44,6 +44,7 @@ prms.alpha                = 200;
 prms.speedFilterFlagRMaps = 0;  % y/n
 prms.speedFilterLimits    = [2.5 400];
 prms.mapSize              = [];
+prms.showWaitBar          = false;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,6 +113,8 @@ else
     sm_pMaps              = cell(length(spkTimes), 1); % pre-allocate for adaptive smoothing
 end
 
+if prms.showWaitBar; hWait = waitbar(0); end
+
 for i = 1:length(spkTimes)
     % spike Map
     if isempty(sampleTimes)
@@ -138,7 +141,9 @@ for i = 1:length(spkTimes)
         otherwise
             error([prms.smooth ' is not a valid option for smoothing rate maps']);
     end 
+    
+    if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Rate Maps... %i/%i done.',i,length(spkTimes))); end
 end
-
+if prms.showWaitBar; close(hWait); end
 end
 
