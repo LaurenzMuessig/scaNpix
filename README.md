@@ -130,11 +130,11 @@ _some more details should go here_
 
 # B) Parameter space:
 
-There are two different parameter spaces that are used within the scaNpix
+There are two different parameter spaces that are used within _scaNpix_
 
 ## 1.	General 
 Parameters that are used when loading data and doing some basic pre-processing (e.g. position smoothing). Typically, you will not need to change the majority of these and they are stored in obj.params as a [map container](https://www.mathworks.com/help/matlab/map-containers.html). You can access values by using the name of the individual parameter as the key (e.g. _obj.params(‘posFS’)_ will give you the position sample rate and _obj.params.keys_ will give you a list of all parameters in the container).
-The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (scanpix.helpers.saveParams(obj,‘container’)_ can write the current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\+scanpix\files\YourFile.mat'_ 
+The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (_scanpix.helpers.saveParams(obj,‘container’)_ can write the current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\+scanpix\files\YourFile.mat'_ 
 
 ### Full List DACQ:
 *	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their tracking 
