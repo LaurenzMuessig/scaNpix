@@ -134,10 +134,10 @@ There are two different parameter spaces that are used within _scaNpix_
 
 ## 1.	General 
 Parameters that are used when loading data and doing some basic pre-processing (e.g. position smoothing). Typically, you will not need to change the majority of these and they are stored in obj.params as a [map container](https://www.mathworks.com/help/matlab/map-containers.html). You can access values by using the name of the individual parameter as the key (e.g. _obj.params(‘posFS’)_ will give you the position sample rate and _obj.params.keys_ will give you a list of all parameters in the container).
-The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (_scanpix.helpers.saveParams(obj,‘container’)_ can write the current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\+scanpix\files\YourFile.mat'_ 
+The default values are generated with _defaultParamsContainer.m_ and you should leave these as they are, but you can save your own version to a file (_scanpix.helpers.saveParams(obj,‘container’)_ can write the current map container in object to disk). You should store your parameter file in _'PathOnYourDisk\\+scanpix\files\YourFile.mat'_ 
 
 ### Full List DACQ:
-*	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their tracking 
+*	_ScalePos2PPM_ – scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion, if you recorded data across different environments that have a different size and/or pix/m setting for their camera setup
 *	_posMaxSpeed_ – speed > posMaxSpeed will be assumed tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
 *	_posSmooth_ – smooth position data over this many seconds (_default=0.4_)
 *	_posHead_ – relative position of head to headstage LEDs (_default=0.5_) 
@@ -147,7 +147,7 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
 *	_cutTag2_ – cut file tag that follows \_tetrodeN in filename (_default=’’_)
 *	_lfpFs_ – low sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (250Hz)
 *	_lfpHighFs_ – high sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (4800Hz)
-*	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='PathToThe@dacqCodeOnYourDisk'_)
+*	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='Path/To/The//+scaNpix/Code/On/Your/Disk'_)
 *	_myRateMapParams_ – _'FileNameOfYourRateMapParams.mat'_ (_default=’’_)
   
   
@@ -161,7 +161,7 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
 *	_lodFromPhy_ – logical flag to indicate what sorting results to use. If _true_ we'll try Phy otherwise we'll use the raw kilosort results
 *	_APFs_ –  sampling rate for single unit neuropixel data (30000Hz)
 *	_lfpFs_ – sampling rate for lfp from neuropixel data (2500Hz)
-*	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='PathToThe@dacqCodeOnYourDisk'_)
+*	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='Path/To/The/+scaNpix/Code/On/Your/Disk'_)
 *	_myRateMapParams_ – _'FileNameOfYourRateMapParams.mat'_ (_default=’’_)
 
 
@@ -169,7 +169,7 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
 ## 2.	Parameters for rate maps. 
 These are stored as a scalar MATLAB structure in _obj.mapParams_ (note that _obj.mapParams_ is a hidden property) and the default values are generated with _sapix.maps.defaultParamsRateMaps.m_ – again do not edit anything in there. 
 You can edit these parameters on the fly when generating different kinds of rate maps.
-If you want to use your own custom values by default you should edit them within object and then save them to disk using _scanpix.helpers.saveParams(obj,‘maps’)_ to _PathOnYourDisk\+scanpix\files\YourFile.mat_. Then go and set _obj.params(‘myRateMapParams’)='PathToYourFile’_. 
+If you want to use your own custom values by default you should edit them within object and then save them to disk using _scanpix.helpers.saveParams(obj,‘maps’)_ to _PathOnYourDisk/+scanpix/files/YourFile.mat_. Then go and set _obj.params(‘myRateMapParams’)='Path/To/Your/File’_. 
 
 ### Full list:
 
