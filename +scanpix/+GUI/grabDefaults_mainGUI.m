@@ -34,14 +34,13 @@ switch lower(defType)
         defStruct.nWaveForms      = 250;
         defStruct.sACColMap       = 'jet';
         % compare cells tab
-%         defStruct.ac_bSz_shortLag = 0.001;
-%         defStruct.ac_bSz_shortLag = 0.02;
         % linearise tab
     case 'gui'
         defStruct.outputDir       = [cd filesep];
         defStruct.filename_suffix = datestr(now,'yymmdd');
     case 'maps'
         defStruct                 = scanpix.maps.defaultParamsRateMaps;
+        defStruct.showWaitBar     = true;
 end
 %
 field = fieldnames(defStruct);

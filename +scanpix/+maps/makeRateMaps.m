@@ -121,7 +121,7 @@ for i = 1:length(spkTimes)
         spkPosBinInd = ceil(spkTimes{i} .* prms.PosFs ); 
     else
         % as sample times in e.g. neuropixel can have some jitter we can't just bin by sample rate
-        spkPosBinInd = arrayfun(@(x) find(sampleTimes - x > 0,1,'first'), spkTimes{i}, 'UniformOutput', 0); 
+        [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
         spkPosBinInd = cell2mat(spkPosBinInd);
     end
     

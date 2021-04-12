@@ -142,7 +142,7 @@ classdef npix < handle
             end
             
             if nargin < 2
-                str = {'all','meta','pos','spikes','lfp'};
+                str = {'all','pos','spikes','lfp'};
                 [select, loadCheck] = listdlg('PromptString','Select what data to load:','ListString',str,'ListSize',[160 100]);
                 if ~loadCheck
                     warning('scaNpix::load: No data selected. Nothing is loaded. Boring...');
@@ -181,7 +181,7 @@ classdef npix < handle
                         case 'spikes'
                             obj.loadSpikes(trialInd(i));
                         case 'lfp'
-                            
+                            %%% TO DO !!!!!
                             %                             obj.loadLFPs(trialInd(i));
                         case 'meta'
                             % already loaded!
@@ -470,8 +470,8 @@ classdef npix < handle
                 clu_info       = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'tab');
                 goodLabel      = strcmp(cellstr(clu_info.group),'good');
                 good_clusts    = clu_info.id(goodLabel) + 1;
-                clu_Depth      = clu_info.depth(goodLabel);
-                clu_Ch         = clu_info.ch(goodLabel) + 1; % this is 0 based I think
+                clu_Depth      = clu_info.depth(goodLabel);  % I think this amd the following seem to not give correct results in somce cases?? Phy Issue?? 
+                clu_Ch         = clu_info.ch(goodLabel) + 1; % this is 0 based 
                 cluLabel       = string(clu_info.group);
                 cluLabel       = cluLabel(goodLabel);
             else
