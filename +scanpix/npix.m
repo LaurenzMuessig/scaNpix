@@ -239,8 +239,8 @@ classdef npix < handle
             fidMeta  = fopen(fullfile(metaDataFile.folder,metaDataFile.name),'r');
             C        = textscan(fidMeta, '%[^=] = %[^\r\n]');
             fclose(fidMeta);
-            obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
-            obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
+%             obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
+%             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
             %%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
             
             % load channel map
@@ -253,13 +253,15 @@ classdef npix < handle
             chanMapStruct = load(chanMapName);
             f = fieldnames(chanMapStruct);
             for i = 1:length(f)
-                obj.chanMap(trialIterator).(f{i}) = chanMapStruct.(f{i});
+                obj.chanMap(trialIterator).(f{i})  = chanMapStruct.(f{i});
             end
+            obj.trialMetaData(trialIterator).nChan = sum(chanMapStruct.connected);
             
             if isempty(obj.dataSetName)
                 obj.dataSetName = ['r' num2str(metaXMLFile.animal) '_' num2str(metaXMLFile.date)];
             end
             
+
         end
         
         %%
@@ -581,15 +583,13 @@ classdef npix < handle
             
             % deal with loading params
             if nargin == 1
-                % use defaults
-                addParams = cell(2,0);
-                nChan     = obj.trialMetaData(1).nChanTot;
-                ext       = obj.fileType;
+                % use defaults, only add channel n from object metadata
+                addParams = {'nch'; obj.trialMetaData(1).nChan};
             elseif strcmp(varargin{1},'ui')
                 % UI dialoge
-                prompts = {'ext',    'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'unwhiten' };
-                varargs = {'',       'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'unwhite' };
-                defVals = {'.ap.bin', obj.trialMetaData(1).nChanTot, 250,                  5,                  30,                  0.375,             0,           0};
+                prompts = {'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'unwhiten' };
+                varargs = {'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'unwhite'  };
+                defVals = { obj.trialMetaData(1).nChan,    250,                  5,                  40,                  0.375,             0,           0         };
                 
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
@@ -602,38 +602,18 @@ classdef npix < handle
                     addParams{1,i-1} = varargs{i};
                     addParams{2,i-1} = rtn{i,2};
                 end
-                nChan = rtn{strcmp(varargs,'nch'),2};
-                ext = rtn{1,2};
             else
                 % name-value pairs
                 addParams = {varargin{1:2:end};varargin{2:2:end}};
-                if any(strcmp(addParams(1,:),'nch'))
-                    nChan = addParams{2,strcmp(addParams(1,:),'nch')};
-                else
-                    nChan = obj.trialMetaData(1).nChanTot;
+                % always add channel n unless already supplied
+                if ~any(strcmp(addParams(1,:),'nch'))
+                    addParams(:,end+1) = {'nch'; obj.trialMetaData(1).nChan};
                 end
-                if any(strcmp(addParams,'ext'))
-                    ext = addParams{2,strcmp(addParams(1,:),'ext')};
-                    addParams = addParams(:,~strcmp(addParams(1,:),'ext'));
-                else
-                    ext = obj.fileType;
-                end
-                
+
             end
-            % now deal with channel(s) we want to ignore
-            if nChan == 385
-                ignoreChan = [192, 385, obj.badChans(:)]; % [ref sync other bad channels];
-            else
-                %                 ignoreChan = obj.badChan; %%%%% this needs adding to
-                %                 class def
-                ignoreChan = [];
-            end
-            addParams(:,end+1) = {'remchan';ignoreChan};
-            
+
             for i = 1:length(obj.trialNames)
-                binFile = dir(fullfile(obj.dataPath{i},['*' ext]));
-                tempST = cellfun(@(x) x + obj.trialMetaData(i).offSet, obj.spikeData.spk_Times{i},'uni',0); % add offset to spike times
-                [obj.spikeData.spk_waveforms{i,1}, obj.spikeData.spk_waveforms{i,2}] = scanpix.npixUtils.getWaveforms(fullfile(binFile.folder,binFile.name),tempST, obj.cell_ID(:,3), addParams{:});
+                obj = extract_waveforms(obj,i,addParams{:});
             end
         end
         

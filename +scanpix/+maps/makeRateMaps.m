@@ -117,6 +117,7 @@ if prms.showWaitBar; hWait = waitbar(0); end
 
 for i = 1:length(spkTimes)
     % spike Map
+
     if isempty(sampleTimes)
         spkPosBinInd = ceil(spkTimes{i} .* prms.PosFs ); 
     else
@@ -124,7 +125,6 @@ for i = 1:length(spkTimes)
         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
         spkPosBinInd = cell2mat(spkPosBinInd);
     end
-    
     spkPosBinned     = posBinned(spkPosBinInd,:);
     spkMapRaw        = accumarray(spkPosBinned(~isnan(spkPosBinned(:,1)),:), 1, nBins);
     
