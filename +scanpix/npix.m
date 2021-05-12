@@ -243,6 +243,8 @@ classdef npix < handle
 %             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
             %%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
             
+            obj.trialMetaData(trialIterator).posFs = 50; % HARCODED ATM! Should maybe be added to xml file?
+            
             % load channel map
             chanMapInfo = dir(fullfile(obj.dataPath{trialIterator},'*ChanMap*'));
             if isempty(chanMapInfo)
@@ -313,7 +315,7 @@ classdef npix < handle
             
             % in case logging point grey data was corrupt
             if all(sampleT == 0)
-                sampleT          = (0:1/prms.Fs:length(led)/prms.Fs)';
+                sampleT          = (0:1/obj.trialMetaData(trialIterator).posFs:length(led)/obj.trialMetaData(trialIterator).posFs)';
                 sampleT          = sampleT(1:length(led)); % pretend we have perfect sampling
                 frameCount       = 1:length(led); % pretend we are not missing any frames
                 obj.trialMetaData(trialIterator).BonsaiCorruptFlag = true;
@@ -441,7 +443,7 @@ classdef npix < handle
             if ~isfield(obj.trialMetaData,'BonsaiCorruptFlag')
                 syncTTLs = scanpix.npixUtils.loadSyncData();
             else
-                syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag); %% WHAT ABOUT PARAMS - AT LEAST NCHAN SHOULD BE GRABBED FROM OBJ
+                syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag); 
             end
            
             
