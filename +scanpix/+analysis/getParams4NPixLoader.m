@@ -51,7 +51,7 @@ prms.paramsFName        = 'tempParams';
 %
 prms.mode               = 'hc'; % 'hc' - hardcoded in prms section; 'ui' - user input (select trials in dialog)
 % trial names etc - when using 'hc' option
-prms.dataPath         = ''; % 'Z:\lmuessig\!postDoc\recording_data\CA1\';
+prms.dataPath           = ''; % 'Z:\lmuessig\!postDoc\recording_data\CA1\';
 prms.Tnames             = {''}; % list of trials to load _famBox _sleepHP _sqTrack
 prms.path2RateMapParams = '';
 

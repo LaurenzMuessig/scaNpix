@@ -1,40 +1,36 @@
 function NPixObj = npix_Loader( varargin )
-% DACQ_dataLoader_v2 - Load DACQ data from raw into a dacq class object. 
-% The parameter space is controlled by 'getParams4DACQLoader' and you can 
+% NPixObj - Load neuropixel data from raw into a npix class object. 
+% The parameter space is controlled by 'getParams4NPixLoader' and you can 
 % pass any params you want to change as prmsStruct or Name-Value pair list 
 % to overwrite the defaults
 % Atm we save a params container based on the above to disk and then
 % overwrite the defaults after initialising object - this is a bit ugly but
-% seems the easiest way (could add automatic deletion of file after
-% loading?)
+% seems the easiest way
 % 
 %
-% Usage:    dacqObj = DACQ_dataLoader
-%           dacqObj = DACQ_dataLoader( mode, optionalInputStruct )
-%           dacqObj = DACQ_dataLoader( mode, 'inputName', inputVal, .. etc .. )
+% Usage:    NPixObj = npix_Loader
+%           NPixObj = npix_Loader( optionalInputStruct )
+%           NPixObj = npix_Loader( 'inputName', inputVal, .. etc .. )
 %
 %
-% Outputs:  dacqObj - dacq class object with data loaded
+% Outputs:  NPixObj - npix class object with data loaded
 %
-% LM 2020
+% LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %% TO-DO
 
+
 %% PARAMS
 
 prms = scanpix.analysis.getParams4NPixLoader(varargin{:});
 
-% need pos + tet data when making maps
+% need pos + spike data when making maps
 if prms.makeRMaps || prms.makeDirMaps || prms.makeLinMaps 
     prms.loadPos    = true;
     prms.loadSpikes = true;
 end
-
-% if prms.loadTet
-%     prms.loadPos = true;
-% end
 
 classFolder = what('+scanpix');
 
@@ -75,6 +71,8 @@ switch prms.mode
     case 'ui'
         NPixObj            = scanpix.npix('ui');    
 end
+delete( fullfile(classFolder.path,'files',[prms.paramsFName '.mat']));
+
 % load
 str = {'pos','spikes','lfp'};
 str = str([prms.loadPos prms.loadSpikes prms.loadEEG]);
