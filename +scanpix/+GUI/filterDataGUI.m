@@ -7,7 +7,9 @@ function index = filterDataGUI(filtVals,criterion,type, direction)
 switch lower(type)
     case 'bylabel'
         index = strcmp(filtVals,criterion);
-    case 'spatialinfo'
+    case 'byvalue'
+        fH = str2func(direction);
+        index = fH(filtVals,criterion);
     case 'custom'
     otherwise
 end
