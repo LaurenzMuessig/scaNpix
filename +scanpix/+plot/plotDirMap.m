@@ -22,14 +22,16 @@ end
 
 % plot as line rather than 'polarplot' as I don't like the circle outline
 % of the polarplots in Matlab
+plot(hAx,[-1 1; 0 0]',[0 0; -1 1]','k-','linewidth',1.5); % axis
+hold(hAx,'on');
 [x,y] = pol2cart(thetas, rhos);
 plot(hAx, [x; x(1)], [y; y(1)],'k','linewidth',2);
-hold(hAx,'on');
-% plot mean vector and format axis
+% plot mean vector 
 [x,y] = pol2cart(meanDir,meanR);
-plot(hAx,[0 x],[0 y],'r-','linewidth',2); % mean vector
-plot(hAx,[-1 1; 0 0]',[0 0; -1 1]','k-','linewidth',1.5);
+plot(hAx,[0 x],[0 y],'r-','linewidth',2);
+% format axis
 hold(hAx,'off');
 axis(hAx,'square');
+axis(hAx,'off');
 end
 

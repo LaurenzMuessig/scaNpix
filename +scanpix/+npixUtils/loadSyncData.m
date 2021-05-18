@@ -100,7 +100,7 @@ elseif BonsaiCorruptFlag
     elseif nFramesBonsai - length(syncTTLs) == +1
         disp('Corrupt Point Grey MetaData Logging: +1 frame in position data. Assuming last frame is missing in neuropix data...')
     else
-        fprintf('Corrupt Point Grey MetaData Logging: Frame N mismatch is %i (Bonsai) vs. %i (Neuropix). We''ll assume even sampling between frames, but you should check carefully if n of mismatch is too big!\n', totalPosSamplesBonsai, length(syncTTLs{2}));
+        fprintf('Corrupt Point Grey MetaData Logging: Frame N mismatch is %i (Bonsai) vs. %i (Neuropix). We''ll assume even sampling between frames, but you should check carefully if n of mismatch is too big!\n', nFramesBonsai, length(syncTTLs));
     end
     
 end

@@ -66,20 +66,28 @@ for i = 1:length(maps{1})
     
     for j = 1:length(maps)
         
-        waitbar(plotCount/nPlots,hWait,'Plotting rate maps, just bare with me!');
+        waitbar(plotCount/nPlots,hWait,['Plotting ' type ' maps, just bare with me!']);
         
         % plot
         hAx = scanpix.plot.addAxisScrollPlot( hScroll, [offsets p.Results.plotsize], p.Results.plotsep );
         
-        if strcmp(type,'rate') || strcmp(type,'spike') || strcmp(type,'pos')
+        if strcmpi(type,'rate') || strcmpi(type,'spike') || strcmpi(type,'pos')
             scanpix.plot.plotRateMap(maps{j}{i},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps)
         elseif  strcmp(type,'dir')
             scanpix.plot.plotDirMap(maps{j}{i},hAx);
+        elseif  strcmpi(type,'sacs')
+            imagesc(hAx,maps{j}{i}); colormap(hAx,jet);
+            axis(hAx,'square');
+            mapSz = size(maps{j}{i});
+            set(hAx,'ydir','normal','xlim',[0 mapSz(2)],'ylim',[0 mapSz(1)]);
+            axis(hAx,'off');
         end
         
         % plot peak rate
-        t = text(hAx);
-        set(t,'Units','pixels','position',[8 -6],'String',sprintf('fRate=%.1f',nanmax(maps{j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
+%         if ~strcmpi(type,'sacs')
+            t = text(hAx);
+            set(t,'Units','pixels','position',[8 -6],'String',sprintf('fRate=%.1f',nanmax(maps{j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
+%         end
         % plot cell ID string
         if j == 1
             t = text(hAx);
