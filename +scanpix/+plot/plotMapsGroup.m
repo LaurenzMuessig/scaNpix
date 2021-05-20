@@ -86,7 +86,7 @@ for i = 1:length(maps{1})
         % plot peak rate
 %         if ~strcmpi(type,'sacs')
             t = text(hAx);
-            set(t,'Units','pixels','position',[8 -6],'String',sprintf('fRate=%.1f',nanmax(maps{j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
+            set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',nanmax(maps{j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
 %         end
         % plot cell ID string
         if j == 1
