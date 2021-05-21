@@ -14,11 +14,11 @@ function [bits_per_spike, bits_per_sec] = spatial_info(rMaps, pMaps)
 % and also removes necessity for loop to get spat. info for a bunch of maps
 %
 %  Usage:  
-%    r = scanpix.analysis.spatial_info(rMaps, pMaps)
+%    [bits_per_spike, bits_per_sec] = scanpix.analysis.spatial_info(rMaps, pMaps)
 %
 %  Inputs: 
 %    rMaps - single rate map or cell array of rate maps
-%    pMaps - single corresponsing position map or cell array of corresponding position maps
+%    pMaps - single corresponding position map or cell array of corresponding position maps
 %
 %  Output: 
 %    bits_per_spike - 1:nMaps  array of spatial info per spike

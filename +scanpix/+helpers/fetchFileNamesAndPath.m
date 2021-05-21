@@ -27,7 +27,7 @@ end
 
 dirList = scanpix.fxchange.uigetfile_n_dir(defaultDir,'Select Top Level Folder(s) With Session Data');
 if isempty(dirList)
-    warning('scaNpix: Loading Aborted. Und tschuess!');
+    warning('scaNpix::fetchFileNamesAndPath:Loading Aborted. Und tschuess!');
     trialNames = [];
     dataDir    = '';
     return
@@ -37,6 +37,13 @@ end
 trialStruct = struct(dir('1'));
 for i = 1:length(dirList)
     trialStruct = vertcat(trialStruct,dir(fullfile(dirList{i},'**',['*' fileExt])));
+end
+
+if isempty(trialStruct)
+    warning('scaNpix::fetchFileNamesAndPath:No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
+    trialNames = [];
+    dataDir    = '';
+    return
 end
 
 [~,ind]   = sort([trialStruct.datenum]);

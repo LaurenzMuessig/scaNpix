@@ -58,7 +58,7 @@ rMapArray           = reshape(horzcat(maps{:}), numel(maps{1}), length(maps));
 rMapArray(unVisInd) = NaN; % set unvisited to NaN (only relevant if you compare different trials)
 rMapArray           = bsxfun(@minus, rMapArray, nanmean(rMapArray, 1) ); % subtract mean/cell
 
-A         = rMapArray(:);                                                    % this is column vector of all rate maps ([rateMap_cell2; rateMap_cell2;...;rateMap_cellN])
+A         = rMapArray(:);                                                    % this is column vector of all rate maps ([rateMap_cell1; rateMap_cell2;...;rateMap_cellN])
 B         = repmat( rMapArray, length(maps), 1 );                            % these are all ratemap column vectors copied nCell times (row wise), so in the end is ratemap_colVector*nCells x nCells
 AB        = reshape( bsxfun(@times, A, B), numel(maps{1}), length(maps)^2 ); % need to reshape so each column corresponds to a ratemap col vector for doing the sums
 sumAB     = nansum(AB, 1);                                                   % This is a 1 x nCells^2 vector, one sum(AB) for each ratemap comparison.

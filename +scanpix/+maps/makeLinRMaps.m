@@ -145,13 +145,21 @@ for s = 1:length(spikeTimes)
     if ~isempty(spikeTimes{s})
         spkMaps = nan(size(lin_pMaps));
         % Convert spike times to pos bin values %
+%         if isempty(sampleTimes)
+%             temp_ST           = ceil(spikeTimes{s} .* trackProps.posFs ); 
+%         else
+%             temp_ST = arrayfun(@(x) find(sampleTimes - x > 0,1,'first'), spikeTimes{s}, 'UniformOutput', 0); % as sample times can be somewhat irregular we can't just bin by sample rate
+%             temp_ST = cell2mat(temp_ST);
+%         end
         if isempty(sampleTimes)
-            temp_ST           = ceil(spikeTimes{s} .* trackProps.posFs ); 
+            temp_ST           = ceil(spikeTimes{s} .* trackProps.posFs );
         else
-            temp_ST = arrayfun(@(x) find(sampleTimes - x > 0,1,'first'), spikeTimes{s}, 'UniformOutput', 0); % as sample times can be somewhat irregular we can't just bin by sample rate
+            % as sample times in e.g. neuropixel can have some jitter we can't just bin by sample rate
+            [~, temp_ST] = arrayfun(@(x) min(abs(sampleTimes - x)), spikeTimes{s}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
             temp_ST = cell2mat(temp_ST);
         end
-        temp_ST(temp_ST == 0) = 1;
+        
+        temp_ST(temp_ST == 0) = 1; % this shouldn't happen. not sure why this is here -- CHECK
         % Bin both directions %
         spkLocAll             = linPosBinned(temp_ST,1); %spike locations
         spkMaps(1,:)          = histcounts(spkLocAll,binList);

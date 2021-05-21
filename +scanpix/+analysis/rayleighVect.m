@@ -1,5 +1,7 @@
 function [meanR,meanDir,thetas,rhos] = rayleighVect(dirMap)
-% rayleighVect - calculate Rayleigh vector from a directional rate maps
+% rayleighVect - calculate Rayleigh vector length and direction from a 
+% directional rate map. Also ouput angles and radii from underlying data as
+% convenient in case you want to also plot the data 
 % package: scanpix.analysis
 %
 %  Usage:   scanpix.analysis.rayleighVect( dirMap )
