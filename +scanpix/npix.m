@@ -46,7 +46,7 @@ classdef npix < handle
     end
     
     properties % maps %
-        maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[]);
+        maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[]);
         linMaps               struct  = struct('linRate',[],'linPos',[],'linRateNormed',[]);
     end
     
@@ -231,6 +231,10 @@ classdef npix < handle
                     obj.trialMetaData(trialIterator).(f{i}) = metaXMLFile.(f{i});
                 end
             end
+            % legacy: older xml files won't contain 'objectPos' field
+            if ~isfield(metaXMLFile,'objectPos')
+                obj.trialMetaData(trialIterator).objectPos = [];
+            end
             obj.trialMetaData(trialIterator).ppm = [];
             obj.trialMetaData(trialIterator).ppm_org = [];
             obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
@@ -361,8 +365,10 @@ classdef npix < handle
             %% post process - basically as scanpix.dacqUtils.postprocess_data_v2
             % scale data to standard ppm if desired
             if ~isempty(obj.params('ScalePos2PPM'))
-                led = floor(led .* (obj.params('ScalePos2PPM')/ppm(1)) );
+                scaleFact = (obj.params('ScalePos2PPM')/ppm(1));
+                led = floor(led .* scaleFact);
                 ppm(1) = obj.params('ScalePos2PPM');
+                obj.trialMetaData(trialIterator).objectPos = obj.trialMetaData(trialIterator).objectPos .* scaleFact;
             end
             
             % remove tracking errors (i.e. too fast)

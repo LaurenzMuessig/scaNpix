@@ -1,4 +1,4 @@
-function [rMapBinned, cMapBinned] = binAnyRMap(rMap,cMap,nSteps,RGB4nans,binVals)
+function [rMapBinned, cMapBinned] = binAnyRMap(rMap,cMap,nSteps,binVals,RGB4nans)
 % bin any rate map for plotting and create a corresponding colormap using
 % Matlab's in-built colormaps. In particular we want to control the range
 % across which we bin, as well as including a color for nan's which are
@@ -33,7 +33,7 @@ if nargin < 4
     RGB4nans = [1 1 1];
     binVals  = [0 nanmax(rMap(:))];
 elseif nargin == 4
-    binVals  = [0 nanmax(rMap(:))];
+    RGB4nans = [1 1 1];
 end
 
 % make colormap

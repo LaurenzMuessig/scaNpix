@@ -44,7 +44,7 @@ if ~obj.loadFlag
 end
 
 if nargin < 2
-    str = {'rate','dir','lin','ego'};
+    str = {'rate','dir','lin','objVect'};
     [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
     if ~loadCheck
         warning('scaNpix::maps::addMaps: No data selected. No maps will be created. Boring...');
@@ -132,7 +132,7 @@ prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % make some maps
-switch mapType
+switch lower(mapType)
     case 'rate'
         for i = trialInd
             [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
@@ -197,6 +197,13 @@ switch mapType
             trackProps.posFs = obj.params('posFs'); 
             [obj.linMaps(1).linRate{i},obj.linMaps(1).linPos{i},obj.posData(1).linXY{i},obj.linMaps(1).linRateNormed{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i},...
                                                                                                                                 obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+        end
+        
+    case 'objvect'
+        for i = trialInd
+            if ~isempty(obj.trialMetaData(i).objectPos)
+                obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
+            end
         end
         
     otherwise

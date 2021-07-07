@@ -52,6 +52,13 @@ prms.posIsCircular        = 0;
 prms.remTrackEnds         = 0;  % Remove this many bins from each end of the linear track. Set to 0 to remove none.
 prms.normSort             = 1;
 
+% object vector maps
+prms.binSz_dist           = 2.5;   % in cm;  2cm in Høydal et al (2019)
+prms.binSz_dir            = 5;     % in degrees;  5deg in Høydal et al (2019)
+prms.posFs                = 50;    % sample rate
+prms.smKernelSz_OV        = [5 3];
+prms.smSigma_OV           = 2;
+
 % don't change
 prms.dirTolerance = prms.dirTolerance * pi/180; % radians
 
