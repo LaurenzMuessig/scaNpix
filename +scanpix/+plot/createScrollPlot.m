@@ -59,14 +59,15 @@ function wheelScroll( hFig, evnt )
 
 %%
 
-prctMove = 0.05; % scroll by this much % of panel size / event (5% seems good)
-
 % we want to update the panel and the slider position
 
 % current panel position
 hPan        = findall(hFig,'Tag','canvas');
 p           = get(hPan, 'Position');
 orgPanelSz  = get(hPan, 'UserData');
+
+prctMove = orgPanelSz(2) / p(4) / 4; % scroll by this much % of panel size / event (1/4 of org panel size seems good)
+
 
 if evnt.VerticalScrollCount < 0 % scroll up
     % update panel - make sure we stay within canvas size

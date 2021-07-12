@@ -33,7 +33,7 @@ switch lower(defType)
         defStruct.rMapColNSteps   = 11;
         defStruct.nWaveForms      = 250;
         defStruct.sACColMap       = 'jet';
-        defStruct.OVcolMap        = 'jet';
+        defStruct.OVcolMap        = 'parula';
         defStruct.normColMapByMax = false;
         % compare cells tab
         % linearise tab

@@ -44,7 +44,7 @@ else
 end
 % plot heat map
 imagesc(hAx, rMapBinned);
-% caxis(hAx, [0 nanmax(rMapBinned(:))]);
+caxis(hAx, [0 p.Results.nsteps+1]);
 colormap(hAx, cMapBinned);
 axis(hAx,'off');
 

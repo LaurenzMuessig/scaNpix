@@ -84,10 +84,8 @@ for i = 1:length(maps{1})
         end
         
         % plot peak rate
-%         if ~strcmpi(type,'sacs')
             t = text(hAx);
             set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',nanmax(maps{j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
-%         end
         % plot cell ID string
         if j == 1
             t = text(hAx);
@@ -95,7 +93,7 @@ for i = 1:length(maps{1})
         end
         % update
         offsets(1) = offsets(1) + p.Results.plotsize(1) + 1.5*p.Results.plotsep(1);
-        nRowPlots = nRowPlots + 1; %+ prms.plot_sAC;
+        nRowPlots = nRowPlots + 1; %;
         
         if nRowPlots >= nPlotsPerRow
             offsets(1) = p.Results.offsetbase(1);

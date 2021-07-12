@@ -56,7 +56,7 @@ prms.normSort             = 1;
 prms.binSz_dist           = 2.5;   % in cm;  2cm in Høydal et al (2019)
 prms.binSz_dir            = 5;     % in degrees;  5deg in Høydal et al (2019)
 prms.posFs                = 50;    % sample rate
-prms.smKernelSz_OV        = [5 3];
+prms.smKernelSz_OV        = 5;
 prms.smSigma_OV           = 2;
 
 % don't change
