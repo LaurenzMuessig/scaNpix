@@ -48,10 +48,14 @@ end
 spikeInd = ceil(spikeT .* p.Results.srate); % bin spikes
 
 % plot
-plot(hAx,xy(:,1),xy(:,2),'k-','linewidth',0.5);
-hold(hAx, 'on');
-plot(hAx,xy(spikeInd,1),xy(spikeInd,2),'rs','LineStyle','none','MarkerFaceColor','r','MarkerEdgeColor','none','MarkerSize',p.Results.msize);
-hold(hAx, 'off');
+plot(hAx,xy(:,1),xy(:,2),'k-',xy(spikeInd,1),xy(spikeInd,2),'rs')
+hAx.Children(1).LineStyle = 'none'; hAx.Children(1).MarkerFaceColor = 'r'; hAx.Children(1).MarkerEdgeColor = 'none'; hAx.Children(1).MarkerSize = p.Results.msize; % spike pos  
+hAx.Children(2).LineWidth = 0.5; % path
+% 'linewidth',0.5);
+% plot(hAx,xy(:,1),xy(:,2),'k-','linewidth',0.5);
+% hold(hAx, 'on');
+% plot(hAx,xy(spikeInd,1),xy(spikeInd,2),'rs','LineStyle','none','MarkerFaceColor','r','MarkerEdgeColor','none','MarkerSize',p.Results.msize);
+% hold(hAx, 'off');
 if ~p.Results.axvis; axis(hAx, 'off'); end
 end
 

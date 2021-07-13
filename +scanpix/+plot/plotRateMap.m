@@ -43,10 +43,19 @@ else
     [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, p.Results.nsteps,p.Results.binVals); % bin rate map
 end
 % plot heat map
-imagesc(hAx, rMapBinned);
-caxis(hAx, [0 p.Results.nsteps+1]);
+if isfield(hAx.Children,'CData')
+    % faster in case figure already contains an image
+    hAx.Children.CData = rMapBinned;
+    hAx.CLim = [0 p.Results.nsteps+1]; 
+else
+    imagesc(hAx,'CData',rMapBinned,[0 p.Results.nsteps+1]);
+end
 colormap(hAx, cMapBinned);
 axis(hAx,'off');
+
+% imagesc(hAx, rMapBinned);
+% caxis(hAx, [0 p.Results.nsteps+1]);
+% colormap(hAx, cMapBinned);
 
 end
 

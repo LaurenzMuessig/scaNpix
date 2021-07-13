@@ -20,7 +20,7 @@ defaultOffsetBase     = [60 50];  % pixel
 defaultFigName        = 'MapGroup';  
 % 
 p = inputParser;
-addOptional(p,'cellIDStr',defaultCellIDStr);
+addOptional(p,'cellIDStr',defaultCellIDStr,@isstring);
 addParameter(p,'cmap',defaultCMap,@ischar);
 addParameter(p,'nsteps',defaultNSteps,@isscalar);
 addParameter(p,'basewidth',defaultBaseWdthFigure);
@@ -55,6 +55,7 @@ end
 offsets   = p.Results.offsetbase;
 hScroll = scanpix.plot.createScrollPlot( [figSize(1:2) nPlotsPerRow*p.Results.plotsize(1)+nPlotsPerRow*p.Results.plotsep(1)+3*offsets(1) figSize(4) ]  );
 hScroll.hFig.Name = p.Results.figname;
+hScroll.hFig.Visible = 'off'; % hiding figure speeds up plotting by a fair amount
 % open a waitbar
 nPlots    = length(maps)*length(maps{1});
 plotCount = 1;
@@ -66,6 +67,7 @@ for i = 1:length(maps{1})
     
     for j = 1:length(maps)
         
+        
         waitbar(plotCount/nPlots,hWait,['Plotting ' type ' maps, just bare with me!']);
         
         % plot
@@ -76,10 +78,11 @@ for i = 1:length(maps{1})
         elseif  strcmp(type,'dir')
             scanpix.plot.plotDirMap(maps{j}{i},hAx);
         elseif  strcmpi(type,'sacs')
-            imagesc(hAx,maps{j}{i}); colormap(hAx,jet);
-            axis(hAx,'square');
             mapSz = size(maps{j}{i});
-            set(hAx,'ydir','normal','xlim',[0 mapSz(2)],'ylim',[0 mapSz(1)]);
+            imagesc(hAx,'CData',maps{j}{i}); colormap(hAx,jet);
+            axis(hAx,'square');
+            
+            set(hAx,'xlim',[0 mapSz(2)],'ylim',[0 mapSz(1)]);
             axis(hAx,'off');
         end
         
@@ -106,12 +109,15 @@ for i = 1:length(maps{1})
             title(hAx,['Trial_' num2str(j)],'Interpreter','none');
         end
         plotCount = plotCount + 1;
+%         disp(plotCount);
     end
     % update and reset
 %     offsets(1) = i * (p.Results.plotsize(1)+p.Results.plotsep(1)) + p.Results.offsetbase(1);
 %     offsets(2) = p.Results.offsetbase(2);
 end
+
 close(hWait);
 
+hScroll.hFig.Visible = 'on';
 end
 

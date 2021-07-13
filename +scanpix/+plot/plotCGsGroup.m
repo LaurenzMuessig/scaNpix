@@ -54,7 +54,7 @@ end
 figSize     = [0.1*screenSz(3) 0.1*screenSz(4) figWdth figHght ]; 
 % open scrollable figure
 hScroll       = scanpix.plot.createScrollPlot(figSize); 
-
+hScroll.hFig.Visible = 'off'; % hiding figure speeds up plotting by a fair amount
 %wait bar
 hWait         = waitbar(0); 
 nPlots        = (length(spikeTimes)*(length(spikeTimes)+1))/2;
@@ -104,7 +104,7 @@ for i = 1:length(spikeTimes)
     offsets(1)     = i * (plotSize(1) + plotSep(1)) + offsetBase(1);
 end
 close(hWait);
-
+hScroll.hFig.Visible = 'on';
 end
 
 
