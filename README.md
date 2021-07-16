@@ -29,7 +29,7 @@ scanpix.maps.makeRateMaps(someInput);
 
 ## 2. Create a class object and load some data:
 
-We first create the object by grabbing some basic parameters (see also section about the parameter space) and then opening a UI dialogue to fetch which data to load. This will initialise the object, but not load any data from disk yet. To select what data to load we first select a parent directory. Then we will get a list of all data files contained within any sub directories and from this list we select which data we want to load (so if your parent directory contains a lot of data files the list will be long). This data will then be treated as one experiment. 
+We first create a data object by grabbing some basic parameters (see also section about the parameter space) and then opening a UI dialogue to fetch which data to load. This will initialise the object into the Matlab workspace, but not load any data from disk yet. To select what data to load we first select a parent directory. Then we will get a list of all data files contained within any sub directories and from this list we select which data we want to load (so if your parent directory contains a lot of data files the list will be long). This data will then be treated as one experiment. 
 
 ### Syntax: 
 ```
@@ -68,7 +68,7 @@ obj.load({‘all},’SomeSetFileName’); % load all types data for trial ’Som
 
 • You can start (a) GUI(s) by using a wrapper function (_scanpix.GUI.startGUI_) or by calling it directly (e.g. _mainGUI_)
 
-• When Launching a GUI, we will check if there are any class objects in the base workspace and ask user if he wants to import these, but you can also simply load the data from within the GUI
+• When Launching a GUI, we will check if there are any data objects in the base workspace and ask user if he wants to import these, but you can also simply load the data from within the GUI
 
 • In the GUI you can load and inspect multiple datasets/data from multiple experiments
 
