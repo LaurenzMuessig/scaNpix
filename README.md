@@ -23,7 +23,7 @@
 ```
 scanpix.maps.makeRateMaps(someInput);
 ```
-•	You can use Tab to autocomplete for subpackage and/or function name
+•	You can use the _Tab_ key to autocomplete for subpackage and/or function name
 
 
 
