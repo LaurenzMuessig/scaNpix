@@ -605,10 +605,15 @@ classdef npix < handle
                     return;
                 end
                 
-                addParams = cell(2,size(rtn,1)-1);
-                for i = 2:size(rtn,1)
-                    addParams{1,i-1} = varargs{i};
-                    addParams{2,i-1} = rtn{i,2};
+%                 addParams = cell(2,size(rtn,1)-1);
+%                 for i = 2:size(rtn,1)
+%                     addParams{1,i-1} = varargs{i};
+%                     addParams{2,i-1} = rtn{i,2};
+%                 end
+                addParams = cell(2,size(rtn,1));
+                for i = 1:size(rtn,1)
+                    addParams{1,i} = varargs{i};
+                    addParams{2,i} = rtn{i,2};
                 end
             else
                 % name-value pairs

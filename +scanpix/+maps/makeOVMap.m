@@ -40,6 +40,7 @@ end
 % this is a temp hack to deal with multiple obj trials - for now use first
 % in list as hard-coded
 if length(objPos) > 2
+    warning('Coordinates for several objects supplied. Will use first in list as reference. Multi object detection is not yet supported!');  
     objPos = objPos(1:2);
 end
 
@@ -58,7 +59,6 @@ dist                 = ceil( dist ./ prms.binSz_dist ); % binned
 minDistBInned        = ceil( prms.minDist ./ prms.binSz_dist );
 % angles to object      
 theta                = mod(atan2(xy(:,2)-objPos(2),xy(:,1)-objPos(1)), 2*pi); % all angles to obj in degrees %% IS THIS RIGHT??
-% theta                = mod(atan2(objPos(2)-xy(:,2),objPos(1))-xy(:,1), 2*pi); % all angles to obj in degrees
 
 % theta(theta < 0)     = theta(theta < 0) + 2*pi; % 0:360
 theta                = ceil( theta ./ binSzDir ); % binned
