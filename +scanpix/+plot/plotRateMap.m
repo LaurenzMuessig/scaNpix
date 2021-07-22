@@ -36,19 +36,25 @@ else
     hAx = p.Results.ax;
 end
 
+if strcmpi(p.Results.colmap,'poulter')
+    nSteps = 8;  % Steve's map has 8 fixed steps, so should ignore any dynamic setting here
+else
+    nSteps = p.Results.nSteps;
+end
+
 %% plot
 if isempty(p.Results.binVals)
-    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, p.Results.nsteps); % bin rate map
+    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, nSteps); % bin rate map
 else
-    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, p.Results.nsteps,p.Results.binVals); % bin rate map
+    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, nSteps,p.Results.binVals); % bin rate map
 end
 % plot heat map
 if isfield(hAx.Children,'CData')
     % faster in case figure already contains an image
     hAx.Children.CData = rMapBinned;
-    hAx.CLim = [0 p.Results.nsteps+1]; 
+    hAx.CLim = [0 nSteps+1]; 
 else
-    imagesc(hAx,'CData',rMapBinned,[0 p.Results.nsteps+1]);
+    imagesc(hAx,'CData',rMapBinned,[0 nSteps+1]);
 end
 colormap(hAx, cMapBinned);
 axis(hAx,'off');

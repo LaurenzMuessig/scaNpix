@@ -41,7 +41,9 @@ switch lower(cMap)
     case 'hcg' 
         temp = scanpix.maps.highContGrayColMap;
         ind  = round(linspace(1,length(temp),nSteps));
-        cMap = colormap(temp(ind,:));    
+        cMap = colormap(temp(ind,:));   
+    case 'poulter'
+        cMap = scanpix.maps.cm_Poulter;
     otherwise
         try
             cMap = feval( str2func(cMap), nSteps );
