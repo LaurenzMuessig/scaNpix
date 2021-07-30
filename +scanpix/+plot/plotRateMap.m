@@ -39,7 +39,7 @@ end
 if strcmpi(p.Results.colmap,'poulter')
     nSteps = 8;  % Steve's map has 8 fixed steps, so should ignore any dynamic setting here
 else
-    nSteps = p.Results.nSteps;
+    nSteps = p.Results.nsteps;
 end
 
 %% plot
@@ -50,7 +50,8 @@ else
 end
 % plot heat map
 if isfield(hAx.Children,'CData')
-    % faster in case figure already contains an image
+    % faster in case figure already contains an image - NOT SURE THIS IS
+    % EVER REACHED! NEEDS TESTING
     hAx.Children.CData = rMapBinned;
     hAx.CLim = [0 nSteps+1]; 
 else
