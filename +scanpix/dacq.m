@@ -44,7 +44,7 @@ classdef dacq < handle
     end
    
     properties % maps %
-        maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[]);
+        maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[],'speed',[]);
         linMaps               struct  = struct('linRate',[],'linPos',[],'linRateNormed',[]);
     end
     

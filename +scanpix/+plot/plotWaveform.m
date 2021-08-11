@@ -42,6 +42,11 @@ if isempty(waveforms)
 end
 
 %% plot
+if size(waveforms,3) == 1
+    % in case of 1 spike, duplicate that to make code compatible 
+    waveforms = shiftdim(cat(3,waveforms,waveforms),2);
+end
+
 meanWFs = squeeze(nanmean(waveforms,1));
 if size(meanWFs,1) == 1; meanWFs = meanWFs'; end
 
@@ -53,6 +58,7 @@ if size(waveforms,1) > p.Results.maxWaves
 else
     waveforms = squeeze(waveforms(:,:,maxInd));
 end
+
 
 if p.Results.plotIndWFs; plot(hAx,waveforms','color',[0.5 0.5 0.5],'linewidth',.3); end
 hold(hAx, 'on');
