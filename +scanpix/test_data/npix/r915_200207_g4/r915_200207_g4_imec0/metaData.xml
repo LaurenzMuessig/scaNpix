@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session>
+  <!-- session meta data -->
+  <animal>915</animal>
+  <date>200207</date> <!-- YYYYMMDD -->
+  <age>34</age>
+  <!-- trial meta data -->
+  <filename>r915_200207_g4_t0</filename> 
+  <trialType>fam</trialType> <!-- environment type -->
+  <duration>900</duration> <!-- in sec -->
+  <envSize>[62.5 62.5]</envSize> <!-- x,y in cm -->
+  <envBorderCoords>[551,97,96,554]</envBorderCoords> <!-- NW & SE -->
+  <!-- tracking meta data -->
+  <nLEDs>2</nLEDs>
+  <LEDfront>red</LEDfront> <!-- red or green -->
+  <LEDorientation>[0 180]</LEDorientation> <!-- nose = 0; CW to 360-->
+  <objectPos></objectPos> <!-- x,y position(s) of object centre in pixels -->
+ 
+</session>
