@@ -25,24 +25,25 @@ function [field, value] = grabDefaults_mainGUI(defType)
 switch lower(defType)
     case 'fig'
         % overview tab
-        defStruct.ac_bSz_shortLag = 0.001;
-        defStruct.ac_lag_shortLag = 0.02;
-        defStruct.ac_bSz_longLag  = 0.005;
-        defStruct.ac_lag_longLag  = 0.5;
-        defStruct.rMapColMap      = 'jet';
-        defStruct.rMapColNSteps   = 11;
-        defStruct.nWaveForms      = 250;
-        defStruct.sACColMap       = 'jet';
-        defStruct.OVcolMap        = 'parula';
-        defStruct.normColMapByMax = false;
+        defStruct.ac_bSz_shortLag  = 0.001;
+        defStruct.ac_lag_shortLag  = 0.02;
+        defStruct.ac_bSz_longLag   = 0.005;
+        defStruct.ac_lag_longLag   = 0.5;
+        defStruct.rMapColMap       = 'jet';
+        defStruct.rMapColNSteps    = 11;
+        defStruct.nWaveForms       = 250;
+        defStruct.sACColMap        = 'jet';
+        defStruct.OVcolMap         = 'parula';
+        defStruct.normColMapByMax  = false;
         % compare cells tab
         % linearise tab
     case 'gui'
-        defStruct.outputDir       = [cd filesep];
-        defStruct.filename_suffix = datestr(now,'yymmdd');
+        defStruct.outputDir        = [cd filesep];
+        defStruct.filename_suffix  = datestr(now,'yymmdd');
     case 'maps'
-        defStruct                 = scanpix.maps.defaultParamsRateMaps;
-        defStruct.showWaitBar     = true;
+        defStruct                  = scanpix.maps.defaultParamsRateMaps;
+        defStruct.rate.showWaitBar = true;
+        defStruct.dir.showWaitBar  = true;
 end
 %
 field = fieldnames(defStruct);

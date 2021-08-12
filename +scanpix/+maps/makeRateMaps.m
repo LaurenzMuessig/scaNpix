@@ -39,7 +39,7 @@ function [ rMaps, sm_pMaps, sm_spkMaps ] = makeRateMaps(spkTimes, positions, sam
 prms.smooth               = 'boxcar'; % 'boxcar; 'adaptive'
 prms.smoothKernel         = 5;
 prms.binSizeSpat          = 2.5; % in cm^2
-prms.PosFs                = 50;
+prms.posFs                = 50;
 prms.alpha                = 200;
 prms.speedFilterFlagRMaps = 0;  % y/n
 prms.speedFilterLimits    = [2.5 400];
@@ -95,7 +95,7 @@ else
     nBins = prms.mapSize;
 end
 % raw pos map
-posMapRaw  = accumarray(posBinned(~isnan(posBinned(:,1)),:), 1, nBins ) ./ prms.PosFs;
+posMapRaw  = accumarray(posBinned(~isnan(posBinned(:,1)),:), 1, nBins ) ./ prms.posFs;
 unVisPos   = posMapRaw == 0; % keep record of unvisited positions
 
 %% make maps
@@ -119,7 +119,7 @@ for i = 1:length(spkTimes)
     % spike Map
 
     if isempty(sampleTimes)
-        spkPosBinInd = ceil(spkTimes{i} .* prms.PosFs ); 
+        spkPosBinInd = ceil(spkTimes{i} .* prms.posFs ); 
     else
         % as sample times in e.g. neuropixel can have some jitter we can't just bin by sample rate
         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once

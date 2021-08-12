@@ -61,7 +61,7 @@ end
 if nargin < 4 || isempty(varargin{1})
     if isempty( obj.params('myRateMapParams') )
         % use default params
-        prms = obj.mapParams;
+        prms = obj.mapParams.(mapType);
     else
         % use user defined params
         classFolder = what('scanpix');
@@ -72,7 +72,7 @@ if nargin < 4 || isempty(varargin{1})
             throw(ME);
         end
         f            = fieldnames(temp);
-        prms         = temp.(f{1});
+        prms         = temp.(f{1}).(mapType);
         warning(['scaNpix::maps::addMaps: Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
     end
 end
@@ -81,30 +81,30 @@ if nargin == 4 && ischar(varargin{1})
     if strcmpi(varargin{1},'default')
         % use defaults
         prms = scanpix.maps.defaultParamsRateMaps;
-        
+        prms = prms.(mapType);
     elseif strcmpi(varargin{1},'load')
         % load from file
         [fName, dataDir] = uigetfile(fullfile(classFolder.path,'files', '*.mat'), 'Select map params to load.');
         % fail gracefully
         if isnumeric(fName)
             warning('scaNpix:maps:addMaps: Loading Map Params aborted. Will use defaults instead!');
-            prms         = obj.mapParams;
+            prms         = obj.mapParams.(mapType);
         else
             temp         = load( fullfile(dataDir, fName) );
             f            = fieldnames(temp);
-            prms         = temp.(f{1});
+            prms         = temp.(f{1}).(mapType);
         end
         
     elseif strcmpi(varargin{1},'ui')
         % open UI dialogue to grab parameters
-        prms             = obj.mapParams;
+        prms             = obj.mapParams.(mapType);
         prompts          = fieldnames(prms);
         defaultVals      = struct2cell(prms);
         output           = scanpix.helpers.makeCustomUIDialogue(prompts, defaultVals);
         % exit gracefully
         if isempty(output)
             warning('scaNpix::maps::addMaps: Aborted changing parameters for rate map generation - will use those currently set in object.');
-            prms         = obj.mapParams;
+            prms         = obj.mapParams.(mapType);
         else
             % format as structure
             prms         = cell2struct(output(:,2), output(:,1), 1);
@@ -116,7 +116,7 @@ end
 % Name-Value pair or struct input to change some params
 % explicitly
 if ~isempty(varargin) && (nargin > 4 || isstruct(varargin{1}) )
-    prms = obj.mapParams;
+    prms = obj.mapParams.(mapType);
     if ischar(varargin{1})                                                           %
         for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   %
     elseif isstruct(varargin{1})                                                     %
@@ -126,14 +126,14 @@ if ~isempty(varargin) && (nargin > 4 || isstruct(varargin{1}) )
 end
 
 % these params get set from general data params container
-prms.PosFs               = obj.params('posFs');
-% prms.ppm                 = obj.params('ppm');
-prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
+prms.posFs               = obj.params('posFs');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % make some maps
 switch lower(mapType)
     case 'rate'
+        prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
+        
         for i = trialInd
             [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
         end
@@ -154,6 +154,7 @@ switch lower(mapType)
         end
         
     case 'dir'
+        prms.speedFilterLimits = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
         for i = trialInd
             obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, obj.spikeData.sampleT{i}, obj.posData.speed{i},  prms  );
         end
@@ -161,6 +162,7 @@ switch lower(mapType)
     case 'lin'
         % map making a bit more involved mostly because we need some extra parameters we can't infer from data alone - should check if we
         % can solve this more elegantly
+        prms.speedFilterLimits  = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
         skipNextUI = false;
         for i = trialInd
             % we need the type of the track (for how smoothing is done)

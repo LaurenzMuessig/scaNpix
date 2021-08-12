@@ -1,10 +1,6 @@
 function dirMaps = makeDirMaps(spkTimes, HDirections, sampleTimes, speed, varargin)
-% makeDirMaps - Make a directional rate map
-% We can add spatial rate maps ('rate'), directional rate maps ('dir') or
-% linearised rate maps ('lin') in case of linear track data. This function 
-% is mainly to allow for flexibly choosing which parameters should be used 
-% for the map construction. 
-% For the parameter space check 'scanpix.maps.defaultParamsRateMaps'. 
+% makeDirMaps - generate directional firing rate maps from spike times 
+% and heading direction of animal
 %
 % package: scanpix.maps
 %
@@ -43,7 +39,7 @@ prms.dirSmoothKern        = 5;         % in bins
 prms.binSizeDir           = 6;         % in degrees
 prms.speedFilterFlagDMaps = 0;  % y/n
 prms.speedFilterLimits    = [2.5 400]; % in cm/s
-prms.PosFs                = 50;        % in Hz
+prms.posFs                = 50;        % in Hz
 prms.showWaitBar          = false;
 
 
@@ -85,7 +81,7 @@ HDirections(speedFilter,:) = NaN;
 nBins                   = ceil(360/prms.binSizeDir);
 HDBinned                = ceil(HDirections ./ prms.binSizeDir);
 HDBinned(HDBinned == 0) = max(HDBinned); % bin=0 is the same as last bin
-occMapRaw               = accumarray(HDBinned(~isnan(HDBinned)),1,[nBins 1]) ./ prms.PosFs;
+occMapRaw               = accumarray(HDBinned(~isnan(HDBinned)),1,[nBins 1]) ./ prms.posFs;
 
 %% make maps
 % smooth occupancy map
@@ -99,7 +95,7 @@ dirMaps          = cell(length(spkTimes),1);
 for i = 1:length(spkTimes)
     % spike Map
     if isempty(sampleTimes)
-        spkPosBinInd = ceil(spkTimes{i} .* prms.PosFs ); 
+        spkPosBinInd = ceil(spkTimes{i} .* prms.posFs ); 
     else
         % as sample times can be somewhat irregular we can't just bin by sample rate for e.g. neuropixel data
         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
