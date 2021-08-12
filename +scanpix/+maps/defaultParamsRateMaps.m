@@ -59,6 +59,16 @@ prms.posFs                = 50;    % sample rate
 prms.smKernelSz_OV        = 5;
 prms.smSigma_OV           = 2;
 
+% speed maps
+prms.posRate              = 50;    % Hz (50)
+prms.minBinProp           = 0.005; % valid speed bins need to contain > prctg of samples of population (0.5%)
+prms.speedBinSz           = 2;     % cm/s (2 cm/s)
+prms.maxSpeed             = 40;    % cm/s (40 cm/s)
+prms.smKernelLength       = 0.25;  % in seconds (250ms)
+prms.normaliseFR          = true;  % logical flag
+prms.confInt              = 95;    % confidence interval
+
+
 % don't change
 prms.dirTolerance = prms.dirTolerance * pi/180; % radians
 

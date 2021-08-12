@@ -44,7 +44,7 @@ if ~obj.loadFlag
 end
 
 if nargin < 2
-    str = {'rate','dir','lin','objVect'};
+    str = {'rate','dir','lin','objVect','speed'};
     [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
     if ~loadCheck
         warning('scaNpix::maps::addMaps: No data selected. No maps will be created. Boring...');
@@ -204,6 +204,12 @@ switch lower(mapType)
             if ~isempty(obj.trialMetaData(i).objectPos)
                 obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
             end
+        end
+        
+    case 'speed'
+        
+        for i = trialInd
+            obj.maps(1).speed{i} = scanpix.maps.makeSpeedMap( obj.spikeData.spk_Times{i}, obj.posData.speed{i}, obj.trialMetaData(i).duration,  prms  );
         end
         
     otherwise
