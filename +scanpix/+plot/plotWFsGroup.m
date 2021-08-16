@@ -1,4 +1,4 @@
-function plotWFsGroup(waveForms,cell_IDs)
+function plotWFsGroup(waveForms,cell_IDs,figName)
 % plot all waveforms (mean+/-std) based on a cell array  with waveform 
 % samples of different cells. Can help to check if clusters might have to
 % be merged. We'll make a figure that is scrollable.
@@ -50,6 +50,9 @@ if figHght > 0.7*screenSz(4)
 end
 figSize       = [0.1*screenSz(3) 0.1*screenSz(4) figWdth figHght]; % normalised units
 hScroll       = scanpix.plot.createScrollPlot(figSize); % open scrollable figure
+if nargin > 2
+    hScroll.hFig.Name = figName;
+end
 offsets       = offsetBase;
 for i = 1:length(waveForms)
     % mean +/- STD
@@ -62,7 +65,7 @@ for i = 1:length(waveForms)
         hAx = scanpix.plot.addAxisScrollPlot( hScroll,[offsets plotSize], plotSep );
         axes(hAx);
         % plot waveforms
-        scanpix.fxchange.shadedErrorBar([],meanWF(:,j),stdWFs(:,j),{'r-','linewidth',2,});
+        scanpix.fxchange.shadedErrorBar([],meanWF(:,j),stdWFs(:,j),'lineProps',{'r-','linewidth',2,});
         if i == 1 && length(waveForms) ~= 1
             set(gca,'xlim',[0 size(meanWF,1)],'xtick',[],'ylim',[minVal maxVal]);
         elseif i == length(waveForms)  

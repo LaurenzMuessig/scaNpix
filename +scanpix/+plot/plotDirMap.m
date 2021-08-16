@@ -31,7 +31,7 @@ plot(hAx, [x; x(1)], [y; y(1)],'k','linewidth',2);
 plot(hAx,[0 x],[0 y],'r-','linewidth',2);
 % format axis
 hold(hAx,'off');
-axis(hAx,'square');
-axis(hAx,'off');
+axis(hAx,'square','off');
+% axis(hAx,'off');
 end
 

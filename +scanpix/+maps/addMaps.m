@@ -120,8 +120,8 @@ if ~isempty(varargin) && (nargin > 4 || isstruct(varargin{1}) )
     if ischar(varargin{1})                                                           %
         for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   %
     elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for i=1:length(f);   prms.(f{i}) = s.(f{i});   end                        %
+        s = varargin{1};   f = fieldnames(s.(lower(mapType)));                                        %
+        for i=1:length(f);   prms.(f{i}) = s.(lower(mapType)).(f{i});   end                        %
     end
 end
 
