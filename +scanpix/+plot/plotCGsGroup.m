@@ -1,4 +1,4 @@
-function plotCGsGroup(spikeTimes,binSz,lag,trialDur,cell_IDs)
+function plotCGsGroup(spikeTimes,binSz,lag,trialDur,cell_IDs,figName)
 % plot all possible temporal cross-correlograms (CGs) based on a cell array  
 % with spike times of different cells. Useful to check if clusters might
 % have to be merged. We'll make a figure that is scrollable.
@@ -34,6 +34,7 @@ baseHghtFigure = 170;
 %% params
 if nargin < 5
     cell_IDs = strcat({'cell_'},num2str((1:length(spikeTimes))'));
+    figName = 'scaNpix::CG_overview';
 end
 
 %% plot
@@ -53,7 +54,8 @@ end
 % final size
 figSize     = [0.1*screenSz(3) 0.1*screenSz(4) figWdth figHght ]; 
 % open scrollable figure
-hScroll       = scanpix.plot.createScrollPlot(figSize); 
+hScroll              = scanpix.plot.createScrollPlot(figSize); 
+hScroll.hFig.Name    = figName;
 hScroll.hFig.Visible = 'off'; % hiding figure speeds up plotting by a fair amount
 %wait bar
 hWait         = waitbar(0); 

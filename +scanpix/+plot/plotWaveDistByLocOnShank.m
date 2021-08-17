@@ -20,7 +20,7 @@ scalingFact = (max(coords(:,2)) - min(coords(:,2)) ) / 6; % dividing by 6 seems 
 
 figSz  = [200 850];
 screenSz = get(0,'ScreenSize');
-hFig = figure('Name','Waveform Dist. on Shank','Units','pixels','Position',[0.1*screenSz(3) 0.1*screenSz(4) figSz]);
+hFig = figure('Name','scaNpix::WaveformDistOnShank','Units','pixels','Position',[0.1*screenSz(3) 0.1*screenSz(4) figSz]);
 hAx = axes(hFig,'position',[0.25 0.05 0.7 0.9]);
 
 % need overall of max of waveform to scale data properly

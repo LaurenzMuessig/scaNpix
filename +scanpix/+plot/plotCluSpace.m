@@ -1,4 +1,4 @@
-function plotCluSpace(waveForms,scaleMax,cell_IDs)
+function plotCluSpace(waveForms,scaleMax,cell_IDs,figName)
 % Callback function for 'plotCLUSpace' button 
 % This function will plot/reconstruct the cluster space (as in Tint) 
 %
@@ -13,6 +13,7 @@ figSzPix = [550 500];
 %% prepare
 if nargin < 3
     cell_IDs = strcat({'cell_'},num2str((1:length(waveForms))'));
+    figName = 'scaNpix::CluSpace';
 end
 
 % peak-trough amplitudes
@@ -22,7 +23,7 @@ channelComp   = nchoosek(1:4,2); % could also just hard code
 scaleMax      = scaleMax(channelComp);
 % make figure
 screenSz      = get(0,'screensize');
-figure('units','pixel','position',[0.1*screenSz(3) 0.1*screenSz(4) figSzPix]);
+figure('Name',figName,'units','pixel','position',[0.1*screenSz(3) 0.1*screenSz(4) figSzPix]);
 
 offset        = [0 0];
 col           = scanpix.fxchange.cbrewer('qual', 'Set1', max([length(amplitudes), 3]), 'PCHIP' ); % cbrewer makes nice colormaps
