@@ -68,7 +68,7 @@ obj.load({‘all},’SomeSetFileName’); % load all types data for trial ’Som
 
 • You can start (a) GUI(s) by using a wrapper function (_scanpix.GUI.startGUI_) or by calling it directly (e.g. _mainGUI_)
 
-• When Launching a GUI, we will check if there are any data objects in the base workspace and ask user if he wants to import these, but you can also simply load the data from within the GUI
+• When launching a GUI, we will check if there are any data objects in the base workspace and ask user if he wants to import these, but you can also simply load the data from within the GUI
 
 • In the GUI you can load and inspect multiple datasets/data from multiple experiments
 
@@ -167,7 +167,7 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
 
 
 ## 2.	Parameters for rate maps. 
-These are stored as a scalar MATLAB structure in _obj.mapParams_ (note that _obj.mapParams_ is a hidden property) and the default values are generated with _sapix.maps.defaultParamsRateMaps.m_ – again do not edit anything in there. 
+These are stored as a scalar MATLAB structure in _obj.mapParams_ (note that _obj.mapParams_ is a hidden property) and the default values are generated with _scanpix.maps.defaultParamsRateMaps.m_ – again do not edit anything in there. 
 You can edit these parameters on the fly when generating different kinds of rate maps.
 If you want to use your own custom values by default you should edit them within object and then save them to disk using _scanpix.helpers.saveParams(obj,‘maps’)_ to _PathOnYourDisk/+scanpix/files/YourFile.mat_. Then go and set _obj.params(‘myRateMapParams’)='Path/To/Your/File’_. 
 
