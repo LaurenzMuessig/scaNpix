@@ -626,7 +626,7 @@ classdef npix < handle
             end
 
             for i = 1:length(obj.trialNames)
-                obj = extract_waveforms(obj,i,addParams{:});
+                obj = scanpix.npixUtils.extract_waveforms(obj,i,addParams{:});
             end
         end
         
