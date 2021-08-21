@@ -54,7 +54,7 @@ else
     % load from ap.bin raw - you should really HP filter and CAR this data
     % before extracting waveforms
     tempST  = cellfun(@(x) x + npixObj.trialMetaData(trialInd).offSet, npixObj.spikeData.spk_Times{trialInd},'uni',0); % add offset to spike times
-    [waveforms, channels] = getWaveforms(fullfile(npixObj.dataPath,npixObj.trialNames{trialInd}),tempST, npixObj.cell_ID(:,3), varargin);    
+    [waveforms, channels] = getWaveforms(fullfile(npixObj.dataPath,[npixObj.trialNames{trialInd} '.ap.bin']),tempST, npixObj.cell_ID(:,3), varargin);    
 end
 % assign to object directly as well
 npixObj.spikeData.spk_waveforms{trialInd,1} = waveforms;

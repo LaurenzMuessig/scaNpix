@@ -624,9 +624,19 @@ classdef npix < handle
                 end
 
             end
+            
+            if any(strcmp(addParams(1,:),'save'))
+                saveWFs = addParams{2,strcmp(addParams(1,:),'save')};
+            else
+                saveWFs = false;
+            end
 
             for i = 1:length(obj.trialNames)
-                obj = scanpix.npixUtils.extract_waveforms(obj,i,addParams{:});
+                [obj,tmpWF,tmpCH] = scanpix.npixUtils.extract_waveforms(obj,i,addParams{:});
+                if saveWFs
+                    waveforms = [tmpWF tmpCH];
+                    save(fullfile(obj.dataPath{i},'waveforms.mat'),'waveforms');
+                end
             end
         end
         
