@@ -398,7 +398,7 @@ classdef npix < handle
             smLightBack    = imfilter(led(:, :, 2), kernel, 'replicate');
             
             correction                              = obj.trialMetaData(trialIterator).LEDorientation(1); %To correct for light pos relative to rat subtract angle of large light
-            dirData                                 = mod((180/pi) * ( atan2(-smLightFront(:,2)+smLightBack(:,2), +smLightFront(:,1)-smLightBack(:,1)) ) - correction, 360);
+            dirData                                 = mod((180/pi) * ( atan2(smLightFront(:,2)-smLightBack(:,2), smLightFront(:,1)-smLightBack(:,1)) ) - correction, 360); % 
             obj.posData(1).direction{trialIterator} = dirData(:);
             % Get position from smoothed individual lights %%
             wghtLightFront = 1-obj.params('posHead');
