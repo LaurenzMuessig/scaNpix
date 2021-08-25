@@ -99,7 +99,7 @@ mainGUI(classType);
 
 #### Main GUI:
 
-_some more details should go here_
+![Picture1](https://user-images.githubusercontent.com/24457903/130802561-6eb1ee3e-7998-4b96-a4a6-0e8986f9db76.png)
 
 
 ### 3B Use the code to edit/analyse the data in objects from command window
