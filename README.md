@@ -116,7 +116,7 @@ mainGUI(classType);
      * Generate data type specific figures (currently only for neuropixel data)
 
 * Filter:
-     * Filter data according to cluster label (neuropixel data only ), minimum number of spikes in any trial or spatial properties. The latter will prompt user to indicate the threshold value, filter direction ('gt'=greater than ot 'lt'=lower than) and trial Index. For the trial index either a single numeric index can be used or any number of valid trial indices can be combined by either Matlab AND _&_ or OR _|_ operators (e.g. to filter for cells that pass threshold in the first 3 trials of a given dataset, set trial index to _1&2&3_). Use the _Remove Filter_ option to undo any filtering  
+     * Filter data according to cluster label (neuropixel data only ), minimum number of spikes in any trial or spatial properties. The latter will prompt user to indicate the threshold value, filter direction ('gt'=greater than or 'lt'=lower than) and trial Index. For the trial index either a single numeric index can be used or any number of valid trial indices can be combined by either Matlab AND _&_ or OR _|_ operators (e.g. to filter for cells that pass threshold in the first 3 trials of a given dataset, set trial index to _1&2&3_). Use the _Remove Filter_ option to undo any filtering  
 
 * Analysis:
      * Generate spatial properties for all cells/trials in currently selected data set. Result output is into base work space as a cell array named _datasetName__Property_ with cellID in _output{:,1}_ and values as cell-by-trial array in _output{:,2}_. Note that cells removed by current filter will be ignored for analysis output 
