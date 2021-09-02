@@ -122,6 +122,7 @@ mainGUI(classType);
      * Generate spatial properties for all cells/trials in currently selected data set. Result output is into base work space as a cell array named _datasetName__Property_ with cellID in _output{:,1}_ and values as cell-by-trial array in _output{:,2}_. Note that cells removed by current filter will be ignored for analysis output 
 
 
+
 ### 3B Use the code to edit/analyse the data in objects from command window
 
 #### helpers package
@@ -166,7 +167,7 @@ The default values are generated with _defaultParamsContainer.m_ and you should 
 *	_cutTag2_ – cut file tag that follows \_tetrodeN in filename (_default=’’_)
 *	_lfpFs_ – low sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (250Hz)
 *	_lfpHighFs_ – high sampling rate EEG data sampling rate in Hz; leave empty as will be read from eeg file (4800Hz)
-*	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='Path/To/The//+scaNpix/Code/On/Your/Disk'_)
+*	_defaultDir_ – default directory for UI dialogues where to look for things, e.g. data (_default='Path/To/The/+scaNpix/Code/On/Your/Disk'_)
 *	_myRateMapParams_ – _'FileNameOfYourRateMapParams.mat'_ (_default=’’_)
   
   
