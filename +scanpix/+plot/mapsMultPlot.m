@@ -48,15 +48,15 @@ figSize     = [0.1*screenSz(3) 0.1*screenSz(4) figWidth 0.7*screenSz(4)]; %
 % gather plot tiling
 if numel(data) == 1 
     nPlotsPerRow = 6; % in case just 1 trial, we want to make a compact plot...
-    noGridMode = false;
+    noGridMode   = false;
 else
     nPlotsPerRow = numel(data); % ...if it's several trials/plot types, we plot nCells across those
-    noGridMode = true;
+    noGridMode   = true;
 end
 % open plot
-offsets = p.Results.offsetbase;
-hScroll = scanpix.plot.createScrollPlot( [figSize(1:2) nPlotsPerRow*p.Results.plotsize(1)+nPlotsPerRow*p.Results.plotsep(1)+3*offsets(1) figSize(4) ]  );
-hScroll.hFig.Name = p.Results.figname;
+offsets              = p.Results.offsetbase;
+hScroll              = scanpix.plot.createScrollPlot( [figSize(1:2) nPlotsPerRow*p.Results.plotsize(1)+nPlotsPerRow*p.Results.plotsep(1)+3*offsets(1) figSize(4) ]  );
+hScroll.hFig.Name    = p.Results.figname;
 hScroll.hFig.Visible = 'off'; % hiding figure speeds up plotting by a fair amount
 % open a waitbar
 nPlots    = prod([size(data) length(data{1})]);
@@ -72,7 +72,6 @@ for i = 1:length(data{1})
         plotPeakRateFlag = false;
         
         for k = 1:size(data,2)
-            
             
             waitbar(plotCount/nPlots,hWait,'Making your precious figure, just bare with me!');
             

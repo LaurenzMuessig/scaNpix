@@ -64,7 +64,7 @@ CI = @(x,p)std(x(:),'omitnan')/sqrt(sum(~isnan(x(:)))) * tinv(abs([0,1]-(1-p/100
 
 % bin running speeds
 [instSpeed,~,ind] = histcounts(speed,0:prms.speedBinSz:prms.maxSpeed);
-validBins = instSpeed > prms.minBinProp * trialDur*prms.posFs; % in Kropf et al. it's >5% of all bins
+validBins = instSpeed > prms.minBinProp * trialDur*prms.posFs; % in Kropf et al. it's >0.5% of all bins
 
 speedMaps = cell(length(spikeTimes),3);
 

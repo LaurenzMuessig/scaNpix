@@ -77,6 +77,9 @@ if ~BonsaiCorruptFlag && nFramesBonsai ~= length(syncTTLs)
     elseif nFramesBonsai - length(syncTTLs) == +1
         % this case should be clear and essentially no frame is missing!
         disp('Warning. Missmatch between n of pos samples and n of TTLs. +1 frame in pos data, so the last frame in neuropix stream is incomplete and will be removed from pos data.');
+    elseif nFramesBonsai - length(syncTTLs) > 1
+        % this case should happen when animal unplugs during recording
+        fprintf('Warning. There are %i more frames in tracking stream compared to neuropix data - assuming that the animal unplugged in redcording. If not you are in trouble\n', nFramesBonsai-length(syncTTLs));
     else
         fprintf('Warning. Missmatch between n of pos samples and n of TTLs in neuropix data - %i vs. %i. Better go and check out why.\n', nFramesBonsai, length(syncTTLs));
     end
