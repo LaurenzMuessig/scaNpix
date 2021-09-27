@@ -85,7 +85,7 @@ for i = 1:length(data{1})
                 scanpix.plot.plotDirMap(data{1,k,j}{i},hAx);
                 plotPeakRateFlag = true;
             elseif  strcmp(type{j},'lin')
-                %%% NEEDS ADDING %%%
+                 scanpix.plot.plotLinMaps( data{1,k,j}{i}, hAx);
             elseif  strcmpi(type{j},'sacs')
                 mapSz = size(data{1,k,j}{i});
                 imagesc(hAx,'CData',data{k}{i}); colormap(hAx,jet);

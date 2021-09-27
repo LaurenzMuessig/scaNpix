@@ -70,7 +70,7 @@ speedMaps = cell(length(spikeTimes),3);
 
 for i = 1:length(spikeTimes)
     % inst firing rate
-    instFRate = histcounts(ceil(spikeTimes{i}*prms.posFs),0:trialDur*prms.posFs) .* prms.posFs;
+    instFRate = histcounts(ceil(spikeTimes{i}*prms.posFs),0:length(speed)) .* prms.posFs;
     % smooth
     kernel    = ones(1,ceil(prms.smKernelLength * prms.posFs)) ./ (prms.smKernelLength * prms.posFs); % Kropf uses kernel of 250ms
     instFRate = imfilter(instFRate,kernel,'replicate');
