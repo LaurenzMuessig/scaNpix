@@ -79,7 +79,6 @@ else
     prctMove = orgPanelSz(2) / p(4) / 4; % scroll by this much % of panel size / event (1/4 of org panel size seems good)
     hSlide   = findall(hFig,'Tag','sliderY');
     type     = 'y';
-    hFig.UserData.keyReleased = false; % reset
 end
 
 if evnt.VerticalScrollCount < 0 % scroll up/right
