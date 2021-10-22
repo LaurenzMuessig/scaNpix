@@ -120,8 +120,8 @@ if ~isempty(varargin) && (nargin > 4 || isstruct(varargin{1}) )
     if ischar(varargin{1})                                                           %
         for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   %
     elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s.(lower(mapType)));                                        %
-        for i=1:length(f);   prms.(f{i}) = s.(lower(mapType)).(f{i});   end                        %
+        s = varargin{1};   f = fieldnames(s.(mapType));                                        %
+        for i=1:length(f);   prms.(f{i}) = s.(mapType).(f{i});   end                        %
     end
 end
 
@@ -205,6 +205,8 @@ switch lower(mapType)
         for i = trialInd
             if ~isempty(obj.trialMetaData(i).objectPos)
                 obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
+            else
+                warning('scaNpix::maps::addMaps:If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
             end
         end
         

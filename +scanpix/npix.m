@@ -33,7 +33,6 @@ classdef npix < handle
         dataPath(1,:)         string
         dataSetName(1,:)      char
         trialNames(1,:)       string
-        metaData              struct
         cell_ID(:,3)          double %{mustBePositive, mustBeNonNan, mustBeNonzero}
         cell_Label(:,1)       string
     end

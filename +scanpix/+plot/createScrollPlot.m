@@ -82,7 +82,7 @@ else
     hFig.UserData.keyReleased = false; % reset
 end
 
-if evnt.VerticalScrollCount < 0 % scroll up
+if evnt.VerticalScrollCount < 0 % scroll up/right
     % update panel - make sure we stay within canvas size
     switch type
         case 'x'
@@ -92,7 +92,7 @@ if evnt.VerticalScrollCount < 0 % scroll up
             newPos  = max([-p(4)+orgPanelSz(2) p(2)-prctMove*p(4)]);
             set(hPan,'Position',[p(1) newPos  p(3:4)]);  
     end
-elseif evnt.VerticalScrollCount > 0 % scroll down
+elseif evnt.VerticalScrollCount > 0 % scroll down/left
     % update panel - make sure we stay within canvas size
     switch type
         case 'x'

@@ -44,11 +44,13 @@ end
 %% plot
 if size(waveforms,3) == 1
     % in case of 1 spike, duplicate that to make code compatible 
-    tempWF = cat(3,waveforms,waveforms); % TEst this does the right thing for 1 spike case
-    if size(tempWF,3) ~= 2
-        waveforms = shiftdim(tempWF,2);
-    end
+%     tempWF = cat(3,waveforms,waveforms); % TEst this does the right thing for 1 spike case
+%     if size(tempWF,3) ~= 2
+%         waveforms = shiftdim(tempWF,2);
+%     end
+    waveforms = shiftdim(cat(3,waveforms,waveforms),2);
 end
+
 
 meanWFs = squeeze(nanmean(waveforms,1));
 if size(meanWFs,1) == 1; meanWFs = meanWFs'; end
