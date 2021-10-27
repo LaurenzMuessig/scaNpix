@@ -144,30 +144,52 @@ mainGUI(classType);
 #### analysis package
 
 • functions/code for data analysis; e.g. calculation of map properties like spatial information etc. as well as cell properties like gridness etc.
+```
+scanpix.analysis.functionName(_someInput_);
+```
 
 #### dacq/npix Utils maps packages
 
 • functions/code that is specific for data type
+```
+scanpix.dacqUtils.functionName(_someInput_);
+scanpix.npixUtils.functionName(_someInput_);
+```
 
 #### fxchange package
 
 • functions/code from Matlab file exchange
+```
+scanpix.fxchange.functionName(_someInput_);
+```
 
 ####  GUI packages
 
 • app designer code for GUI(s) as well as a few GUI specific functions. Note that when you debug code in App designer while running the GUI, updates of plots in the GUI tend to become quite sluggish 
+```
+scanpix.GUI.functionName(_someInput_);
+```
 
 #### helpers package
 
 • functions/code that e.g. help with data managment/processing in objects
+```
+scanpix.helpers.functionName(_someInput_);
+```
 
 #### maps plot package
 
 • functions/code to generate various types of spatial rate maps
+```
+scanpix.maps.functionName(_someInput_);
+```
 
 #### plot package
 
 • functions/code to make various types of beautiful plots of your data
+```
+scanpix.plot.functionName(_someInput_);
+```
 
 
 
