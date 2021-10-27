@@ -2,7 +2,7 @@
 # General remarks:
 •	This is a [Matlab package](https://uk.mathworks.com/help/matlab/matlab_oop/scoping-classes-with-packages.html) to either load DACQ or neuropixel data into Matlab for inspection in a GUI and further analysis
 
-•	You will need to use at least *MATLAB 2017b* for the general code base, and *MATLAB 2018b* for the GUI. Note that I coded most of it in MATLAB 2019, so there might be dependencies that I have overlooked.
+•	You will need to use at least **MATLAB 2017b** for the general code base, and **MATLAB 2018b** for the GUI. Note that I coded most of it in MATLAB 2019, so there might be dependencies that I have overlooked.
 
 •	If you do find a bug or have a request to improve something, please [raise an issue in Github](https://docs.github.com/en/github/managing-your-work-on-github/creating-an-issue) rather than email me personally about it. 
 
