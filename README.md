@@ -155,19 +155,19 @@ mainGUI(classType);
 
 ####  GUI packages
 
-• app designer code for GUI(s) as well as a few GUI specific functions
+• app designer code for GUI(s) as well as a few GUI specific functions. Note that when you debug code in App designer while running the GUI, updates of plots in the GUI tend to become quite sluggish 
 
 #### helpers package
 
-• _more detail goes here_
+• functions/code that e.g. help with data managment/processing in objects
 
 #### maps plot package
 
-• _more detail goes here_
+• functions/code to generate various types of spatial rate maps
 
 #### plot package
 
-• _more detail goes here_
+• functions/code to make various types of beautiful plots of your data
 
 
 
