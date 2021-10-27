@@ -128,9 +128,9 @@ mainGUI(classType);
 
 * _h_ - display help
 * _CTRL+D_ - make Dir Maps
-* _CTRL+F_- save Figures
+* _CTRL+F_ - save Figures
 * _CTRL+L_ - Load data
-* CTRL+M_ - make Rate Maps
+* _CTRL+M_ - make Rate Maps
 * _CTRL+S_ - save GUI state
 * _CTRL+F_ - save Figures
 * _Up/Down_ - scroll through cells
@@ -141,19 +141,27 @@ mainGUI(classType);
 
 ### 3B Use the code to edit/analyse the data in objects from command window
 
+#### analysis package
+
+• functions/code for data analysis; e.g. calculation of map properties like spatial information etc. as well as cell properties like gridness etc.
+
+#### dacq/npix Utils maps packages
+
+• functions/code that is specific for data type
+
+#### fxchange package
+
+• functions/code from Matlab file exchange
+
+####  GUI packages
+
+• app designer code for GUI(s) as well as a few GUI specific functions
+
 #### helpers package
 
 • _more detail goes here_
 
-#### maps package
-
-• _more detail goes here_
-
-#### analysis package
-
-• _more detail goes here_
-
-#### dacq/npix Utils packages
+#### maps plot package
 
 • _more detail goes here_
 
