@@ -145,7 +145,7 @@ mainGUI(classType);
 
 • functions/code for data analysis; e.g. calculation of map properties like spatial information etc. as well as cell properties like gridness etc.
 ```
-scanpix.analysis.functionName(_someInput_);
+scanpix.analysis.functionName(someInput);
 ```
 
 #### dacq/npix Utils maps packages
@@ -172,7 +172,7 @@ scanpix.GUI.functionName(someInput);
 
 #### helpers package
 
-• functions/code that e.g. help with data managment/processing in objects
+• functions/code that e.g. helps with data management/processing in objects
 ```
 scanpix.helpers.functionName(someInput);
 ```
