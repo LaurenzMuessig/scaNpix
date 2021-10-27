@@ -152,46 +152,44 @@ scanpix.analysis.functionName(_someInput_);
 
 • functions/code that is specific for data type
 ```
-scanpix.dacqUtils.functionName(_someInput_);
-scanpix.npixUtils.functionName(_someInput_);
+scanpix.dacqUtils.functionName(someInput);
+scanpix.npixUtils.functionName(someInput);
 ```
 
 #### fxchange package
 
 • functions/code from Matlab file exchange
 ```
-scanpix.fxchange.functionName(_someInput_);
+scanpix.fxchange.functionName(someInput);
 ```
 
 ####  GUI packages
 
 • app designer code for GUI(s) as well as a few GUI specific functions. Note that when you debug code in App designer while running the GUI, updates of plots in the GUI tend to become quite sluggish 
 ```
-scanpix.GUI.functionName(_someInput_);
+scanpix.GUI.functionName(someInput);
 ```
 
 #### helpers package
 
 • functions/code that e.g. help with data managment/processing in objects
 ```
-scanpix.helpers.functionName(_someInput_);
+scanpix.helpers.functionName(someInput);
 ```
 
 #### maps plot package
 
 • functions/code to generate various types of spatial rate maps
 ```
-scanpix.maps.functionName(_someInput_);
+scanpix.maps.functionName(someInput);
 ```
 
 #### plot package
 
 • functions/code to make various types of beautiful plots of your data
 ```
-scanpix.plot.functionName(_someInput_);
+scanpix.plot.functionName(someInput);
 ```
-
-
 
 
 # B) Parameter space:
