@@ -133,9 +133,9 @@ mainGUI(classType);
 * _CTRL+M_ - make Rate Maps
 * _CTRL+S_ - save GUI state
 * _CTRL+F_ - save Figures
-* _Up/Down_ - scroll through cells
-* _Ins/Del_ - scroll through trial
-* _PageUp/PageDown_ - scroll through datasets
+* _Up/Down_ - browse through cells
+* _Insert/Delete_ - browse through trials
+* _PageUp/PageDown_ - browse through datasets
 * _Wheelscroll_ - vertical scroll in figures
 * _CTRL+Wheelscroll_ - horizontal scroll in figures
 
