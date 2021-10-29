@@ -243,8 +243,8 @@ classdef dacq < handle
             sFileTxt = [cat(1,C{1}) cat(1,C{2})];
             fclose(fid);
             
-            % legacy data isn't supported
-            if str2double(scanpix.dacqUtils.getValue(sFileTxt, 'ADC_fullscale_mv')) ~= 1500
+            % legacy data isn't supported. multiplex pre-amp has different ADC range
+            if str2double(scanpix.dacqUtils.getValue(sFileTxt, 'ADC_fullscale_mv')) ~= 1500 && isempty(scanpix.dacqUtils.getValue(sFileTxt, 'demux_en_dac_1')) 
                 ME = MException('scaNpix:loadSet:legacyDataError', ['''' strrep(obj.dataPath{trialIterator},'\','/') obj.trialNames{trialIterator} '.set'' was not acquired with DACQ USB. Data obtained from legacy versions are not supported.' ]);
                 throw(ME);
             end
