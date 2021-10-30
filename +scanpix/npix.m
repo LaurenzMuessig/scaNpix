@@ -230,10 +230,18 @@ classdef npix < handle
                     obj.trialMetaData(trialIterator).(f{i}) = metaXMLFile.(f{i});
                 end
             end
+            % reshape into more convenient format ([minX maxX; minY maxY])
+            obj.trialMetaData(trialIterator).envBorderCoords = [min(obj.trialMetaData(trialIterator).envBorderCoords([1,3])),max(obj.trialMetaData(trialIterator).envBorderCoords([1,3])); min(obj.trialMetaData(trialIterator).envBorderCoords([2,4])),max(obj.trialMetaData(trialIterator).envBorderCoords([2,4]))];
+
             % legacy: older xml files won't contain 'objectPos' field
             if ~isfield(metaXMLFile,'objectPos')
                 obj.trialMetaData(trialIterator).objectPos = [];
             end
+            %
+            if ~isfield(metaXMLFile,'posFs')
+                obj.trialMetaData(trialIterator).posFs = 50; % HARCODED ATM! Should maybe be added to xml file?
+            end
+            
             obj.trialMetaData(trialIterator).ppm = [];
             obj.trialMetaData(trialIterator).ppm_org = [];
             obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
@@ -245,8 +253,6 @@ classdef npix < handle
 %             obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
 %             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
             %%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
-            
-            obj.trialMetaData(trialIterator).posFs = 50; % HARCODED ATM! Should maybe be added to xml file?
             
             % load channel map
             chanMapInfo = dir(fullfile(obj.dataPath{trialIterator},'*ChanMap*'));
@@ -368,6 +374,7 @@ classdef npix < handle
                 led = floor(led .* scaleFact);
                 ppm(1) = obj.params('ScalePos2PPM');
                 obj.trialMetaData(trialIterator).objectPos = obj.trialMetaData(trialIterator).objectPos .* scaleFact;
+                obj.trialMetaData(trialIterator).envBorderCoords = obj.trialMetaData(trialIterator).envBorderCoords .* scaleFact;
             end
             
             % remove tracking errors (i.e. too fast)
@@ -404,11 +411,6 @@ classdef npix < handle
             wghtLightBack  = obj.params('posHead');
             xy = (smLightFront .* wghtLightFront + smLightBack .* wghtLightBack);  %
             
-            % running speed
-            pathDists                                  = sqrt( (xy(1:end-1,1) - xy(2:end,1)).^2 + (xy(1:end-1,2) - xy(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
-            obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
-            obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
-            
             % pos data
             obj.posData(1).XYraw{trialIterator}        = xy;
             obj.posData(1).XY{trialIterator}           = [double( floor(xy(:,1)) + 1 ), double( floor(xy(:,2)) + 1 )];
@@ -416,6 +418,15 @@ classdef npix < handle
             
             obj.trialMetaData(trialIterator).ppm       = ppm(1);
             obj.trialMetaData(trialIterator).ppm_org   = ppm(2);
+            
+            % scale position
+            boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
+            scanpix.maps.scalePosition(obj, trialIterator, 'envDimensions',boxExt);
+            
+            % running speed
+            pathDists                                  = sqrt( (obj.posData(1).XYraw{trialIterator}(1:end-1,1) - obj.posData(1).XYraw{trialIterator}(2:end,1)).^2 + (obj.posData(1).XYraw{trialIterator}(1:end-1,2) - obj.posData(1).XYraw{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
+            obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
+            obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
 
             fprintf('  DONE!\n');
             
