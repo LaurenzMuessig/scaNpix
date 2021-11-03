@@ -1,4 +1,4 @@
-function dirMaps = makeDirMaps(spkTimes, HDirections, sampleTimes, speed, varargin)
+function [dirMaps, dirPosMap] = makeDirMaps(spkTimes, HDirections, sampleTimes, speed, varargin)
 % makeDirMaps - generate directional firing rate maps from spike times 
 % and heading direction of animal
 %
@@ -85,8 +85,8 @@ occMapRaw               = accumarray(HDBinned(~isnan(HDBinned)),1,[nBins 1]) ./ 
 
 %% make maps
 % smooth occupancy map
-kernel           = ones(prms.dirSmoothKern,1) ./ prms.dirSmoothKern;
-sm_occMaps       = imfilter(occMapRaw,kernel,'circular');
+kernel          = ones(prms.dirSmoothKern,1) ./ prms.dirSmoothKern;
+dirPosMap       = imfilter(occMapRaw,kernel,'circular');
  
 if prms.showWaitBar; hWait = waitbar(0); end
 
@@ -108,7 +108,7 @@ for i = 1:length(spkTimes)
     % smooth     
     sm_spkDirMap    = imfilter(spkMapRaw,kernel,'circular');
     % dir map
-    dirMaps{i}      = sm_spkDirMap ./ sm_occMaps;
+    dirMaps{i}      = sm_spkDirMap ./ dirPosMap;
         
     if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Dir Maps... %i/%i done.',i,length(spkTimes))); end
 
