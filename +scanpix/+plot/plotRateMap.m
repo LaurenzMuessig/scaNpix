@@ -17,17 +17,17 @@ function plotRateMap(map,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% parse input
-defaultColMap  = 'jet';
-defaultNSteps  = 11;
-defaulthAx     = [];
-defaultBinVals = [];
+defaultColMap   = 'jet';
+defaultNSteps   = 11;
+defaulthAx      = [];
+defaultCMapEdge = [];
 
 p = inputParser;
 checkAx = @(x) ishghandle(x, 'axes') || @isempty;
 addOptional(p,'ax',defaulthAx, checkAx);
 addParameter(p,'colmap',defaultColMap,@ischar);
 addParameter(p,'nsteps',defaultNSteps,@isscalar);
-addParameter(p,'binVals',defaultBinVals);
+addParameter(p,'cmapEdge',defaultCMapEdge);
 parse(p,varargin{:});
 
 if isempty(p.Results.ax)
@@ -36,20 +36,20 @@ else
     hAx = p.Results.ax;
 end
 
-if strcmpi(p.Results.colmap,'poulter')
-    nSteps = 8;  % Steve's map has 8 fixed steps, so should ignore any dynamic setting here
-else
-    nSteps = p.Results.nsteps;
-end
+% if strcmpi(p.Results.colmap,'poulter')
+%     nSteps = 8;  % Steve's map has 8 fixed steps, so should ignore any dynamic setting here
+% else
+%     nSteps = p.Results.nsteps;
+% end
 
 %% plot
-if isempty(p.Results.binVals)
-    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, nSteps); % bin rate map
+if isempty(p.Results.cmapEdge)
+    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, 'colmap',p.Results.colmap, 'nsteps', p.Results.nsteps); % bin rate map
 else
-    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, p.Results.colmap, nSteps,p.Results.binVals); % bin rate map
+    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, 'colmap',p.Results.colmap, 'nsteps', p.Results.nsteps, 'cmapEdge', p.Results.cmapEdge); % bin rate map
 end
 % plot heat map
-imagesc(hAx,'CData',rMapBinned,[0 nSteps+1]);
+imagesc(hAx,'CData',rMapBinned,[0 size(cMapBinned,1)]);
 
 colormap(hAx, cMapBinned);
 axis(hAx,'off');

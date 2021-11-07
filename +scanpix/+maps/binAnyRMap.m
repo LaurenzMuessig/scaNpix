@@ -1,4 +1,4 @@
-function [rMapBinned, cMapBinned] = binAnyRMap(rMap,cMap,nSteps,binVals,RGB4nans)
+function [rMapBinned, cMapBinned] = binAnyRMap(rMap,varargin)
 % bin any rate map for plotting and create a corresponding colormap using
 % Matlab's in-built colormaps. In particular we want to control the range
 % across which we bin, as well as including a color for nan's which are
@@ -24,41 +24,55 @@ function [rMapBinned, cMapBinned] = binAnyRMap(rMap,cMap,nSteps,binVals,RGB4nans
 %
 % LM 2020
 
+%%
+defaultColMap    = 'jet';
+defaultNSteps    = 11;
+defaultRGB4nans  = [1 1 1];
+defaultCMapEdge  = [];
+
+p = inputParser;
+addParameter(p,'colmap',defaultColMap,@ischar);
+addParameter(p,'nsteps',defaultNSteps,@isscalar);
+addParameter(p,'rgb4nans',defaultRGB4nans);
+addParameter(p,'cmapEdge',defaultCMapEdge);
+parse(p,varargin{:});
+
+%%
 if isempty(rMap)
     [rMapBinned, cMapBinned] = deal([]);
     return
 end
 
-if nargin < 4
-    RGB4nans = [1 1 1];
-    binVals  = [0 nanmax(rMap(:))];
-elseif nargin == 4
-    RGB4nans = [1 1 1];
-end
-
 % make colormap
-switch lower(cMap)
+switch lower(p.Results.colmap)
     case 'hcg' 
         temp = scanpix.maps.highContGrayColMap;
-        ind  = round(linspace(1,length(temp),nSteps));
+        ind  = round(linspace(1,length(temp),p.Results.nsteps));
         cMap = colormap(temp(ind,:));   
+        nSteps = p.Results.nsteps;
     case 'poulter'
         cMap = scanpix.maps.cm_Poulter;
+        nSteps = size(cMap,1);
     otherwise
         try
-            cMap = feval( str2func(cMap), nSteps );
+            cMap = feval( str2func(p.Results.colmap), p.Results.nsteps );
+            nSteps = p.Results.nsteps;
         catch
-            error(['''' cMap ''' not yet supported as colormap. Why don''t you add it yourself?']);
+            error(['''' p.Results.colmap ''' not yet supported as colormap. Why don''t you add it yourself?']);
         end
 end
 
 % bin rMap
-rMapBinned              = discretize(rMap,linspace(binVals(1),binVals(2),nSteps+1));
+rMapBinned = discretize(rMap,linspace(0,nanmax(rMap(:)),nSteps+1));
+if ~isempty(p.Results.cmapEdge)
+    rMapBinned(rMap < p.Results.cmapEdge(1)) = 1;
+    rMapBinned(rMap > p.Results.cmapEdge(2)) = max(rMapBinned(:));
+end
 rMapBinned(isnan(rMap)) = 0;
 
 % color map
 cMapBinned              = nan(size(cMap,1)+1,size(cMap,2));
-cMapBinned(1,:)         = RGB4nans;
+cMapBinned(1,:)         = p.Results.rgb4nans;
 cMapBinned(2:end,:)     = cMap;
 
 

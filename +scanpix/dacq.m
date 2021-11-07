@@ -282,7 +282,7 @@ classdef dacq < handle
             %%% EEG Channels %%%
             % Which channels EEGs recorded? %
             recordingChannel = zeros([1 128]); %HARD CODED
-            for i = 1:length(recordingChannel) %% There are occasional DACQs which only have EEG 1-4. This loop thereore needs to fail gracefully.
+            for i = 1:length(recordingChannel) %%
                 temp=scanpix.dacqUtils.getValue(sFileTxt,['saveEEG_ch_' num2str(i)]);
                 if isempty(temp)
                     break;

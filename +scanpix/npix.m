@@ -358,7 +358,7 @@ classdef npix < handle
             
             ppm = nan(2,1);
             % estimate ppm
-            if strcmp(obj.trialMetaData(trialIterator).envBorderCoords,'[]')
+            if isempty(obj.trialMetaData(trialIterator).envBorderCoords)
                 winSz  = [double(csvData{6}(1)) double(csvData{7}(1))];
                 ppm(:) = mean(winSz ./ (obj.trialMetaData(trialIterator).envSize ./ 100) );
             else
@@ -379,7 +379,7 @@ classdef npix < handle
             
             % remove tracking errors (i.e. too fast)
             for i = 1:2
-                pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1); % % distances in cm
+                pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1) .* 100; % % distances in cm
                 tempSpeed        = pathDists ./ diff(sampleT); % cm/s
                 tempSpeed(end+1) = tempSpeed(end);
                 % filter out
