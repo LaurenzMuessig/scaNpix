@@ -14,10 +14,11 @@ function [rMapBinned, cMapBinned] = binAnyRMap(rMap,varargin)
 %
 %
 % Inputs:   rMap     - rate map
-%           cMap     - 'string' - name of colormap in matlab
-%           nSteps   - how many steps should the colormap for the rate map have?
-%           RGB4nans - [R G B]; [1 1 1] as default (white)
-%           binVals  - range across which to bin (default: [0 max(rMap(:)])      
+%           varargin - optional inputs; Name-Value pair(s) for:
+%                      'colmap'   - Matlab color map
+%                      'nsteps'   - how many steps in colour map), 
+%                      'rgb4nans' - RGB triplet for colour for NaNs in map 
+%                      'cmapEdge' - [min max] for colormap; default = [0 max(rMap(:)]       
 %
 % Outputs:  rMapBinned - binned rate map
 %           cMapBinned - colormap for rate map
