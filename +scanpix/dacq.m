@@ -328,6 +328,7 @@ classdef dacq < handle
             setFile.ppm_org     = []; % will be populated when loading pos data
             setFile.trialType   = []; % no method yet for dacq data to gather that
             setFile.trackLength = []; % no method yet for dacq data to gather that
+            setFile.envSize     = []; % no method yet for dacq data to gather that
             
             % output
             if isempty(obj.trialMetaData)
@@ -414,8 +415,13 @@ classdef dacq < handle
             obj.trialMetaData(trialIterator).ppm_org = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
 
             if ~isempty(obj.params('ScalePos2PPM'))
-                led_pos = floor( led_pos .* (obj.params('ScalePos2PPM') / str2double(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'))) );
+                scaleFact = (obj.params('ScalePos2PPM') / str2double(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre')));
+                led_pos = floor( led_pos .*  scaleFact);
                 posHeader{strcmp(posHeader(:,1),'pixels_per_metre'),2} = num2str(obj.params('ScalePos2PPM'));
+                obj.trialMetaData(trialIterator).xmin = obj.trialMetaData(trialIterator).xmin * scaleFact;
+                obj.trialMetaData(trialIterator).xmax = obj.trialMetaData(trialIterator).xmax * scaleFact;
+                obj.trialMetaData(trialIterator).ymin = obj.trialMetaData(trialIterator).ymin * scaleFact;
+                obj.trialMetaData(trialIterator).ymax = obj.trialMetaData(trialIterator).ymax * scaleFact;
             end
 %             obj.params('ppm') = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
             obj.trialMetaData(trialIterator).ppm = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');

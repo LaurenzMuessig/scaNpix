@@ -43,9 +43,9 @@ prms.posFs                = 50;
 prms.alpha                = 200;
 prms.speedFilterFlagRMaps = 0;  % y/n
 prms.speedFilterLimits    = [2.5 400];
-prms.mapSize              = [];
 prms.showWaitBar          = false;
-
+prms.rate.envSize         = [];
+prms.trimNaNs             = true;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % - This is the template code for name-value list OR struct passing of parameters -- %
@@ -77,23 +77,17 @@ positions(speedFilter,:) = NaN;
 
 %% posMap
 binSizePix = floor( ppm/100 * prms.binSizeSpat ); % this many pix in one bin  %%%%% @TOM: Is 'floor' correct here??
-% bin positions
-% first we want to shift positions so that the lower edges will fall into bin 1 in both dimensions (in dacq coords that would be dependent on
-% window size). So we find the nearest multiple of 'binSizePix' to lower bound of coordinates and subtract that to avoid moving pixels across bin
-% edges - this is mainly to keep format backward compatible to the old Scan (not sure this is really necessary)
-positions = bsxfun(@minus,positions, floor( min(positions,[],1)/binSizePix )*binSizePix ); 
-% if any(min(positions,[],1) == 0)
-%     positions(:,min(positions,[],1) == 0) = positions(:,min(positions,[],1) == 0) + 1;
-% end
-positions(positions == 0) = 1;
-
-posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates (not necesarry, but keeps old Scan format)
-
-if isempty(prms.mapSize)
-    nBins = [nanmax(posBinned(:,1)) nanmax(posBinned(:,2))]; % 'guess' map size from data (fine if sampled well)
+% % bin positions
+% % note to comparison to old Scan - to replicate the exact map from the original version you would have to do the following:
+% positions = bsxfun(@minus,positions, floor( min(positions,[],1)/binSizePix )*binSizePix ); 
+% positions(positions == 0) = 1;
+posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
+if isempty(prms.envSize)
+    nBins = [nanmax(posBinned(:,1)) nanmax(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
 else
-    nBins = prms.mapSize;
+    nBins = fliplr( ceil( prms.envSize ./ binSizePix) ); 
 end
+
 % raw pos map
 posMapRaw  = accumarray(posBinned(~isnan(posBinned(:,1)),:), 1, nBins ) ./ prms.posFs;
 unVisPos   = posMapRaw == 0; % keep record of unvisited positions
@@ -145,5 +139,23 @@ for i = 1:length(spkTimes)
     if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Rate Maps... %i/%i done.',i,length(spkTimes))); end
 end
 if prms.showWaitBar; close(hWait); end
+
+if prms.trimNaNs
+    rMaps      = trimNaNs(rMaps);
+    sm_spkMaps = trimNaNs(sm_spkMaps);
+    sm_pMaps   = trimNaNs(sm_pMaps);
 end
+
+end
+
+function maps = trimNaNs(maps)
+
+nanIndC1 = find(sum(isnan(maps{1}),1) ~= size(maps{1},1),1,'first');
+nanIndC2 = find(sum(isnan(maps{1}),1) ~= size(maps{1},1),1,'last');
+nanIndR1 = find(sum(isnan(maps{1}),2) ~= size(maps{1},2),1,'first');
+nanIndR2 = find(sum(isnan(maps{1}),2) ~= size(maps{1},2),1,'last');
+maps     = cellfun(@(x) x(nanIndR1:nanIndR2,nanIndC1:nanIndC2),maps,'uni',0);
+
+end
+
 

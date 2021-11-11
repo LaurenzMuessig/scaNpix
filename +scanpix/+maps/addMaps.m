@@ -135,6 +135,12 @@ switch lower(mapType)
         prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
         
         for i = trialInd
+            if ~isempty( obj.trialMetaData(i).envSize )
+                prms.envSize = obj.trialMetaData(i).envSize / 100 * obj.trialMetaData(i).ppm; % in pixels
+            elseif strcmp(obj.fileType,'.set')
+                prms.envSize = [obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin];
+            end
+        
             [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
         end
         

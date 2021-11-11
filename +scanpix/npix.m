@@ -424,7 +424,7 @@ classdef npix < handle
             scanpix.maps.scalePosition(obj, trialIterator, 'envDimensions',boxExt);
             
             % running speed
-            pathDists                                  = sqrt( (obj.posData(1).XYraw{trialIterator}(1:end-1,1) - obj.posData(1).XYraw{trialIterator}(2:end,1)).^2 + (obj.posData(1).XYraw{trialIterator}(1:end-1,2) - obj.posData(1).XYraw{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
+            pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
             obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
             obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
 
