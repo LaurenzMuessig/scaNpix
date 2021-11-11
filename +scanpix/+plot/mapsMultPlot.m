@@ -1,8 +1,9 @@
 function mapsMultPlot(data,type,varargin)
-%  
 % This is a generic plotting routine to make a scrollable plot for any
 % arbitrary combination of maps. We make the following assumption that 
 % data = cell(1,nTrials,nMapTypes) 
+% This fnct is a specialised version of scanpix.plot.multPlot  
+% package: scanpix.plot
 %
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -141,6 +142,5 @@ close(hWait);
 
 hScroll.hFig.Visible = 'on';
 
-t = 1;
 end
 
