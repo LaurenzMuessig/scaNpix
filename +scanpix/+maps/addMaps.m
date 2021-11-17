@@ -144,20 +144,20 @@ switch lower(mapType)
             [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
         end
         
-        % pad maps so size is the same for all maps is set
-        mapSz = reshape(cell2mat(cellfun(@(x) size(x{1}),obj.maps.rate,'uni',0)),2,[]);
-        maxSz = max(mapSz,[],2);
-        padSz = ceil((maxSz-mapSz) ./ 2);
-        
-        mapType = {'rate','pos','spike'};
-        for i = 1:length(mapType)
-            for j = trialInd
-                obj.maps.(mapType{i}){j} = cellfun(@(x) padarray(x,[padSz(1,j) padSz(2,j)],NaN), obj.maps.(mapType{i}){j},'uni',0);
-                if any(mapSz(:,j) + 2*padSz(:,j) > maxSz)
-                    obj.maps.(mapType{i}){j} = cellfun(@(x) x(1:maxSz(1),1:maxSz(2)),obj.maps.(mapType{i}){j},'uni',0); % might need to trim off one row/column
-                end
-            end
-        end
+%         % pad maps so size is the same for all maps is set
+%         mapSz = reshape(cell2mat(cellfun(@(x) size(x{1}),obj.maps.rate,'uni',0)),2,[]);
+%         maxSz = max(mapSz,[],2);
+%         padSz = ceil((maxSz-mapSz) ./ 2);
+%         
+%         mapType = {'rate','pos','spike'};
+%         for i = 1:length(mapType)
+%             for j = trialInd
+%                 obj.maps.(mapType{i}){j} = cellfun(@(x) padarray(x,[padSz(1,j) padSz(2,j)],NaN), obj.maps.(mapType{i}){j},'uni',0);
+%                 if any(mapSz(:,j) + 2*padSz(:,j) > maxSz)
+%                     obj.maps.(mapType{i}){j} = cellfun(@(x) x(1:maxSz(1),1:maxSz(2)),obj.maps.(mapType{i}){j},'uni',0); % might need to trim off one row/column
+%                 end
+%             end
+%         end
         
     case 'dir'
         prms.speedFilterLimits = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];

@@ -2,8 +2,7 @@ function obj = objLoader(objType,dataPath, varargin )
 % obj - Load neuropixel or DACQ data from raw into a class object. 
 % If you do not want to use defaults you need to generate your own param
 % containers (obj params) or struct (map params).
-% We only load pos and spike data. If you want the LFP data you need to
-% load it yourself at later stage with e.g. obj.load('lfp')
+% We only load pos and spike data by default!
 % 
 %
 % Usage:    obj = objLoader( objType, dataPath )
@@ -32,8 +31,8 @@ loadSpikes       = true;
 loadLFP          = false;
 
 p = inputParser;
-addParameter(p,'objParams',defaultObjParams,@(x) isa(x,'containers.Map') || ischar(x));
-addParameter(p,'mapParams',defaultMapParams,@(x) isstruct(x) || ischar(x));
+addParameter(p,'objParams',defaultObjParams, @(x) isa(x,'containers.Map') || ischar(x) || isempty(x));
+addParameter(p,'mapParams',defaultMapParams, @(x) isstruct(x) || ischar(x) || isempty(x));
 addParameter(p,'pos',loadPos, @islogical);
 addParameter(p,'spikes',loadSpikes, @islogical);
 addParameter(p,'lfp',loadLFP, @islogical);
@@ -43,7 +42,7 @@ loadStr = {'pos','spikes','lfp'};
 
 classFolder = what('+scanpix');
 
-%% Load Data (create DACQ object)
+%% Load Data (create class object)
 if strcmpi(objType,'dacq')
     obj = scanpix.dacq('default',false); % assume default params
 elseif strcmpi(objType,'npix')
@@ -60,7 +59,6 @@ if ~isempty(p.Results.objParams)
         end
     else
         obj.params = p.Results.objParams;
-
     end
 end
 % change map params if desired
@@ -94,7 +92,7 @@ end
 obj.trialNames = trialNames;
 
 % load
-loadStr = loadStr( [p.Results.pos p.Results.spikes p.Results.lfp]);
+loadStr = loadStr( [p.Results.pos p.Results.spikes p.Results.lfp] );
 obj.load(loadStr);
 
 
