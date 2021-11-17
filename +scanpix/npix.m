@@ -379,11 +379,19 @@ classdef npix < handle
             
             % remove tracking errors (i.e. too fast)
             for i = 1:2
-                pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1) .* 100; % % distances in cm
+                % speed
+                pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1); % % distances in m
                 tempSpeed        = pathDists ./ diff(sampleT); % cm/s
                 tempSpeed(end+1) = tempSpeed(end);
+                speedInd = tempSpeed > obj.params('posMaxSpeed');
+                % env borders
+                if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once'))
+                	envSzInd = led(:,1,i) < 0.95*obj.trialMetaData(trialIterator).envBorderCoords(1,1) | led(:,1,i) > 1.05*obj.trialMetaData(trialIterator).envBorderCoords(1,2) | led(:,2,i) < 0.95*obj.trialMetaData(trialIterator).envBorderCoords(2,1) | led(:,2,i) > 1.05*obj.trialMetaData(trialIterator).envBorderCoords(2,2); 
+                else
+                    %%%% NEED TO ADD CIRCLE FIT %%%%
+                end
                 % filter out
-                led(tempSpeed > obj.params('posMaxSpeed'),:,i) = NaN;
+                led(speedInd | envSzInd,:,i) = NaN;
             end
             
             % interpolate missing positions
