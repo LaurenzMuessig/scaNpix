@@ -17,7 +17,7 @@ function scalePosition(obj, trialIndex, mode, envSzPix, minOccForEdge)
 %    trialIndices  - numeric index of trials or 'all' 
 %    mode          - mode for scaling 'envSampling' 'envDimensions' 
 %    envSzPix      - [sizePixX sizePixY] - size of environment in pix for x and y 
-%    minOccForEdge - min dwell time in s for defining edge. first/last pixels that 
+%    minOccForEdge - min dwell time in s for defining edge. first/last pixels  
 %                    that satisfy this is x and y for min/max extent (default=1)
 %
 % Outputs:
@@ -65,7 +65,7 @@ switch lower(mode)
             
             tempPos = obj.posData.XY{trialIndex}(:,j);
             
-            pathHist = histcounts( tempPos, 0.5:1:max(obj.posData.XY{trialIndex}(:))  );    % is this right? 768 is the maximum extent for the DACQ camera.
+            pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % is this right? 768 is the maximum extent for the DACQ camera.
             
             lowerEdge = find(pathHist >= minOccForEdge, 1, 'first');
             upperEdge = find(pathHist >= minOccForEdge, 1, 'last');
