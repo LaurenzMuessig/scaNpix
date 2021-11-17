@@ -12,8 +12,8 @@ function obj = objLoader(objType,dataPath, objParams, mapParams )
 % Inputs:
 %    objType   - 'npix' or 'dacq' - class object type
 %    dataPath  - path to data can be cell array of path strings
-%    objParams - optional; containers.Map (see 'scanpix.helpers.defaultParamsContainer' for details on format) or path to file on disk
-%    mapParams - optional; mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format)
+%    objParams - optional; containers.Map (see 'scanpix.helpers.defaultParamsContainer' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat')
+%    mapParams - optional; mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat') 
 %
 % Outputs: obj - class object with data loaded
 %
@@ -38,15 +38,25 @@ else
 end
 % change params if desired
 if nargin > 2 && ~isempty(objParams)
-    if ischar(objParams)
+    if ischar(objParams) && exist(fullfile(classFolder.path,'files',[objParams '.mat']),'file') == 2
         scanpix.helpers.changeParams(obj,'file', fullfile(classFolder.path,'files',[objParams '.mat']) );
-    elseif strcmp(classs(objParams),'containers.Map')
+    elseif isa(objParams,'containers.Map')
         obj.params = objParams;
+    else
+        error('scaNpix::objLoader:''objParams'' needs to be a pointer to a file or a containers.Map.');
     end
 end
 % change map params if desired
 if nargin == 4 && ~isempty(mapParams)
-    obj.mapParams = mapParams;
+    if ischar(mapParams) && exist(fullfile(classFolder.path,'files',[mapParams '.mat']),'file') == 2
+        tmp = load(fullfile(classFolder.path,'files',[mapParams '.mat']));
+        f = fieldnames(tmp);
+        obj.mapParams = tmp.(f{1});
+    elseif isstruct(mapParams)
+        obj.mapParams = mapParams;
+    else 
+        error('scaNpix::objLoader:''mapParams'' needs to be a pointer to a file or a prms struct.');
+    end 
 end
 
 % 
