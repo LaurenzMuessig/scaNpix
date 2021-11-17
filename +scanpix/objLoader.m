@@ -1,4 +1,4 @@
-function obj = objLoader(objType,dataPath, objParams, mapParams )
+function obj = objLoader(objType,dataPath, varargin )
 % obj - Load neuropixel or DACQ data from raw into a class object. 
 % If you do not want to use defaults you need to generate your own param
 % containers (obj params) or struct (map params).
@@ -25,9 +25,23 @@ function obj = objLoader(objType,dataPath, objParams, mapParams )
 
 
 %% PARAMS
+defaultObjParams = [];
+defaultMapParams = [];
+loadPos          = true;
+loadSpikes       = true;
+loadLFP          = false;
+
+p = inputParser;
+addParameter(p,'objParams',defaultObjParams,@(x) isa(x,'containers.Map') || ischar(x));
+addParameter(p,'mapParams',defaultMapParams,@(x) isstruct(x) || ischar(x));
+addParameter(p,'pos',loadPos, @islogical);
+addParameter(p,'spikes',loadSpikes, @islogical);
+addParameter(p,'lfp',loadLFP, @islogical);
+parse(p,varargin{:});
+
+loadStr = {'pos','spikes','lfp'};
 
 classFolder = what('+scanpix');
-
 
 %% Load Data (create DACQ object)
 if strcmpi(objType,'dacq')
@@ -37,26 +51,31 @@ elseif strcmpi(objType,'npix')
 else
 end
 % change params if desired
-if nargin > 2 && ~isempty(objParams)
-    if ischar(objParams) && exist(fullfile(classFolder.path,'files',[objParams '.mat']),'file') == 2
-        scanpix.helpers.changeParams(obj,'file', fullfile(classFolder.path,'files',[objParams '.mat']) );
-    elseif isa(objParams,'containers.Map')
-        obj.params = objParams;
+if ~isempty(p.Results.objParams)
+    if ischar(p.Results.objParams) 
+        if exist(fullfile(classFolder.path,'files',[p.Results.objParams '.mat']),'file') == 2
+            scanpix.helpers.changeParams(obj,'file', fullfile(classFolder.path,'files',[p.Results.objParams '.mat']) );
+        else
+            error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.objParams '.mat']));
+        end
     else
-        error('scaNpix::objLoader:''objParams'' needs to be a pointer to a file or a containers.Map.');
+        obj.params = p.Results.objParams;
+
     end
 end
 % change map params if desired
-if nargin == 4 && ~isempty(mapParams)
-    if ischar(mapParams) && exist(fullfile(classFolder.path,'files',[mapParams '.mat']),'file') == 2
-        tmp = load(fullfile(classFolder.path,'files',[mapParams '.mat']));
-        f = fieldnames(tmp);
-        obj.mapParams = tmp.(f{1});
-    elseif isstruct(mapParams)
-        obj.mapParams = mapParams;
-    else 
-        error('scaNpix::objLoader:''mapParams'' needs to be a pointer to a file or a prms struct.');
-    end 
+if ~isempty(p.Results.mapParams)
+    if ischar(p.Results.mapParams)
+        if exist(fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']),'file') == 2
+            tmp = load(fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']));
+            f = fieldnames(tmp);
+            obj.mapParams = tmp.(f{1});
+        else
+            error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']));
+        end
+    else
+        obj.mapParams = p.Results.mapParams;
+    end
 end
 
 % 
@@ -75,7 +94,8 @@ end
 obj.trialNames = trialNames;
 
 % load
-obj.load({'pos','spikes'});
+loadStr = loadStr( [p.Results.pos p.Results.spikes p.Results.lfp]);
+obj.load(loadStr);
 
 
 
