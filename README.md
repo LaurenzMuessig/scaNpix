@@ -141,7 +141,7 @@ mainGUI(classType);
 
 
 #### Batch Loading of data
-It's possible to load a batch of datasets into the GUI by supplying paths etc via a spreadsheet. For inofrmation on the format of the spreadsheet, see _scanpix.readExpInfo_. 
+It's possible to load a batch of datasets into the GUI by supplying paths etc via a spreadsheet. For information on the format of the spreadsheet, see _scanpix.readExpInfo_. 
 
 ### 3B Use the code to edit/analyse the data in objects from command window
 
