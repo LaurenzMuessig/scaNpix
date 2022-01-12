@@ -139,6 +139,10 @@ mainGUI(classType);
 * _Wheelscroll_ - vertical scroll in figures
 * _CTRL+Wheelscroll_ - horizontal scroll in figures
 
+
+#### Batch Loading of data
+It's possible to load a batch of datasets into the GUI by supplying paths etc via a spreadsheet. For inofrmation on the format of the spreadsheet, see _scanpix.readExpInfo_. 
+
 ### 3B Use the code to edit/analyse the data in objects from command window
 
 #### analysis package
