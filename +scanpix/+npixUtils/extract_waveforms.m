@@ -28,14 +28,14 @@ if nargin == 1 || isempty(trialInd)
 end
 
 %%
-if p.Results.useDrift
+if strcmp(p.Results.mode,'drift')
     % load from drift corr file should be the default really whjen using
     % KS2.5 or 3
     if isempty(p.Results.path2drift)
-        % pronpt user to select file
+        % prompt user to select file
         [fNameDrift,pathDrift] = uigetfile(fullfile(cd,'*.dat'),'Please Select Drift-corrected File');
         if isnumeric(pathDrift)
-            warning('If you want to use the driift corrected data to extract waveforms, I need some info where that might be. Too late now, but maybe you''ll do better later.');
+            warning('If you want to use the drift corrected data to extract waveforms, I need some info where that might be found on your disk. Too late now, but maybe you''ll do better later.');
             return
         end
         path2drift = [pathDrift fNameDrift];
@@ -50,11 +50,16 @@ if p.Results.useDrift
 %     tempST  = cellfun(@(x) x + npixObj.trialMetaData(trialInd).offSet, npixObj.spikeData.spk_Times{trialInd},'uni',0); % add offset to spike times
 
     [waveforms, channels] = getWaveforms(path2drift,tempST, npixObj.cell_ID(:,3), varargin);
-else
-    % load from ap.bin raw - you should really HP filter and CAR this data
-    % before extracting waveforms
+elseif strcmp(p.Results.mode,'raw')
+    % if you load from ap.bin raw - you should really HP filter and CAR this data before extracting waveforms
     tempST  = cellfun(@(x) x + npixObj.trialMetaData(trialInd).offSet, npixObj.spikeData.spk_Times{trialInd},'uni',0); % add offset to spike times
-    [waveforms, channels] = getWaveforms(fullfile(npixObj.dataPath,[npixObj.trialNames{trialInd} '.ap.bin']),tempST, npixObj.cell_ID(:,3), varargin);    
+    if ~isempty(p.Results.clu)
+        ind = ismember(npixObj.cell_ID(:,1),p.Results.clu);
+    else
+        ind = true(length(npixObj.cell_ID(:,1)),1);
+    end
+    [waveforms, channels] = getWaveforms(fullfile(npixObj.dataPath,[npixObj.trialNames{trialInd} npixObj.fileType]),tempST(ind), npixObj.cell_ID(ind,3), varargin);    
+    
 end
 % assign to object directly as well
 npixObj.spikeData.spk_waveforms{trialInd,1} = waveforms;
@@ -87,7 +92,7 @@ function [waveforms, channels] = getWaveforms(path2raw,spikeTimes, clu_Channel, 
 %% PARAMS
 p = parseParams(varargin{:});
 
-if p.Results.useDrift
+if strcmp(p.Results.mode,'drift')
     unwhitenData = true; % need to unwhiten when using drift corr file!
    %%% Display some warning about bad param choice like using HP filter or CAR?
 else
@@ -210,8 +215,9 @@ defaultBitResolution = 1.2/2^10;  % in V/bit
 defaultChanSpaceVert = 20;        % vertical channel spacing in um
 defaultApplyCAR      = false;     % do common average referencing
 defaultUnWhitedata   = false;     % unwhiten data - important if using KS2.5 or higher as drift corrected file is whitened  
-useDriftCorr         = true;
+mode                 = 'drift';
 path2drift           = '';        % path to drift corr. file
+cluIDs               = [];
 
 p = inputParser;
 addParameter(p,'remchans',   defaultChanIgnore);
@@ -227,8 +233,9 @@ addParameter(p,'bitres',     defaultBitResolution,@isscalar);
 addParameter(p,'chanspace',  defaultChanSpaceVert,@isscalar);
 addParameter(p,'car',        defaultApplyCAR);
 addParameter(p,'unwhite',    defaultUnWhitedata);
-addParameter(p,'useDrift',   useDriftCorr,@islogical);
+addParameter(p,'mode',       mode,@ischar);
 addParameter(p,'path2drift', path2drift,@ischar);
+addParameter(p,'clu',        cluIDs);
 
 parse(p,varargs{:});
 

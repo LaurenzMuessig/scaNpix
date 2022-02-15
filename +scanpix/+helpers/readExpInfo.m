@@ -37,7 +37,7 @@ function [ expInfo, maxNTrial ] = readExpInfo( cribSheetPath, varargin )
 defaultSheetPath   = 'S:\1postDoc\Neuropixels\rawData\masterSheetNpixData.xlsx';
 %%%
 
-standardFieldNames = {'filePath','animal','trialName','experiment_ID','notes'}; % these fields are standard and need to be included on sheet (except for 'notes')
+standardFieldNames = {'filePath','animal','trialName','experiment_ID'}; % these fields are standard and need to be included on sheet (except for 'notes')
 
 %% params
 defaultMethod       = 'single';

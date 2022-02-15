@@ -85,7 +85,7 @@ end
 obj.dataPath = filepath;
 
 if strcmpi(objType,'npix')
-    trialNames = cellfun(@(x) x{1},cellfun(@(x) regexp(x,'[.]','split'),name,'uni',0),'uni',0);
+    trialNames = cellfun(@(x) x{1}, cellfun(@(x) regexp(x,'[.]ap','split'),name,'uni',0),'uni',0);
 else
     trialNames = name;
 end

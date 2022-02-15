@@ -489,23 +489,35 @@ classdef npix < handle
             spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
             spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
             obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
-            % load cluster IDs
-            clustIDs           = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
-            % now we need to remove bad clusters and spike times outside trial
-            unClustIDs         = unique(clustIDs);
+            
             if loadFromPhy    
+                % load cluster IDs
+                clustIDs           = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
                 % phy curated output - only load clusters labelled good
                 clu_info       = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'tab');
                 goodLabel      = strcmp(cellstr(clu_info.group),'good');
-                good_clusts    = clu_info.id(goodLabel) + 1;
+                try
+                    good_clusts    = clu_info.id(goodLabel) + 1;
+                catch
+                    good_clusts    = clu_info.cluster_id(goodLabel) + 1;
+                end
                 clu_Depth      = clu_info.depth(goodLabel);  % I think this amd the following seem to not give correct results in somce cases?? Phy Issue?? 
                 clu_Ch         = clu_info.ch(goodLabel) + 1; % this is 0 based 
                 cluLabel       = string(clu_info.group);
                 cluLabel       = cluLabel(goodLabel);
             else
+                try
+                    % try and load cluster IDs from back up folder as this will prevent issues further down in case you curated the data in phy (and merged/split at least one cluster)
+                    clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'backUpFiles','spike_clusters.npy')) + 1; % 0 based index
+                    ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'backUpFiles','cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
+                catch
+                    warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you PHY''d the data and merged/split clusters, loading raw kilosort results will fail shortly...');
+                    % load cluster IDs
+                    clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
+                    ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
+                end
                 % raw kilosort output - we'll take everything in this case and can
                 % filter later if needed
-                ks_labels      = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
                 cluLabel       = string(ks_labels.KSLabel); % this is either 'good' or 'mua'
                 %     ind_good       = strcmp(cluLabel,'good') | strcmp(cluLabel,'mua');
                 good_clusts    = ks_labels.cluster_id + 1; % ID for clusters also 0 based
@@ -518,6 +530,8 @@ classdef npix < handle
                 [clu_Depth,clu_Ch] = scanpix.npixUtils.getCluChDepthFromTemplates(templates, Winv, [chanMapKS(:) chanPos(:,2)]);
             end
             
+            % now we need to remove bad clusters and spike times outside trial
+            unClustIDs         = unique(clustIDs);
             % index for 'good' clusters
             unGoodClustIDs = unClustIDs(ismember(unClustIDs,good_clusts)); % remove 'mua' or 'noise' clusters from list in case we deal with phy output
             [~,indGood]    = ismember(clustIDs,unGoodClustIDs); % only keep these
