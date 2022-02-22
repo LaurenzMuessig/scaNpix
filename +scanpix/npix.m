@@ -255,7 +255,7 @@ classdef npix < handle
             %%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
             
             % load channel map
-            chanMapInfo = dir(fullfile(obj.dataPath{trialIterator},'*ChanMap*'));
+            chanMapInfo = dir(fullfile(obj.dataPath{trialIterator},'*kiloSortChanMap*'));
             if isempty(chanMapInfo)
                 chanMapName = scanpix.npixUtils.SGLXMetaToCoords_v2(fullfile(obj.dataPath{trialIterator})); % create map on the fly
             else

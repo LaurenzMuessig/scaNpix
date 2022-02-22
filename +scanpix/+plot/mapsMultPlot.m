@@ -15,10 +15,11 @@ defaultCellIDStr      = strrep(string(strcat('c_',num2str((1:size(data{1}))'))),
 defaultCMap           = 'jet';
 defaultNSteps         = 11; 
 defaultPlotSize       = [75 75];  % pixel
-defaultPlotSep        = [40 30];  % pixel
+defaultPlotSep        = [50 30];  % pixel
 defaultOffsetBase     = [60 50];  % pixel
 defaultFigName        = 'multPlot';  
 defaultHeaders        = '';  
+defaultNPlotsRow      = 6;
 % 
 p = inputParser;
 addOptional(p,'cellIDStr',defaultCellIDStr,@isstring);
@@ -29,50 +30,33 @@ addParameter(p,'plotsep',defaultPlotSep);
 addParameter(p,'offsetbase',defaultOffsetBase);
 addParameter(p,'figname',defaultFigName,@ischar);
 addParameter(p,'headers',defaultHeaders,@iscell);
+addParameter(p,'nplots',defaultNPlotsRow,@isscalar);
 parse(p,varargin{:});
 
 % some sanity checcks should go here
 
-%% plot
-% set up figure 
-screenSz       = get(0,'screensize');
-
-figStart = [0.1*screenSz(3) 0.1*screenSz(4)];
-
+%%
 % gather plot tiling
 if numel(data) == 1 
-    nPlotsPerRow = 6; % in case just 1 trial, we want to make a compact plot...
+%     nPlotsPerRow = p.Results.plotsize; % in case just 1 trial, we want to make a compact plot...
     noGridMode   = false;
+    axArraySz    = [ceil(length(data{1})/p.Results.nplots) p.Results.nplots];
 else
-    nPlotsPerRow = numel(data); % ...if it's several trials/plot types, we plot nCells across those
+%     nPlotsPerRow = numel(data); % ...if it's several trials/plot types, we plot nCells across those
     noGridMode   = true;
+    axArraySz    = [length(data{1})*size(data,1) numel(data)];
 end
 nPlots    = prod([size(data) length(data{1})]);
-% set width
-figWidth = min([nPlots,nPlotsPerRow]) * p.Results.plotsize(1) + min([nPlots,nPlotsPerRow]) * p.Results.plotsep(1)+3*p.Results.offsetbase(1);
-if figWidth > 0.7*screenSz(3)
-    figWidth = 0.7*screenSz(3);
-end
-% set height
-figHeight = ceil(nPlots/nPlotsPerRow) * p.Results.plotsize(2) + (ceil(nPlots/nPlotsPerRow)-1)*p.Results.plotsep(2)+3*p.Results.offsetbase(2);
-if figHeight > 0.7*screenSz(4)
-    figHeight = 0.7*screenSz(4);   
-end
-
-% open plot
-offsets              = p.Results.offsetbase;
-hScroll              = scanpix.plot.createScrollPlot( [figStart  figWidth figHeight ]  );
-hScroll.hFig.Name    = p.Results.figname;
-hScroll.hFig.Visible = 'off'; % hiding figure speeds up plotting by a fair amount
+%
+[axArray, hScroll] = scanpix.plot.multPlot(axArraySz,'plotsize',p.Results.plotsize,'plotsep',p.Results.plotsep,'figname',p.Results.figname);
+% hScroll.hFig.Visible = 'off';
 
 % open a waitbar
 plotCount = 1;
 hWait     = waitbar(0); 
 
-nRowPlots = 0;
-
 for i = 1:length(data{1})
-    
+       
     for j = 1:size(data,3)
         
         plotPeakRateFlag = false;
@@ -82,7 +66,8 @@ for i = 1:length(data{1})
             waitbar(plotCount/nPlots,hWait,'Making your precious figure, just bare with me!');
             
             % plot
-            hAx = scanpix.plot.addAxisScrollPlot( hScroll, [offsets p.Results.plotsize], p.Results.plotsep );
+            [b, a] = ind2sub(fliplr(axArraySz),plotCount);
+            hAx = axArray{a,b};
             
             if strcmpi(type{j},'rate') || strcmpi(type{j},'spike') || strcmpi(type{j},'pos')
                 scanpix.plot.plotRateMap(data{1,k,j}{i},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps)
@@ -113,16 +98,7 @@ for i = 1:length(data{1})
             % plot cell ID string
             if j == 1 && k == 1
                 t = text(hAx);
-                set(t,'Units','pixels','position',[-40 hAx.Position(4)/2],'String',p.Results.cellIDStr{i},'FontSize',8,'Interpreter','none' ); % harcoded text pos
-            end
-            % update
-            offsets(1) = offsets(1) + p.Results.plotsize(1) + 1.5*p.Results.plotsep(1);
-            nRowPlots = nRowPlots + 1; %;
-            
-            if nRowPlots >= nPlotsPerRow
-                offsets(1) = p.Results.offsetbase(1);
-                offsets(2) = offsets(2) + p.Results.plotsize(2) + p.Results.plotsep(2);
-                nRowPlots = 0;
+                set(t,'Units','pixels','position',[-30 hAx.Position(4)/2],'String',p.Results.cellIDStr{i},'FontSize',8,'Interpreter','none' ); % harcoded text pos
             end
             
             if i == length(data{1}) && noGridMode
@@ -133,14 +109,13 @@ for i = 1:length(data{1})
                 end
             end
             plotCount = plotCount + 1;
-            %disp(plotCount);
         end
     end
 end
 
 close(hWait);
 
-hScroll.hFig.Visible = 'on';
+% hScroll.hFig.Visible = 'on';
 
 end
 
