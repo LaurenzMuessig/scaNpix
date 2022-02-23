@@ -1,3 +1,4 @@
+
 function hAx = addAxisScrollPlot( hScroll, plotPos, plotSep, polarFlag )
 % Add new axes to scrollable plot, making sure to increase size of canvas
 % as we go along.
@@ -67,7 +68,7 @@ if posAx(1) + posAx(3) > 0.95*p_hPan(3) && hScroll.hFig.UserData.plotArray(2) > 
         if hScroll.hFig.UserData.plotArray(2) > (length(ax)+1)/hScroll.hFig.UserData.plotArray(1)
             set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3)+plotPos(3)+plotSep(1) p_hPan(4)]); % increase canvas size
         else
-            set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3)+plotSep(1) p_hPan(4)]); % increase canvas size
+            set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3)+0.95*plotPos(3) p_hPan(4)]); % increase canvas size
         end
     end
     p_hPan      = get(hScroll.hPan, 'Position'); %
@@ -82,7 +83,7 @@ if posAx(2) + posAx(4) > 0.95*p_hPan(4)
         if hScroll.hFig.UserData.plotArray(1)*hScroll.hFig.UserData.plotArray(2)-hScroll.hFig.UserData.plotArray(1) > length(ax)
             set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3) p_hPan(4)+plotPos(4)+plotSep(2)]);
         else
-            set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3) p_hPan(4)+plotSep(2)]);
+            set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3) p_hPan(4)+0.95*plotPos(4)]);
         end
     end
     p_hPan      = get(hScroll.hPan, 'Position'); %

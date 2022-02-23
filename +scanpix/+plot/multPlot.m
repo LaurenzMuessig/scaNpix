@@ -51,6 +51,9 @@ nPlots   = prod(axArraySz);
 figWidth = min([nPlots,axArraySz(2)]) * p.Results.plotsize(1) + min([nPlots,axArraySz(2)]) * p.Results.plotsep(1)+3*p.Results.offsetbase(1);
 if figWidth > 0.7*screenSz(3)
     sliderStepX = 1/((figWidth - 0.7*screenSz(3)) / (p.Results.plotsize(1)+p.Results.plotsep(1))); % this should roughly result in a step size of 1 plot
+     if sliderStepX > 1
+        sliderStepX = 1;
+    end
     figWidth = 0.7*screenSz(3);
 else
     sliderStepX = 1;
@@ -59,6 +62,9 @@ end
 figHeight = ceil(nPlots/axArraySz(2)) * p.Results.plotsize(2) + (ceil(nPlots/axArraySz(2))-1)*p.Results.plotsep(2)+3*p.Results.offsetbase(2);
 if figHeight > 0.7*screenSz(4)
     sliderStepY = 1/((figHeight - 0.7*screenSz(4)) / (p.Results.plotsize(2)+p.Results.plotsep(2))); % this should roughly result in a step size of 1 plot
+    if sliderStepY > 1
+        sliderStepY = 1;
+    end
     figHeight = 0.7*screenSz(4); 
 else
     sliderStepY = 1;
