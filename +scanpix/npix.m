@@ -33,7 +33,7 @@ classdef npix < handle
         dataPath(1,:)         string
         dataSetName(1,:)      char
         trialNames(1,:)       string
-        cell_ID(:,3)          double %{mustBePositive, mustBeNonNan, mustBeNonzero}
+        cell_ID(:,4)          double %{mustBePositive, mustBeNonNan, mustBeNonzero}
         cell_Label(:,1)       string
     end
     
@@ -202,6 +202,7 @@ classdef npix < handle
         end
         
     end
+    
     methods(Hidden)
         %%
         function loadMeta(obj, trialIterator)
@@ -231,7 +232,8 @@ classdef npix < handle
                 end
             end
             % reshape into more convenient format ([minX maxX; minY maxY])
-            obj.trialMetaData(trialIterator).envBorderCoords = [min(obj.trialMetaData(trialIterator).envBorderCoords([1,3])),max(obj.trialMetaData(trialIterator).envBorderCoords([1,3])); min(obj.trialMetaData(trialIterator).envBorderCoords([2,4])),max(obj.trialMetaData(trialIterator).envBorderCoords([2,4]))];
+%             obj.trialMetaData(trialIterator).envBorderCoords = [min(obj.trialMetaData(trialIterator).envBorderCoords([1,3])),max(obj.trialMetaData(trialIterator).envBorderCoords([1,3])); min(obj.trialMetaData(trialIterator).envBorderCoords([2,4])),max(obj.trialMetaData(trialIterator).envBorderCoords([2,4]))];
+            obj.trialMetaData(trialIterator).envBorderCoords = [obj.trialMetaData(trialIterator).envBorderCoords(1:2:end); obj.trialMetaData(trialIterator).envBorderCoords(2:2:end)];
 
             % legacy: older xml files won't contain 'objectPos' field
             if ~isfield(metaXMLFile,'objectPos')
@@ -357,14 +359,20 @@ classdef npix < handle
             end
             
             ppm = nan(2,1);
+            if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')); circleFlag = false; else; circleFlag = true; end
             % estimate ppm
             if isempty(obj.trialMetaData(trialIterator).envBorderCoords)
-                winSz  = [double(csvData{6}(1)) double(csvData{7}(1))];
-                ppm(:) = mean(winSz ./ (obj.trialMetaData(trialIterator).envSize ./ 100) );
+                envSzPix  = [double(csvData{6}(1)) double(csvData{7}(1))];
+                ppm(:) = mean(envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) );
             else
                 % this case should be default
-                winSz  = [abs(obj.trialMetaData(trialIterator).envBorderCoords(1)-obj.trialMetaData(trialIterator).envBorderCoords(3)), abs(obj.trialMetaData(trialIterator).envBorderCoords(2)-obj.trialMetaData(trialIterator).envBorderCoords(4))];
-                ppm(:) = round( mean( winSz ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
+                if ~circleFlag
+                    envSzPix  = [abs(obj.trialMetaData(trialIterator).envBorderCoords(1,1)-obj.trialMetaData(trialIterator).envBorderCoords(1,2)), abs(obj.trialMetaData(trialIterator).envBorderCoords(2,1)-obj.trialMetaData(trialIterator).envBorderCoords(2,2))];
+                else
+                    [xCenter, yCenter, radius, ~] = scanpix.fxchange.circlefit(obj.trialMetaData(trialIterator).envBorderCoords(1,:), obj.trialMetaData(trialIterator).envBorderCoords(2,:));
+                    envSzPix = [2*radius 2*radius];
+                end
+                ppm(:) = round( mean( envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
             end
             
             %% post process - basically as scanpix.dacqUtils.postprocess_data_v2
@@ -385,10 +393,10 @@ classdef npix < handle
                 tempSpeed(end+1) = tempSpeed(end);
                 speedInd = tempSpeed > obj.params('posMaxSpeed');
                 % env borders
-                if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once'))
-                	envSzInd = led(:,1,i) < 0.95*obj.trialMetaData(trialIterator).envBorderCoords(1,1) | led(:,1,i) > 1.05*obj.trialMetaData(trialIterator).envBorderCoords(1,2) | led(:,2,i) < 0.95*obj.trialMetaData(trialIterator).envBorderCoords(2,1) | led(:,2,i) > 1.05*obj.trialMetaData(trialIterator).envBorderCoords(2,2); 
+                if ~circleFlag
+                	envSzInd = led(:,1,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,1,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,2,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(2,:)) | led(:,2,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(2,:)); 
                 else
-                    %%%% NEED TO ADD CIRCLE FIT %%%%
+                    envSzInd = (led(:,1,i) - xCenter).^2 + (led(:,2,i) - yCenter).^2 > radius^2; % points outside of environment
                 end
                 % filter out
                 led(speedInd | envSzInd,:,i) = NaN;
@@ -567,11 +575,6 @@ classdef npix < handle
             % sort by depth
             [clu_Depth, indSort] = sort(clu_Depth,'ascend');
             spikeTimesFin        = spikeTimesFin(indSort);
-            good_clusts          = good_clusts(indSort);
-            cluLabel             = cluLabel(indSort);
-            clu_Ch               = clu_Ch(indSort);
-            
-            
             %% output
             obj.spikeData(1).spk_Times{trialIterator} = spikeTimesFin;
             endIdxNPix                                = min( [ length(syncTTLs), find(syncTTLs < obj.trialMetaData(trialIterator).duration + syncTTLs(1),1,'last') + 1]);
@@ -579,7 +582,13 @@ classdef npix < handle
             % we'll only need to grab this once - this assumes data was clustered together, but wouldn't make much sense otherwise?
             % what about reload?
             if trialIterator == 1
-                obj.cell_ID    = [good_clusts, clu_Depth, clu_Ch];
+                good_clusts          = good_clusts(indSort);
+                cluLabel             = cluLabel(indSort);
+                clu_Ch               = clu_Ch(indSort);
+                % likely at least the ref channel will have been removed before sorting - this will map channel ID back to raw data
+                clu_Ch_mapped = scanpix.npixUtils.mapChans(obj.chanMap.connected,clu_Ch);
+
+                obj.cell_ID    = [good_clusts, clu_Depth, clu_Ch clu_Ch_mapped];
                 obj.cell_Label = cluLabel;
             end
             

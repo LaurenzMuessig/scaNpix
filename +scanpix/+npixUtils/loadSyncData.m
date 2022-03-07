@@ -71,12 +71,12 @@ end
 % in an acceptable manner, esp. for corrupt data
 if ~BonsaiCorruptFlag && nFramesBonsai ~= length(syncTTLs)
     if nFramesBonsai - length(syncTTLs) == -1
-        % this case isn't 100% clear as frame could be missing anywhere
-        disp('Warning. Missmatch between n of pos samples and n of TTLs. -1 frame in pos data, so we assume the last frame in neuropix stream is incomplete and will be removed from neuropix data.');
+        % this case isn't 100% clear as frame could be missing anywhere - don't think this ever happens anymore since using CatGT to extract sync pulse times
+        disp('Warning. Missmatch between n of pos samples and n of TTLs. -1 frame in pos data, so we assume the last frame in neuropix stream is incomplete and will be removed from the data.');
         syncTTLs = syncTTLs(1:end-1);
     elseif nFramesBonsai - length(syncTTLs) == +1
         % this case should be clear and essentially no frame is missing!
-        disp('Warning. Missmatch between n of pos samples and n of TTLs. +1 frame in pos data, so the last frame in neuropix stream is incomplete and will be removed from pos data.');
+        disp('Warning. Missmatch between n of pos samples and n of TTLs. +1 frame in pos data, so the last TTL was deemed incomplete. We will remove last pos frame.');
     elseif nFramesBonsai - length(syncTTLs) > 1
         % this case should happen when animal unplugs during recording
         fprintf('Warning. There are %i more frames in tracking stream compared to neuropix data - assuming that the animal unplugged in redcording. If not you are in trouble\n', nFramesBonsai-length(syncTTLs));
