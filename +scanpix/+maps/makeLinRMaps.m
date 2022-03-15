@@ -1,4 +1,4 @@
-function [ lin_rMaps, lin_pMaps, linPos, lin_rMaps_normed ] = makeLinRMaps(spikeTimes,positions,sampleTimes,direction,speed,trackProps,varargin)
+function [ lin_rMaps, lin_pMaps, linPos ] = makeLinRMaps(spikeTimes,positions,sampleTimes,direction,speed,trackProps,varargin)
 % makeLinRMaps - Make linear rate map
 % Function will do the position linearisation as well
 % package: scanpix.maps
@@ -204,17 +204,17 @@ if prms.remTrackEnds > 0
 end
 
 %%
-% normalise maps and sort by position of max (if desired)
-lin_rMaps_normed = cell(3,2);
-if prms.normSort
-    for i = 1:3
-        maxMaps               = nanmax(lin_rMaps{i}, [], 2);
-        [~, maxInd]           = nanmax( bsxfun(@eq, lin_rMaps{i}, maxMaps),[], 2 );
-        [~, sortInd]          = sort( maxInd );
-        lin_rMaps_normed{i,1} = lin_rMaps{i}(sortInd,:) ./ maxMaps(sortInd); % ordered maps
-        lin_rMaps_normed{i,2} = sortInd;  % also keep an index so we can reconstruct later which row belongs to which cell
-    end
-end
+% % normalise maps and sort by position of max (if desired)
+% lin_rMaps_normed = cell(3,2);
+% if prms.normSort
+%     for i = 1:3
+%         maxMaps               = nanmax(lin_rMaps{i}, [], 2);
+%         [~, maxInd]           = nanmax( bsxfun(@eq, lin_rMaps{i}, maxMaps),[], 2 );
+%         [~, sortInd]          = sort( maxInd );
+%         lin_rMaps_normed{i,1} = lin_rMaps{i}(sortInd,:) ./ maxMaps(sortInd); % ordered maps
+%         lin_rMaps_normed{i,2} = sortInd;  % also keep an index so we can reconstruct later which row belongs to which cell
+%     end
+% end
 
 end
 

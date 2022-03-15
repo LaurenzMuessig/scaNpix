@@ -60,7 +60,7 @@ prms.lin.speedFilterLimitLow   = speedFilterLimitLow;
 prms.lin.speedFilterLimitHigh  = speedFilterLimitHigh;
 prms.lin.posIsCircular         = 0;
 prms.lin.remTrackEnds          = 0;  % Remove this many bins from each end of the linear track. Set to 0 to remove none.
-prms.lin.normSort              = 1;
+% prms.lin.normSort              = 1;
 % don't change
 prms.lin.dirTolerance          = prms.lin.dirTolerance * pi/180; % radians
 

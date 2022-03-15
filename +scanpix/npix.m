@@ -40,13 +40,12 @@ classdef npix < handle
     properties % trial data %
         trialMetaData(1,:)    struct
         posData               struct  = struct('XYraw',[],'XY',[],'direction',[],'speed',[],'linXY',[],'sampleT',[]);
-        spikeData             struct  = struct('spk_Times',[],'spk_waveforms',[],'sampleT',[]);  %%% DEAL WITH WAVEFORMS?
+        spikeData             struct  = struct('spk_Times',[],'spk_waveforms',[],'sampleT',[]); 
         lfpData               struct  = struct('lfp',[]);
     end
     
     properties % maps %
-        maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[],'speed',[]);
-        linMaps               struct  = struct('linRate',[],'linPos',[],'linRateNormed',[]);
+        maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[],'speed',[],'lin',[],'linPos',[]);
     end
     
     %     properties(Dependent)

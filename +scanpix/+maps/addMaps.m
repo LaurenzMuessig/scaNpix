@@ -203,8 +203,8 @@ switch lower(mapType)
             end
             trackProps.ppm   = obj.trialMetaData(i).ppm;
             trackProps.posFs = obj.params('posFs'); 
-            [obj.linMaps(1).linRate{i},obj.linMaps(1).linPos{i},obj.posData(1).linXY{i},obj.linMaps(1).linRateNormed{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i},...
-                                                                                                                                obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+            
+            [obj.maps(1).lin{i},obj.maps(1).linPos{i},obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
         end
         
     case 'objvect'

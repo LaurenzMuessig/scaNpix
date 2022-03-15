@@ -28,7 +28,6 @@ end
 if noLoadProps
     obj.posData.linXY = cell(1,length(obj.trialNames));
     obj.maps          = structfun(@(x) cell(1,length(obj.trialNames)),obj.maps,'uni',0);
-    obj.linMaps       = structfun(@(x) cell(1,length(obj.trialNames)),obj.linMaps,'uni',0);
 end
 
 % this could actually have a hard coded list instead of supplying as input?

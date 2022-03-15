@@ -88,8 +88,8 @@ switch lower(mode)
             
             tempPos = obj.posData.XY{trialIndex}(:,j);
             
-            lowerEdge = obj.trialMetaData(trialIndex).envBorderCoords(j,1) * 0.95; % give a bit of leeway
-            upperEdge = obj.trialMetaData(trialIndex).envBorderCoords(j,2) * 1.05; % 
+            lowerEdge = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:)) * 0.95; % give a bit of leeway
+            upperEdge = max(obj.trialMetaData(trialIndex).envBorderCoords(j,:)) * 1.05; % 
             
             tempPos( tempPos > upperEdge )  = NaN;
             tempPos( tempPos <= lowerEdge ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
