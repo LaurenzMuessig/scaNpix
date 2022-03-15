@@ -264,7 +264,6 @@ If you want to use your own custom values by default you should edit them within
    * _speedFilterFlagLMaps_ – logical flag if speed filtering for position data is invoked (_default=true_)
    * _posIsCircular_ – logical flag position data is assumed to be circular, as e.g. on square track (_default=false_)
    * _remTrackEnds_ – set this many bins to NaN at each end of the linear track (_default=0_). Don’t use for square track data
-   * _normSort_ – make normalized and sorted (by rate map peak on track) map array (_default=1_)
 
 * Parameters for linearisation of position data: 
    * _minDwellForEdge_ – minimum dwell of animal in bin at edge of environment in seconds (_default=1_)
