@@ -493,12 +493,12 @@ classdef npix < handle
             
             
             %% load sorting resuts
-            % load spike times
-            spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
-            spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
-            obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
             
             if loadFromPhy    
+                % load spike times
+                spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
+                spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+                obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
                 % load cluster IDs
                 clustIDs           = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
                 % phy curated output - only load clusters labelled good
@@ -516,10 +516,19 @@ classdef npix < handle
             else
                 try
                     % try and load cluster IDs from back up folder as this will prevent issues further down in case you curated the data in phy (and merged/split at least one cluster)
+                    % load spike times
+                    spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'backUpFiles','spike_times.npy'));
+                    spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+                    obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+                    %
                     clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'backUpFiles','spike_clusters.npy')) + 1; % 0 based index
                     ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'backUpFiles','cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
                 catch
                     warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you PHY''d the data and merged/split clusters, loading raw kilosort results will fail shortly...');
+                    % load spike times
+                    spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
+                    spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+                    obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
                     % load cluster IDs
                     clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
                     ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?

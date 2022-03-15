@@ -79,7 +79,7 @@ if ~BonsaiCorruptFlag && nFramesBonsai ~= length(syncTTLs)
         disp('Warning. Missmatch between n of pos samples and n of TTLs. +1 frame in pos data, so the last TTL was deemed incomplete. We will remove last pos frame.');
     elseif nFramesBonsai - length(syncTTLs) > 1
         % this case should happen when animal unplugs during recording
-        fprintf('Warning. There are %i more frames in tracking stream compared to neuropix data - assuming that the animal unplugged in redcording. If not you are in trouble\n', nFramesBonsai-length(syncTTLs));
+        fprintf('Warning. There are %i more frames in tracking stream compared to neuropix data - assuming that the animal unplugged in recording. If not, you are in trouble\n', nFramesBonsai-length(syncTTLs));
     else
         fprintf('Warning. Missmatch between n of pos samples and n of TTLs in neuropix data - %i vs. %i. Better go and check out why.\n', nFramesBonsai, length(syncTTLs));
     end
