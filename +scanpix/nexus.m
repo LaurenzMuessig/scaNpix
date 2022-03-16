@@ -158,7 +158,7 @@ classdef nexus < handle
             
             for i = 1:length(loadStr)
                 
-                obj.loadMeta(trialInd(i)); % load some meta data - will need to make a meta data file compatible with LM's code -IV
+%                 obj.loadMeta(trialInd(i)); % load some meta data - will need to make a meta data file compatible with LM's code -IV
                                
                 for j = 1:length(loadMode)
                     
@@ -166,7 +166,7 @@ classdef nexus < handle
                         case 'all'
                             obj.loadPos(trialInd(i));
                             obj.loadSpikes(trialInd(i));
-                            %                             obj.loadLFPs(trialInd(i));
+                            obj.loadLFPs(trialInd(i)); %IV addded 
                             break;
                         case 'pos'
                             obj.loadPos(trialInd(i));
@@ -174,9 +174,9 @@ classdef nexus < handle
                             obj.loadSpikes(trialInd(i));
                         case 'lfp'
                             %%% TO DO !!!!!
-                            %                             obj.loadLFPs(trialInd(i));
+                            obj.loadLFPs(trialInd(i));
                         case 'meta'
-                            % already loaded!
+                            % already loaded! - add metadata here IV 
                         otherwise
                             ME = MException('scaNpix:load:invalidInput', ['' loadMode{j} ''' is not a valid data type selector. Try ''all'', ''pos'', ''spikes'' and/or ''eeg'' instead. ']);
                             throw(ME);
