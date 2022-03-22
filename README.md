@@ -351,12 +351,9 @@ If you want to use your own custom values by default you should edit them within
    * _pos_ – cell arrays of 2D position maps
    * _dir_ – cell arrays of directional maps
    * _sACs_ – cell arrays of spatial autocorellograms
+   * _lin_ – cell(3,1) arrays of linearised rate maps. Format is full rate maps ({1}), rate map for CW ({2}) and CCW ({3}) runs
+   * _linPos_ – cell arrays of linearised position maps. Format is same as for lin
    
-* _linMaps_ (struct) – scalar structure with linearised rate maps
-   * _linRate_ – cell(3,1) arrays of linearised rate maps. Format is full rate maps ({1}), rate map for CW ({2}) and CCW ({3}) runs
-   * _linPos_ – cell arrays of linearised position maps. Format is same as for linRate
-   * _linRateNormed_ – cell(3,2) arrays of linearised rate maps, normalised by their peak rates and ordered according to their position on the track. Format of first column is as for linRate and in 2nd column you have the index, such that:
-_linRate{1}=linRateNormed{1,1}(linRateNormed{1,2}_)
 
 ## Hidden properties:
 
