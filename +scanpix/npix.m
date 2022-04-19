@@ -429,7 +429,7 @@ classdef npix < handle
             % pos data
             obj.posData(1).XYraw{trialIterator}        = xy;
             obj.posData(1).XY{trialIterator}           = [double( floor(xy(:,1)) + 1 ), double( floor(xy(:,2)) + 1 )];
-            obj.posData(1).sampleT{trialIterator}      = sampleT; % this is redundant (I think)
+            obj.posData(1).sampleT{trialIterator}      = sampleT; % this is redundant as we don't want to use the sample times from the PG camera
             
             obj.trialMetaData(trialIterator).ppm       = ppm(1);
             obj.trialMetaData(trialIterator).ppm_org   = ppm(2);
@@ -439,7 +439,8 @@ classdef npix < handle
             scanpix.maps.scalePosition(obj, trialIterator, 'envDimensions',boxExt);
             
             % running speed
-            pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
+%             pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
+            pathDists                                  = sqrt( diff(xy(:,1)).^2 + diff(xy(:,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
             obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
             obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
 
