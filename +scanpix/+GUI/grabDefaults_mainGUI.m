@@ -35,6 +35,7 @@ switch lower(defType)
         defStruct.sACColMap        = 'jet';
         defStruct.OVcolMap         = 'parula';
         defStruct.normColMapByMax  = false;
+        defStruct.plotNormSpeedMap = false;
         % compare cells tab
         % linearise tab
     case 'gui'

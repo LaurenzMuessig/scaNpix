@@ -34,7 +34,7 @@ prms.minBinProp     = 0.005; % valid speed bins need to contain > prctg of sampl
 prms.speedBinSz     = 2;     % cm/s (2 cm/s)
 prms.maxSpeed       = 40;    % cm/s (40 cm/s)
 prms.smKernelLength = 0.25;  % in seconds (250ms)
-prms.normaliseFR    = true;  % logical flag
+prms.normaliseFR    = false;  % logical flag
 prms.confInt        = 95;    % confidence interval
 
 
@@ -66,28 +66,35 @@ CI = @(x,p)std(x(:),'omitnan')/sqrt(sum(~isnan(x(:)))) * tinv(abs([0,1]-(1-p/100
 [instSpeed,~,ind] = histcounts(speed,0:prms.speedBinSz:prms.maxSpeed);
 validBins = instSpeed > prms.minBinProp * trialDur*prms.posFs; % in Kropf et al. it's >0.5% of all bins
 
+occCounts   = accumarray(ind(ind~=0), 1, [size(instSpeed,2) 1])./ prms.posFs;
+
 speedMaps = cell(length(spikeTimes),3);
 
 for i = 1:length(spikeTimes)
     % inst firing rate
-    instFRate = histcounts(ceil(spikeTimes{i}*prms.posFs),0:length(speed)) .* prms.posFs;
+    instFRate = histcounts(ceil(spikeTimes{i}*prms.posFs),0:length(speed)); %.* prms.posFs;
     % smooth
     kernel    = ones(1,ceil(prms.smKernelLength * prms.posFs)) ./ (prms.smKernelLength * prms.posFs); % Kropf uses kernel of 250ms
+%     h = fspecial('average',[ceil(prms.smKernelLength * prms.posFs) 1],1/prms.posFs)
     instFRate = imfilter(instFRate,kernel,'replicate');
     
     % mean rate / speed bin 
     speedMaps{i,1}(:,1) = prms.speedBinSz/2:prms.speedBinSz:prms.maxSpeed-prms.speedBinSz/2;
-    speedMaps{i,1}(:,2) = accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@mean);
+    spikeCounts = accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1]);
+    speedMaps{i,1}(:,2) = spikeCounts./occCounts;
+%     speedMaps{i,1}(:,2) = accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@mean);
     % 95 CI for means (a bit dense)
-    speedMaps{i,1}(:,3:4) = cell2mat( cellfun(@(x) CI(x,prms.confInt), accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@(x) {x}),'uni',0) );
+%     speedMaps{i,1}(:,3:4) = cell2mat( cellfun(@(x) CI(x,prms.confInt), accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@(x) {x}),'uni',0) );
+    speedMaps{i,1}(:,3:4) = cell2mat( cellfun(@(x) CI(x,prms.confInt), accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@(x) {x}),'uni',0) ) .* prms.posFs;
     speedMaps{i,1}        = speedMaps{i,1}(validBins,:);
     % add Kropf et al. normalisation
-    if prms.normaliseFR
-        b = regress(speedMaps{i}(:,2),[speedMaps{i,1}(:,1) ones(length(speedMaps{i,1}(:,1)), 1)]);
-        yInt = speedMaps{i}(1,1) - b(1)*prms.speedBinSz/2;
-        speedMaps{i,2} = (speedMaps{i}(:,2) - yInt) ./ (b(1)*prms.maxSpeed);
-        speedMaps{i,3} = [b(1) yInt];
-    end
+%     if prms.normaliseFR
+%         b =  regress(instFRate',[ind ones(length(ind), 1)]);
+% %         yInt = speedMaps{i}(1,2) - b(1)*speedMaps{i}(1,1);
+%         tmpMap         = accumarray(ind(ind~=0),(instFRate(ind~=0)'-b(2))./(b(1)*prms.maxSpeed),[length(instSpeed) 1],@mean);
+%         speedMaps{i,2} = tmpMap(validBins);
+%         speedMaps{i,3} = [b(1) b(2)];
+%     end
 end
 
 
