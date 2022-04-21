@@ -203,6 +203,7 @@ if prms.remTrackEnds > 0
     lin_pMaps(:, set2nanInd) = NaN;
 end
 
+
 %%
 % % normalise maps and sort by position of max (if desired)
 % lin_rMaps_normed = cell(3,2);

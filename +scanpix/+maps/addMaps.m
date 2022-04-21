@@ -172,8 +172,8 @@ switch lower(mapType)
         skipNextUI = false;
         for i = trialInd
             % we need the type of the track (for how smoothing is done)
-            if ~isempty(obj.trialMetaData(trialInd).trialType)
-                trackProps.type = obj.trialMetaData(trialInd).trialType;
+            if ~isempty(obj.trialMetaData(i).trialType)
+                trackProps.type = obj.trialMetaData(i).trialType;
             else
                 uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
                 if isempty(uiInput)
@@ -181,16 +181,16 @@ switch lower(mapType)
                     return;
                 else
                     trackProps.type = uiInput{1};
-                    obj.trialMetaData(trialInd).trialType = uiInput{1};
+                    obj.trialMetaData(i).trialType = uiInput{1};
                     trackProps.length = str2double(uiInput{2});
-                    obj.trialMetaData(trialInd).trackLength = str2double(uiInput{2});
+                    obj.trialMetaData(i).trackLength = str2double(uiInput{2});
                     skipNextUI = true;
                 end
             end
             
             % we need the length of the track for the pos scaling to work
-            if ~isempty(obj.trialMetaData(trialInd).trackLength)
-                trackProps.length= obj.trialMetaData(trialInd).trackLength;
+            if ~isempty(obj.trialMetaData(i).trackLength)
+                trackProps.length= obj.trialMetaData(i).trackLength;
             elseif ~skipNextUI
                 uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
                 if isempty(uiInput)
@@ -204,7 +204,8 @@ switch lower(mapType)
             trackProps.ppm   = obj.trialMetaData(i).ppm;
             trackProps.posFs = obj.params('posFs'); 
             
-            [obj.maps(1).lin{i},obj.maps(1).linPos{i},obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+            [obj.maps(1).lin{i} ,posMap,obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+            obj.maps(1).linPos{i} = num2cell(posMap,2);
         end
         
     case 'objvect'
