@@ -45,7 +45,7 @@ function [gridness, Props] = gridprops(autoCorr,varargin)
 
 prms.peakMode = 'point';     % Are peaks local max points ('point'), or contig areas over corrThr ('area')?
 prms.corrThr = 0.3;          % For peakMode='point', points must be >corrThr. For peakMode='area', look for contig regions over corrThr.
-prms.fieldExtentMethod = 'halfHeight'; % How do we find the extent of the peaks. 'halfHeight' or 'watershed'.
+prms.fieldExtentMethod = 'watershed'; % How do we find the extent of the peaks. 'halfHeight' or 'watershed'.
 prms.corrThrMode = 'abs';    % Does corrThr refer to absolute r-value (default) or r relative to central point ('rel', for time-win ACs).
 prms.areaThr = 20;           % Min size of contig areas when peakMode='area'. 100(MoserThr) * 1.5^2(MoserBin) / 1.92^2(WillsBin) = 61
 prms.closePeakFilter = [0 1 1 1 0; ones(3,5); 0 1 1 1 0];    % When peakMode='point', this filter defines area within which two peaks are counted as one.
@@ -66,7 +66,7 @@ if prms.verbose;  disp(prms);   end
 gridness=nan;
 Props.waveLength=NaN;
 Props.gridness=NaN;
-Props.orientation=NaN;
+Props.orientation=nan(1,3);
 Props.fieldSize=NaN;
 Props.closestPeaksCoord=NaN; 
 Props.maxDistFromCentre=NaN;
@@ -243,7 +243,13 @@ Props.waveLength=mean(distFromCentre(closestPeaks));
 [th, dummy]=cart2pol(xyCoordMaxBinCentral(closestPeaks,1), -xyCoordMaxBinCentral(closestPeaks,2)); % TW: Modified to take account of inverted y-axis.
 th=th(th>=0); %Remove negative values - can do this as peaks are 180deg radially symetrical
 if ~isempty(th)
-    Props.orientation=(min(th)/(2*pi))*360;
+%     Props.orientation=(min(th)/(2*pi))*360;
+    tmp = (sort(th)./(2*pi))*360;
+    if length(tmp) > 3
+        Props.orientation=tmp(1:3)';
+    else
+        Props.orientation(1:length(th))=tmp;
+    end
 end
 clear r th
 

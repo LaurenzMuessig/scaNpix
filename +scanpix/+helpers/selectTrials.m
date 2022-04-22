@@ -29,7 +29,7 @@ if length(trialNameStrIn) == 1
 end
 
 % UI selection
-[select, loadCheck] = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[180 100],'CancelString','Keep All');
+[select, loadCheck] = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400],'CancelString','Keep All');
 if ~loadCheck
     return;
 else

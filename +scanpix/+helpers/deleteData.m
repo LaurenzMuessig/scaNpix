@@ -4,22 +4,22 @@ function deleteData(obj, type, varargin)
 %
 % Syntax:
 %       scanpix.helpers.delete(obj,type)
-%       scanpix.helpers.delete(obj,type,trialStr)
-%       scanpix.helpers.delete(obj,type,cellInd)
+%       scanpix.helpers.delete(obj,'trials',trialStr)
+%       scanpix.helpers.delete(obj,'cells',cellInd)
 %
 % Inputs:
 %    type     - 'trials' or 'cells'
 %    varargin:
 %             - trialStr - string/cell array of strings; name(s) of trial(s) to be deleted from object
 %               if ommited will open UI dialogue to select trial(s)
-%             - cellInd - numeric index of cells to be deleted
+%             - cellInd - logical or numeric index of cells to be deleted from data
 %
 % Outputs:
 %
 % see also:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% parse inputs
+%% parse inputs
 switch type
     case 'trials'
         if nargin < 3
@@ -50,7 +50,7 @@ switch type
         end
 end
     
-
+%% delete
 switch type
     case 'trials'
         deleteInd = ismember(obj.trialNames,trialStr);
@@ -90,7 +90,7 @@ switch type
         for i = 1:length(f)
             indEmpty = cellfun('isempty',obj.maps.(f{i}));
             if ~all(indEmpty)
-                if all(cellfun(@(x) size(x,1),obj.maps.(f{i}){~indEmpty}) == length(cellInd))
+                if all(cellfun(@(x) size(x,1),obj.maps.(f{i}){~indEmpty}) == length(cellInd)) % standard and lin pos maps should be omitted
                     obj.maps.(f{i}){~indEmpty} = cellfun(@(x) x(cellInd,:),obj.maps.(f{i}){~indEmpty},'uni',0);
                 end
             end
