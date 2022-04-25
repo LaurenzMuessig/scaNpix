@@ -33,7 +33,7 @@ if strcmp(p.Results.mode,'drift')
     % KS2.5 or 3
     if isempty(p.Results.path2drift)
         % prompt user to select file
-        [fNameDrift,pathDrift] = uigetfile(fullfile(cd,'*.dat'),'Please Select Drift-corrected File');
+        [fNameDrift,pathDrift] = uigetfile(fullfile(cd,'*.dat'),'Please Select the Drift Corrected File');
         if isnumeric(pathDrift)
             warning('If you want to use the drift corrected data to extract waveforms, I need some info where that might be found on your disk. Too late now, but maybe you''ll do better later.');
             return
@@ -48,22 +48,23 @@ if strcmp(p.Results.mode,'drift')
     ind     = find(strcmp([npixObj.trialNames{trialInd} npixObj.fileType],cellstr(logFile.filename)));
     tempST  = cellfun(@(x) x + npixObj.trialMetaData(trialInd).offSet + sum(logFile.duration(2:ind-1)), npixObj.spikeData.spk_Times{trialInd},'uni',0); % add offset to spike times
 %     tempST  = cellfun(@(x) x + npixObj.trialMetaData(trialInd).offSet, npixObj.spikeData.spk_Times{trialInd},'uni',0); % add offset to spike times
-
-    [waveforms, channels] = getWaveforms(path2drift,tempST, npixObj.cell_ID(:,3), varargin);
+    [waveforms, channels] = getWaveforms(path2drift,tempST, npixObj.cell_ID, varargin);
 elseif strcmp(p.Results.mode,'raw')
     % if you load from ap.bin raw - you should really HP filter and CAR this data before extracting waveforms
     tempST  = cellfun(@(x) x + npixObj.trialMetaData(trialInd).offSet, npixObj.spikeData.spk_Times{trialInd},'uni',0); % add offset to spike times
-    if ~isempty(p.Results.clu)
-        ind = ismember(npixObj.cell_ID(:,1),p.Results.clu);
-    else
-        ind = true(length(npixObj.cell_ID(:,1)),1);
-    end
-    [waveforms, channels] = getWaveforms(fullfile(npixObj.dataPath,[npixObj.trialNames{trialInd} npixObj.fileType]),tempST(ind), npixObj.cell_ID(ind,3), varargin);    
-    
+    [waveforms, channels] = getWaveforms(fullfile(npixObj.dataPath{trialInd},[npixObj.trialNames{trialInd} npixObj.fileType]),tempST, npixObj.cell_ID, varargin);     
 end
-% assign to object directly as well
-npixObj.spikeData.spk_waveforms{trialInd,1} = waveforms;
-npixObj.spikeData.spk_waveforms{trialInd,2} = channels;
+% assign to object directly as well - we give option that only some
+% waveform(s) have been loaded as this is slow and you might only want to
+% look at a small group of units
+if isempty(npixObj.spikeData.spk_waveforms{trialInd})
+    npixObj.spikeData.spk_waveforms{trialInd,1} = waveforms;
+    npixObj.spikeData.spk_waveforms{trialInd,2} = channels;
+else
+    ind = ~cellfun('isempty',waveforms);
+    npixObj.spikeData.spk_waveforms{trialInd,1}(ind) = waveforms(ind);
+    npixObj.spikeData.spk_waveforms{trialInd,2}(ind) = channels(ind);
+end
 end
 
 %% this subfunction grabs the actual waveform data
@@ -99,6 +100,13 @@ else
     unwhitenData = p.Results.unwhite; % this is prob redundant unless when you used KS2 and you want to load waveforms from ops.fproc
 end
 
+if ~isempty(p.Results.clu)
+    cluInd = ismember(clu_Channel(:,1),p.Results.clu);
+else
+    cluInd = true(length(clu_Channel(:,1)),1);
+end
+
+
 %% PREPROCESS
 binFileStruct  = dir( path2raw );
 if isempty(binFileStruct)
@@ -107,14 +115,21 @@ end
 dataTypeNBytes = numel(typecast(cast(0, p.Results.prec), 'uint8')); % determine number of bytes per sample
 nSamp          = binFileStruct.bytes/(p.Results.nch*dataTypeNBytes);  % Number of samples per channel - quicker than reading from meta file
 
-% we need to check in channel map if recording spanned multiple banks
+% we need to check in channel map if recording spanned multiple banks -
+% NEEDS WORK TO ACCOUNT BETTER FOR ALL EVENTUALITIES
 chanMapFile    = dir( fullfile(binFileStruct.folder, '*ChanMap.mat') );
 if isempty(chanMapFile)
     chanMapFName = scanpix.npixUtils.SGLXMetaToCoords_v2(binFileStruct.folder);
 else
-    chanMapFName = chanMapFile.name;
+    if strcmp(p.Results.mode,'drift') 
+        chanMapFile    = dir( fullfile(binFileStruct.folder, '*driftCorrChanMap.mat') );
+        chanMapFName = fullfile(chanMapFile.folder,chanMapFile.name);
+    else
+        chanMapFile    = dir( fullfile(binFileStruct.folder, '*kilosortChanMap.mat') );
+        chanMapFName = fullfile(chanMapFile.folder,chanMapFile.name);
+    end
 end
-chanMap        = load(fullfile(binFileStruct.folder,chanMapFName));
+chanMap        = load(chanMapFName);
 bankBoundaries = find(abs(diff(chanMap.ycoords)) > p.Results.chanspace) + [0 1];
 
 if unwhitenData
@@ -150,8 +165,10 @@ hWait = waitbar(0);
 [waveforms, channels] = deal(cell(length(spikeTimes),1));
 for i = 1:length(spikeTimes) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
+    if ~cluInd(i);continue;end
+    
     currSTimesBin = ceil(spikeTimes{i} * p.Results.fs);
-    currChannels  = max([1,clu_Channel(i)-p.Results.getnch]):min([p.Results.nch, clu_Channel(i)+p.Results.getnch]); % take care not to go <0 or >prms.nCh
+    currChannels  = max([1,clu_Channel(i,3)-p.Results.getnch]):min([p.Results.nch, clu_Channel(i,3)+p.Results.getnch]); % take care not to go <0 or >prms.nCh
     % remove channels from list
     ind = ismember(currChannels,p.Results.remchans);
     if any(ind)
@@ -175,6 +192,10 @@ for i = 1:length(spikeTimes) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         nWFs2Extract = min(length(currSTimesBin),p.Results.nwave);
     else
         nWFs2Extract = length(currSTimesBin);
+    end
+    
+    if strcmp(p.Results.mode,'raw')
+        currChannels = scanpix.npixUtils.mapChans(chanMap.connected,currChannels);
     end
     
     currWave     = nan(nWFs2Extract,p.Results.nsamp+1,2*p.Results.getnch+1);

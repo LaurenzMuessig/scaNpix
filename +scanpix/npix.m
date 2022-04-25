@@ -371,6 +371,7 @@ classdef npix < handle
             if isempty(obj.trialMetaData(trialIterator).envBorderCoords)
                 envSzPix  = [double(csvData{6}(1)) double(csvData{7}(1))];
                 ppm(:) = mean(envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) );
+                scaleMethod = 'envsampling';
             else
                 % this case should be default
                 if ~circleFlag
@@ -380,6 +381,7 @@ classdef npix < handle
                     envSzPix = [2*radius 2*radius];
                 end
                 ppm(:) = round( mean( envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
+                scaleMethod = 'envDimensions';
             end
             
             %% post process - basically as scanpix.dacqUtils.postprocess_data_v2
@@ -444,7 +446,7 @@ classdef npix < handle
             
             % scale position
             boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
-            scanpix.maps.scalePosition(obj, trialIterator, 'envDimensions',boxExt);
+            scanpix.maps.scalePosition(obj, trialIterator, scaleMethod, boxExt, 1);
             
             % running speed
 %             pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
@@ -608,7 +610,7 @@ classdef npix < handle
             spikeTimes          = spikeTimes(sortInd);
             
             % reformat into more convenient form
-            spikeTimesFin  = accumarray(clustIDs,spikeTimes,[max(unGoodClustIDs) 1],@(x) {x});
+            spikeTimesFin  = accumarray(clustIDs,spikeTimes,[max([unGoodClustIDs;good_clusts]) 1],@(x) {x});
             % remove empty clusters - need to make sure not to remove cells that
             % only fire in some trials of a trial sequence (we are assuming here that
             % you clustered all data together and then split back into individual

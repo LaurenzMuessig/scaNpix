@@ -44,7 +44,7 @@ prms.alpha                = 200;
 prms.speedFilterFlagRMaps = 0;  % y/n
 prms.speedFilterLimits    = [2.5 400];
 prms.showWaitBar          = false;
-prms.rate.envSize         = [];
+prms.envSize              = [];
 prms.trimNaNs             = true;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

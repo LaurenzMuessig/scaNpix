@@ -41,6 +41,7 @@ switch lower(defType)
     case 'gui'
         defStruct.outputDir        = [cd filesep];
         defStruct.filename_suffix  = datestr(now,'yymmdd');
+        defStruct.WF_loadMode      = 'file';
     case 'maps'
         defStruct                  = scanpix.maps.defaultParamsRateMaps;
         defStruct.rate.showWaitBar = true;

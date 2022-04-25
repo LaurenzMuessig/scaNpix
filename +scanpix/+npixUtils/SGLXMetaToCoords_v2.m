@@ -15,7 +15,7 @@
 % (LM, 2020)
 % package: scanpix.npixUtils
 
-function newName = SGLXMetaToCoords_v2(path)
+function newName = SGLXMetaToCoords_v2(path,nameStr)
 
 
 % Output selection:
@@ -95,7 +95,11 @@ switch outType
         fclose(fid);
         
     case 1     %KS2 *.mat
-        newName = [fname,'_kilosortChanMap.mat'];
+        if nargin == 1
+            newName = [fname,'_kilosortChanMap.mat'];
+        else
+            newName = [fname,'_' nameStr 'ChanMap.mat'];
+        end
         chanMap = (1:numel(chans))';
         chanMap0ind = chanMap - 1;
         connected = logical(connected);

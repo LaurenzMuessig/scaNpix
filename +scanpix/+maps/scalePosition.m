@@ -79,7 +79,7 @@ switch lower(mode)
             
             XYScaled(:,j) = tempPos;
             
-            obj.trialMetaData(trialIndex).envSize = round(envSzPix(j) / obj.trialMetaData(trialIndex).ppm * 100); % from pix to cm
+            obj.trialMetaData(trialIndex).envSize(j) = envSzPix(j) / obj.trialMetaData(trialIndex).ppm * 100; % from pix to cm
         end
         
     case 'envdimensions'
