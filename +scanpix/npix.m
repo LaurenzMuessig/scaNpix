@@ -392,6 +392,9 @@ classdef npix < handle
                 ppm(1) = obj.params('ScalePos2PPM');
                 obj.trialMetaData(trialIterator).objectPos = obj.trialMetaData(trialIterator).objectPos .* scaleFact;
                 obj.trialMetaData(trialIterator).envBorderCoords = obj.trialMetaData(trialIterator).envBorderCoords .* scaleFact;
+                if circleFlag
+                    [xCenter, yCenter, radius] = deal(xCenter*scaleFact,yCenter*scaleFact,radius*scaleFact);
+                end
             end
             
             % remove tracking errors (i.e. too fast)
@@ -405,6 +408,7 @@ classdef npix < handle
                 if ~circleFlag
                 	envSzInd = led(:,1,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,1,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,2,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(2,:)) | led(:,2,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(2,:)); 
                 else
+                    
                     envSzInd = (led(:,1,i) - xCenter).^2 + (led(:,2,i) - yCenter).^2 > radius^2; % points outside of environment
                 end
                 % filter out
@@ -446,7 +450,9 @@ classdef npix < handle
             
             % scale position
             boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
-            scanpix.maps.scalePosition(obj, trialIterator, scaleMethod, boxExt, 1);
+            if ~circleFlag
+                scanpix.maps.scalePosition(obj, trialIterator, scaleMethod, boxExt, 1); % need to enable this for circular env as well!
+            end
             
             % running speed
 %             pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
