@@ -57,13 +57,15 @@ end
 % assign to object directly as well - we give option that only some
 % waveform(s) have been loaded as this is slow and you might only want to
 % look at a small group of units
+
+% npixObj.spikeData.spk_waveforms{trialInd}{1} = waveforms;
+% npixObj.spikeData.spk_waveforms{trialInd}{2} = channels;
+
 if isempty(npixObj.spikeData.spk_waveforms{trialInd})
-    npixObj.spikeData.spk_waveforms{trialInd,1} = waveforms;
-    npixObj.spikeData.spk_waveforms{trialInd,2} = channels;
+    npixObj.spikeData.spk_waveforms{trialInd} = [waveforms, channels];
 else
     ind = ~cellfun('isempty',waveforms);
-    npixObj.spikeData.spk_waveforms{trialInd,1}(ind) = waveforms(ind);
-    npixObj.spikeData.spk_waveforms{trialInd,2}(ind) = channels(ind);
+    npixObj.spikeData.spk_waveforms{trialInd}(ind,:) = [waveforms(ind),channels(ind)];
 end
 end
 

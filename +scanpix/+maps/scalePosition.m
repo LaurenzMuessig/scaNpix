@@ -1,4 +1,4 @@
-function scalePosition(obj, trialIndex, mode, envSzPix, minOccForEdge)
+function scalePosition(obj, trialIndex, envSzPix, minOccForEdge)
 % scalePosition - Find the edges of vis env, and scale path 
 % package: scanpix.maps
 % 
@@ -31,21 +31,18 @@ function scalePosition(obj, trialIndex, mode, envSzPix, minOccForEdge)
 if nargin < 2
     uiInput = inputdlg({'trialIndex','dwell thresh','Env. size X','Env. size Y (optional)'},'',1,{'','1','62.5',''});
     if isempty(uiInput)
-        warning('scaNpix::Maps::scalePosition:You don''t seem to like scaled positions. Have to abort here...');
+        warning('scaNpix::Maps::scalePosition:You don''t seem to enjoy scaling positions. Have to abort here...');
         return;
     else
         trialIndex = str2double(uiInput{1});
         minOccForEdge = str2double(uiInput{2});
         envSzPix = [obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{3}), obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{4})];
     end
-end
-
-% assume defaults is 'minOccForEdge' and/or 'boxExtent' aren't supplied
-if nargin < 4
+elseif nargin < 3 % assume defaults is 'minOccForEdge' and/or 'boxExtent' aren't supplied
     envSzPix = [250 250];
-    if strcmp(mode,'envsampling')
-        minOccForEdge = 1;
-    end
+    minOccForEdge = 1;
+elseif nargin < 4
+    minOccForEdge = 1;
 end
 
 if length(envSzPix) == 1 || isnan(envSzPix(2))
@@ -54,53 +51,30 @@ end
 
 % scale path
 XYScaled = nan((size(obj.posData.XY{trialIndex})));  % don't use raw pos??
-
-
-switch lower(mode)
-    case 'envsampling'
+for j = 1:2
+    
+    tempPos = obj.posData.XY{trialIndex}(:,j);
+    
+    if isempty(obj.trialMetaData(trialIndex).envBorderCoords)
+        pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % is this right? 768 is the maximum extent for the DACQ camera.
         
-        minOccForEdge = minOccForEdge * obj.params('posFs'); % samples
-        
-        for j = 1:2
-            
-            tempPos = obj.posData.XY{trialIndex}(:,j);
-            
-            pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % is this right? 768 is the maximum extent for the DACQ camera.
-            
-            lowerEdge = find(pathHist >= minOccForEdge, 1, 'first');
-            upperEdge = find(pathHist >= minOccForEdge, 1, 'last');
-            
-            tempPos( tempPos > upperEdge )  = NaN;
-            tempPos( tempPos <= lowerEdge ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
-            tempPos = tempPos - lowerEdge;
-            tempPos = tempPos .* (  envSzPix(j) / (upperEdge-lowerEdge) );
-            
-            tempPos(tempPos > envSzPix(j)) = envSzPix(j);    % Have checked that when this happens, it is a many decimal places rounding error.
-            
-            XYScaled(:,j) = tempPos;
-            
-            obj.trialMetaData(trialIndex).envSize(j) = envSzPix(j) / obj.trialMetaData(trialIndex).ppm * 100; % from pix to cm
-        end
-        
-    case 'envdimensions'
-              
-        for j = 1:2
-            
-            tempPos = obj.posData.XY{trialIndex}(:,j);
-            
-            lowerEdge = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:)) * 0.95; % give a bit of leeway
-            upperEdge = max(obj.trialMetaData(trialIndex).envBorderCoords(j,:)) * 1.05; % 
-            
-            tempPos( tempPos > upperEdge )  = NaN;
-            tempPos( tempPos <= lowerEdge ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
-            tempPos = tempPos - lowerEdge;
-            tempPos = tempPos .* (  envSzPix(j) / (upperEdge-lowerEdge) );
-            
-            tempPos(tempPos > envSzPix(j)) = envSzPix(j); 
-            
-            XYScaled(:,j) = tempPos;
-        end    
+        lowerEdge = find(pathHist >= minOccForEdge, 1, 'first');
+        upperEdge = find(pathHist >= minOccForEdge, 1, 'last');
+    else
+        lowerEdge = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:)); 
+        upperEdge = max(obj.trialMetaData(trialIndex).envBorderCoords(j,:)); %
+    end
+    
+    tempPos( tempPos > upperEdge )  = NaN;
+    tempPos( tempPos <= lowerEdge ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
+    tempPos = tempPos - lowerEdge;
+    tempPos = tempPos .* (  envSzPix(j) / (upperEdge-lowerEdge) );
+    
+    tempPos(tempPos > envSzPix(j)) = envSzPix(j);
+    
+    XYScaled(:,j) = tempPos;
 end
+
 % For consistency, make sure that all x=nan and all y= nan match up %
 XYScaled(any(isnan(XYScaled),2),:) = nan;
 % output

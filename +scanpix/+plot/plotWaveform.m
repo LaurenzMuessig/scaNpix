@@ -48,7 +48,7 @@ if size(waveforms,3) == 1
 %     if size(tempWF,3) ~= 2
 %         waveforms = shiftdim(tempWF,2);
 %     end
-    waveforms = shiftdim(cat(3,waveforms,waveforms),2);
+%     waveforms = shiftdim(cat(3,waveforms,waveforms),2);
 end
 
 
@@ -56,7 +56,11 @@ meanWFs = squeeze(nanmean(waveforms,1));
 if size(meanWFs,1) == 1; meanWFs = meanWFs'; end
 
 [~, maxInd] = max(abs(min(meanWFs,[],1) - max(meanWFs,[],1)));
-axLims  = [min(min(waveforms(:,:,maxInd))) max(max(waveforms(:,:,maxInd)))];
+if p.Results.plotIndWFs
+    axLims  = [min(min(waveforms(:,:,maxInd))) max(max(waveforms(:,:,maxInd)))];
+else
+    axLims  = [min(min(meanWFs)) max(max(meanWFs))];
+end
 nSamples = size(waveforms,2);
 if size(waveforms,1) > p.Results.maxWaves
     selInd = round(linspace(1,size(waveforms,1),p.Results.maxWaves));

@@ -44,10 +44,10 @@ screenSz = get(0,'screensize');
 % dynamically control figure size
 if length(prompts) <= nLines
     ySF   = 0.7*(length(prompts)/nLines);
-    figSz = [0.2*screenSz(3) 0.1*screenSz(4) 0.15*screenSz(3) ySF*screenSz(4)+25];
+    figSz = [0.425*screenSz(3) (1-ySF)/2*screenSz(4)-25 0.15*screenSz(3) ySF*screenSz(4)+25];
 else
     xSF   = 0.2 * ceil(length(prompts)/nLines);
-    figSz = [0.2*screenSz(3) 0.1*screenSz(4) xSF*screenSz(3) 0.7*screenSz(4)+25];   % will fail for too many lines, but that seems unlikely? Should maybe include a graceful exit
+    figSz = [(1-xSF)/2*screenSz(3) 0.175*screenSz(4)-25 xSF*screenSz(3) 0.7*screenSz(4)+25];   % will fail for too many lines, but that seems unlikely? Should maybe include a graceful exit
 end
 
 % open figure

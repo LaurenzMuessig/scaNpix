@@ -90,8 +90,8 @@ switch type
         for i = 1:length(f)
             indEmpty = cellfun('isempty',obj.maps.(f{i}));
             if ~all(indEmpty)
-                if all(cellfun(@(x) size(x,1),obj.maps.(f{i}){~indEmpty}) == length(cellInd)) % standard and lin pos maps should be omitted
-                    obj.maps.(f{i}){~indEmpty} = cellfun(@(x) x(cellInd,:),obj.maps.(f{i}){~indEmpty},'uni',0);
+                if all(cellfun(@(x) size(x,1),obj.maps.(f{i})(~indEmpty)) == length(cellInd)) % standard and lin pos maps should be omitted
+                    obj.maps.(f{i})(~indEmpty) = cellfun(@(x) x(cellInd,:),obj.maps.(f{i})(~indEmpty),'uni',0);
                 end
             end
         end

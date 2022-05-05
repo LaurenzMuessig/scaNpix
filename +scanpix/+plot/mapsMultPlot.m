@@ -56,15 +56,17 @@ plotCount = 1;
 hWait     = waitbar(0); 
 
 for i = 1:length(data{1})
-       
-    for j = 1:size(data,3)
+    
+    for k = 1:size(data,2)
         
-        plotPeakRateFlag = false;
-        
-        for k = 1:size(data,2)
-            
+        for j = 1:size(data,3)
+                      
             waitbar(plotCount/nPlots,hWait,'Making your precious figure, just bare with me!');
             
+%             if isempty(data{1,k,j}{i})
+%                 continue
+%             end
+            plotPeakRateFlag = false;
             % plot
             [b, a] = ind2sub(fliplr(axArraySz),plotCount);
             hAx = axArray{a,b};
@@ -78,8 +80,9 @@ for i = 1:length(data{1})
             elseif  strcmp(type{j},'lin')
                  scanpix.plot.plotLinMaps( data{1,k,j}{i}, hAx);
             elseif  strcmpi(type{j},'sacs')
+                plotPeakRateFlag = true;
                 mapSz = size(data{1,k,j}{i});
-                imagesc(hAx,'CData',data{k}{i}); colormap(hAx,jet);
+                imagesc(hAx,'CData',data{1,k,j}{i}); colormap(hAx,jet);
                 axis(hAx,'square');
                 
                 set(hAx,'xlim',[0 mapSz(2)],'ylim',[0 mapSz(1)]);

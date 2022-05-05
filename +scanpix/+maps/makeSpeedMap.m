@@ -36,6 +36,8 @@ prms.maxSpeed       = 40;    % cm/s (40 cm/s)
 prms.smKernelLength = 0.25;  % in seconds (250ms)
 prms.normaliseFR    = false;  % logical flag
 prms.confInt        = 95;    % confidence interval
+prms.showWaitBar    = false;
+
 
 
 %% parse input
@@ -70,6 +72,8 @@ occCounts   = accumarray(ind(ind~=0), 1, [size(instSpeed,2) 1])./ prms.posFs;
 
 speedMaps = cell(length(spikeTimes),3);
 
+if prms.showWaitBar; hWait = waitbar(0); end
+
 for i = 1:length(spikeTimes)
     % inst firing rate
     instFRate = histcounts(ceil(spikeTimes{i}*prms.posFs),0:length(speed)); %.* prms.posFs;
@@ -95,8 +99,11 @@ for i = 1:length(spikeTimes)
 %         speedMaps{i,2} = tmpMap(validBins);
 %         speedMaps{i,3} = [b(1) b(2)];
 %     end
+    if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Speed Maps... %i/%i done.',i,length(spkTimes))); end
+
 end
 
+if prms.showWaitBar; close(hWait); end
 
 end
 

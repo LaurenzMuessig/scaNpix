@@ -347,7 +347,7 @@ classdef npix < handle
             % account if 1st frame(s) would be missing, but I am not sure this would
             % actually ever happen (as 1st fame should always be triggered fine)
             % first check if there are any...
-            missFrames       = find(~ismember(1:length(frameCount),frameCount));
+            missFrames       = find(~ismember(1:frameCount(end),frameCount));
             nMissFrames      = length(missFrames);
             if ~isempty(missFrames)
                 fprintf('Note: There are %i missing frames in tracking data for %s.\n', nMissFrames, obj.trialMetaData(trialIterator).filename);
@@ -371,7 +371,6 @@ classdef npix < handle
             if isempty(obj.trialMetaData(trialIterator).envBorderCoords)
                 envSzPix  = [double(csvData{6}(1)) double(csvData{7}(1))];
                 ppm(:) = mean(envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) );
-                scaleMethod = 'envsampling';
             else
                 % this case should be default
                 if ~circleFlag
@@ -381,7 +380,6 @@ classdef npix < handle
                     envSzPix = [2*radius 2*radius];
                 end
                 ppm(:) = round( mean( envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
-                scaleMethod = 'envDimensions';
             end
             
             %% post process - basically as scanpix.dacqUtils.postprocess_data_v2
@@ -451,7 +449,7 @@ classdef npix < handle
             % scale position
             boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
             if ~circleFlag
-                scanpix.maps.scalePosition(obj, trialIterator, scaleMethod, boxExt, 1); % need to enable this for circular env as well!
+                scanpix.maps.scalePosition(obj, trialIterator, boxExt, 1); % need to enable this for circular env as well!
             end
             
             % running speed

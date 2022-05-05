@@ -45,7 +45,7 @@ prms.speedFilterFlagRMaps = 0;  % y/n
 prms.speedFilterLimits    = [2.5 400];
 prms.showWaitBar          = false;
 prms.envSize              = [];
-prms.trimNaNs             = true;
+prms.trimNaNs             = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % - This is the template code for name-value list OR struct passing of parameters -- %
@@ -81,8 +81,8 @@ binSizePix = floor( ppm/100 * prms.binSizeSpat ); % this many pix in one bin  %%
 % % note to comparison to old Scan - to replicate the exact map from the original version you would have to do the following:
 % positions = bsxfun(@minus,positions, floor( min(positions,[],1)/binSizePix )*binSizePix ); 
 % positions(positions == 0) = 1;
-positions = bsxfun(@minus,positions, min(positions,[],1)-1 ); % maybe this should be done at level of position processing during loading?
 posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
+
 if isempty(prms.envSize)
     nBins = [nanmax(posBinned(:,1)) nanmax(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
 else

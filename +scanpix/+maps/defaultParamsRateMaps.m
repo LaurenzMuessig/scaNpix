@@ -28,7 +28,7 @@ prms.rate.smooth               = 'adaptive'; % 'boxcar; 'adaptive'
 prms.rate.smoothKernel         = 5;    % size smoothing kernel (in bins)
 prms.rate.alpha                = 200;  % alpha parameter - don't change
 prms.rate.envSize              = [];
-prms.rate.trimNaNs                  = true;
+prms.rate.trimNaNs             = false;
 prms.rate.showWaitBar          = showWaitBar;
 
 %% dir maps
@@ -79,6 +79,7 @@ prms.speed.maxSpeed            = 40;    % cm/s (40 cm/s)
 prms.speed.smKernelLength      = 0.25;  % in seconds (250ms)
 prms.speed.normaliseFR         = true;  % logical flag
 prms.speed.confInt             = 95;    % confidence interval
+prms.speed.showWaitBar         = showWaitBar;
 
 
 

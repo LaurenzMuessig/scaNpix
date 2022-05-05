@@ -36,6 +36,8 @@ else
     hAx = p.Results.ax;
 end
 
+if isempty(map);  return; end
+
 % if strcmpi(p.Results.colmap,'poulter')
 %     nSteps = 8;  % Steve's map has 8 fixed steps, so should ignore any dynamic setting here
 % else
