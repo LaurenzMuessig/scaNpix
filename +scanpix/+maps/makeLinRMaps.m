@@ -155,8 +155,9 @@ for s = 1:length(spikeTimes)
             temp_ST           = ceil(spikeTimes{s} .* trackProps.posFs );
         else
             % as sample times in e.g. neuropixel can have some jitter we can't just bin by sample rate
-            [~, temp_ST] = arrayfun(@(x) min(abs(sampleTimes - x)), spikeTimes{s}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
-            temp_ST = cell2mat(temp_ST);
+%             [~, temp_ST] = arrayfun(@(x) min(abs(sampleTimes - x)), spikeTimes{s}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
+%             temp_ST = cell2mat(temp_ST);
+            [~, temp_ST] = min(abs(bsxfun(@minus, sampleTimes, spikeTimes{s}.')), [], 1);
         end
         
         temp_ST(temp_ST == 0) = 1; % this shouldn't happen. not sure why this is here -- CHECK

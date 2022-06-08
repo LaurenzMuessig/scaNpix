@@ -86,7 +86,7 @@ posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordi
 if isempty(prms.envSize)
     nBins = [nanmax(posBinned(:,1)) nanmax(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
 else
-    nBins = fliplr( ceil( prms.envSize ./ binSizePix) ); 
+    nBins = fliplr( ceil( prms.envSize ./ binSizePix) ) + min(posBinned); 
 end
 
 % raw pos map
@@ -111,14 +111,22 @@ end
 if prms.showWaitBar; hWait = waitbar(0); end
 
 for i = 1:length(spkTimes)
+    
+    if isempty(spkTimes{i})
+        rMaps{i} = zeros(size(posMapRaw));
+        rMaps{i}(unVisPos) = NaN;
+        continue
+    end
+    
     % spike Map
 
     if isempty(sampleTimes)
         spkPosBinInd = ceil(spkTimes{i} .* prms.posFs ); 
     else
         % as sample times in e.g. neuropixel can have some jitter we can't just bin by sample rate
-        [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
-        spkPosBinInd = cell2mat(spkPosBinInd);
+%         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
+%         spkPosBinInd = cell2mat(spkPosBinInd);
+        [~, spkPosBinInd] = min(abs(bsxfun(@minus, sampleTimes, spkTimes{i}.')), [], 1);
     end
     spkPosBinned     = posBinned(spkPosBinInd,:);
     spkMapRaw        = accumarray(spkPosBinned(~isnan(spkPosBinned(:,1)),:), 1, nBins);

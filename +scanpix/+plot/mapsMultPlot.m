@@ -49,7 +49,7 @@ end
 nPlots    = prod([size(data) length(data{1})]);
 %
 [axArray, hScroll] = scanpix.plot.multPlot(axArraySz,'plotsize',p.Results.plotsize,'plotsep',p.Results.plotsep,'figname',p.Results.figname);
-% hScroll.hFig.Visible = 'off';
+hScroll.hFig.Visible = 'off';
 
 % open a waitbar
 plotCount = 1;
@@ -72,7 +72,13 @@ for i = 1:length(data{1})
             hAx = axArray{a,b};
             
             if strcmpi(type{j},'rate') || strcmpi(type{j},'spike') || strcmpi(type{j},'pos')
-                scanpix.plot.plotRateMap(data{1,k,j}{i},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps)
+                scanpix.plot.plotRateMap(data{1,k,j}{i},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps);
+                % scale all axes to the largest possible map here? makes
+                % everything appear in proportion
+                if i == 1                    
+                    axLims = max(cell2mat(cellfun(@size,vertcat(data{1,:,j}),'UniformOutput',false)));
+                end
+                set(hAx,'ydir','reverse','xlim',[0 axLims(2)],'ylim',[0 axLims(1)]);
                 plotPeakRateFlag = true;
             elseif  strcmp(type{j},'dir')
                 scanpix.plot.plotDirMap(data{1,k,j}{i},hAx);
@@ -83,7 +89,7 @@ for i = 1:length(data{1})
                 plotPeakRateFlag = true;
                 mapSz = size(data{1,k,j}{i});
                 imagesc(hAx,'CData',data{1,k,j}{i}); colormap(hAx,jet);
-                axis(hAx,'square');
+%                 axis(hAx,'square');
                 
                 set(hAx,'xlim',[0 mapSz(2)],'ylim',[0 mapSz(1)]);
                 axis(hAx,'off');
@@ -101,7 +107,7 @@ for i = 1:length(data{1})
             % plot cell ID string
             if j == 1 && k == 1
                 t = text(hAx);
-                set(t,'Units','pixels','position',[-30 hAx.Position(4)/2],'String',p.Results.cellIDStr{i},'FontSize',8,'Interpreter','none' ); % harcoded text pos
+                set(t,'Units','pixels','position',[-40 hAx.Position(4)/2],'String',p.Results.cellIDStr{i},'FontSize',8,'Interpreter','none' ); % harcoded text pos
             end
             
             if i == length(data{1}) && noGridMode
@@ -118,7 +124,7 @@ end
 
 close(hWait);
 
-% hScroll.hFig.Visible = 'on';
+hScroll.hFig.Visible = 'on';
 
 end
 

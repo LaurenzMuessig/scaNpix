@@ -33,9 +33,6 @@ function r = spatialCorrelation(maps)
 if ~iscell(maps)
    error('Gimme some cell array of maps as input please, will ya?'); 
 end
-if size( unique( cell2mat( cellfun(@(x) size(x), maps, 'uni', 0) ), 'rows' ), 1) > 1 % 
-    error('Maps don''t have same number of rows and/or columns. Go and sort it out mate.');
-end
 
 % switch between modes
 if size(maps,2) > 1
@@ -46,6 +43,15 @@ if size(maps,2) > 1
 else
     % the full monty
     ABflag = false;
+end
+
+% interpolate maps to common size in case dimensions differ - this is
+% inspired from CBarry's code
+if size( unique( cell2mat( cellfun(@(x) size(x), maps, 'uni', 0) ), 'rows' ), 1) > 1 %
+    maxDimSz = max(unique( cell2mat( cellfun(@(x) size(x), maps, 'uni', 0) ), 'rows'));
+    for i=1:length(maps)
+        maps{i}=interp2(maps{i},linspace(1,size(maps{i},2), maxDimSz(2)),linspace(1, size(maps{i},1), maxDimSz(1))', '*linear');
+    end
 end
 
 %% get the correlations

@@ -78,8 +78,9 @@ for i = 1:length(spikeTimes)
     if isempty(sampleT)
         spkPosBinInd = ceil(spikeTimes{i} .* prms.posFs ); 
     else
-        [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleT - x)), spikeTimes{i}, 'UniformOutput', 0);
-        spkPosBinInd = cell2mat(spkPosBinInd);
+%         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleT - x)), spikeTimes{i}, 'UniformOutput', 0);
+%         spkPosBinInd = cell2mat(spkPosBinInd);
+        [~, spkPosBinInd] = min(abs(bsxfun(@minus, sampleTimes, spikeTimes{i}.')), [], 1);
     end
     spkBinnedDist    = dist(spkPosBinInd); 
     spkBinnedTheta   = theta(spkPosBinInd); 

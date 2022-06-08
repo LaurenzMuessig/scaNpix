@@ -314,7 +314,10 @@ classdef npix < handle
             end
             
             fID = fopen(fullfile(fName.folder,fName.name),'rt');
-            csvData = textscan(fID,'%u%f%f%f%f%u%u%f','HeaderLines',1,'delimiter',',');
+            header = textscan(fID,'%s',1);
+            nColumns = length(strsplit(header{1}{1},','));
+            fmt = ['%u%f%f%f%f%u%u%f' repmat('%u',nColumns-8,1)];
+            csvData = textscan(fID,fmt,'HeaderLines',1,'delimiter',',');
             fclose(fID);
             
             % led data - same format as for dacq
@@ -366,7 +369,7 @@ classdef npix < handle
             end
             
             ppm = nan(2,1);
-            if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')); circleFlag = false; else; circleFlag = true; end
+            if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')) && size(obj.trialMetaData(trialIterator).envBorderCoords,2) < 3; circleFlag = false; else; circleFlag = true; end
             % estimate ppm
             if isempty(obj.trialMetaData(trialIterator).envBorderCoords)
                 envSzPix  = [double(csvData{6}(1)) double(csvData{7}(1))];

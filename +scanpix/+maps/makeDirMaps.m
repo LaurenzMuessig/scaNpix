@@ -93,13 +93,20 @@ if prms.showWaitBar; hWait = waitbar(0); end
 % pre-allocate
 dirMaps          = cell(length(spkTimes),1);
 for i = 1:length(spkTimes)
+    
+    if isempty(spkTimes{i})
+         dirMaps{i} = zeros(size(dirPosMap));
+         continue
+    end
+    
     % spike Map
     if isempty(sampleTimes)
         spkPosBinInd = ceil(spkTimes{i} .* prms.posFs ); 
     else
         % as sample times can be somewhat irregular we can't just bin by sample rate for e.g. neuropixel data
-        [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
-        spkPosBinInd = cell2mat(spkPosBinInd);
+%         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
+    [~, spkPosBinInd] = min(abs(bsxfun(@minus, sampleTimes, spkTimes{i}.')), [], 1); % this seems to be most efficient way 
+%         spkPosBinInd = cell2mat(spkPosBinInd);
     end
     
     spkPosBinned    = HDBinned(spkPosBinInd,:);
