@@ -156,9 +156,9 @@ classdef npix < handle
                 loadMode  = {loadMode};
             end
             
-            if strcmp(loadMode{2},'reload')
+            if any(strcmp(loadMode,'reload'))
                 reloadFlag = true;
-                loadMode = loadMode(1);
+                loadMode = loadMode(~strcmp(loadMode,'reload'));
             end
             
             if nargin < 3
@@ -316,7 +316,10 @@ classdef npix < handle
             fID = fopen(fullfile(fName.folder,fName.name),'rt');
             header = textscan(fID,'%s',1);
             nColumns = length(strsplit(header{1}{1},','));
-            fmt = ['%u%f%f%f%f%u%u%f' repmat('%u',nColumns-8,1)];
+            fmt = ['%u%f%f%f%f%u%u%f'];
+            % allow for any n of additonal fields from Bonsai output
+            if nColumns > 8; fmt = [fmt repmat('%u',nColumns-8,1)]; end
+            
             csvData = textscan(fID,fmt,'HeaderLines',1,'delimiter',',');
             fclose(fID);
             
@@ -633,7 +636,7 @@ classdef npix < handle
                 clu_Depth      = clu_Depth(~indEmpty);
             end
             % sort by depth
-            [clu_Depth, indSort] = sort(clu_Depth,'ascend');
+            [clu_Depth, indSort] = sort(clu_Depth,'ascend'); % should be changed to descent to be sorted naturally 
             spikeTimesFin        = spikeTimesFin(indSort);
             %% output
             obj.spikeData(1).spk_Times{trialIterator} = spikeTimesFin;

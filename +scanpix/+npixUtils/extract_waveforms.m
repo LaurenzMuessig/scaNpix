@@ -125,6 +125,13 @@ if isempty(chanMapFile)
 else
     if strcmp(p.Results.mode,'drift') 
         chanMapFile    = dir( fullfile(binFileStruct.folder, '*driftCorrChanMap.mat') );
+        % in case there is no drift corr channel map (legacy data), we need
+        % to generate it
+        if isempty(chanMapFile)
+            tmpChanMap    = dir( fullfile(binFileStruct.folder, '*kilosortChanMap.mat') );
+            saveDriftCorrChanMap(fullfile(tmpChanMap.folder,tmpChanMap.name));
+            chanMapFile    = dir( fullfile(binFileStruct.folder, '*driftCorrChanMap.mat') );
+        end
         chanMapFName = fullfile(chanMapFile.folder,chanMapFile.name);
     else
         chanMapFile    = dir( fullfile(binFileStruct.folder, '*kilosortChanMap.mat') );
@@ -261,6 +268,26 @@ addParameter(p,'path2drift', path2drift,@ischar);
 addParameter(p,'clu',        cluIDs);
 
 parse(p,varargs{:});
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function saveDriftCorrChanMap(pathChanMap)
+
+tmp = load(pathChanMap);
+
+chanMap     = (1:sum(tmp.connected))';
+chanMap0ind = chanMap-1;
+kcoords     = tmp.kcoords(tmp.connected);
+xcoords     = tmp.xcoords(tmp.connected);
+ycoords     = tmp.ycoords(tmp.connected);
+connected   = true(sum(tmp.connected),1);
+
+p = fileparts(pathChanMap);
+[~,fn,~] = fileparts(tmp.name);
+name = fullfile(p,[fn '_driftCorrChanMap.mat']);
+
+save( name, 'chanMap', 'chanMap0ind', 'connected', 'name', 'xcoords', 'ycoords', 'kcoords' );
 
 end
 

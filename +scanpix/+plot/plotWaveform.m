@@ -59,8 +59,9 @@ if size(meanWFs,1) == 1; meanWFs = meanWFs'; end
 if p.Results.plotIndWFs
     axLims  = [min(min(waveforms(:,:,maxInd))) max(max(waveforms(:,:,maxInd)))];
 else
-    axLims  = [min(min(meanWFs)) max(max(meanWFs))];
+    axLims  = [min(meanWFs(:)) max(meanWFs(:))];
 end
+
 nSamples = size(waveforms,2);
 if size(waveforms,1) > p.Results.maxWaves
     selInd = round(linspace(1,size(waveforms,1),p.Results.maxWaves));
