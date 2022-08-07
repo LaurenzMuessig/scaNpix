@@ -44,7 +44,7 @@ if ~obj.loadFlag
 end
 
 if nargin < 2
-    str = {'rate','dir','lin','objVect','speed'};
+    str = {'rate','dir','lin','sAC','objVect','speed'};
     [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
     if ~loadCheck
         warning('scaNpix::maps::addMaps: No data selected. No maps will be created. Boring...');
@@ -208,6 +208,18 @@ switch lower(mapType)
             obj.maps(1).linPos{i} = num2cell(posMap,2);
         end
         
+    case 'sac'
+        
+        if isempty(obj.maps(1).rate{1})
+            warning('scaNpix::maps::addMaps:You need to generate rate maps before demanding spatial autocorrelograms.')
+            return
+        end
+        
+        for i = trialInd
+            % we don't want to smooth the AC but use smoothed rate map as input
+            obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x),obj.maps.rate{i},'uni',0);
+        end
+
     case 'objvect'
         for i = trialInd
             if ~isempty(obj.trialMetaData(i).objectPos)

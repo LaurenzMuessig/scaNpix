@@ -80,13 +80,14 @@ binSizePix = floor( ppm/100 * prms.binSizeSpat ); % this many pix in one bin  %%
 % % bin positions
 % % note to comparison to old Scan - to replicate the exact map from the original version you would have to do the following:
 % positions = bsxfun(@minus,positions, floor( min(positions,[],1)/binSizePix )*binSizePix ); 
+positions = positions - min(positions) + eps; 
 % positions(positions == 0) = 1;
 posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
 
 if isempty(prms.envSize)
     nBins = [nanmax(posBinned(:,1)) nanmax(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
 else
-    nBins = fliplr( ceil( prms.envSize ./ binSizePix) ) + min(posBinned); 
+    nBins = fliplr( ceil( prms.envSize ./ binSizePix ) ); %+ min(posBinned)-1; 
 end
 
 % raw pos map

@@ -57,10 +57,22 @@ prms.crossCorrMode=0;        % Assumes CG is a cross-cell CG. Looks for closest 
                              % to calculate gridness. Set 'centreMaskSizeThr' to [], as this code hasn't been fixed for cross-corrs.
 prms.verbose=0;              % Print to screen prms struct
 prms.showCorrRing=0;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
-for ii=1:2:length(varargin)
-    prms.(varargin{ii}) = varargin{ii+1};
-end
+
+
+% ---------------------------------------------------------------------------------- %
+if ~isempty(varargin)                                                                %
+    if ischar(varargin{1})                                                           %
+        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
+    elseif isstruct(varargin{1})                                                     %
+        s = varargin{1};   f = fieldnames(s);                                        %
+        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
+    end                                                                              %
+end                                                                                  %
+% ---------------------------------------------------------------------------------- %
+
 if prms.verbose;  disp(prms);   end
+
+if isempty(prms.closePeakFilter); prms.closePeakFilter = [0 1 1 1 0; ones(3,5); 0 1 1 1 0]; end % this is just for compatability with the GUI 
 
 % Preallocate output Props %
 gridness=nan;

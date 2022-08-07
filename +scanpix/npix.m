@@ -48,9 +48,11 @@ classdef npix < handle
         maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[],'speed',[],'lin',[],'linPos',[]);
     end
     
-    %     properties(Dependent)
-    %
-    %     end
+    properties(Dependent,SetAccess=private)
+        spatialInfo
+        rVect
+        gridProps
+    end
     
     properties(Hidden)
         fileType              char    = '.ap.bin';
@@ -279,9 +281,7 @@ classdef npix < handle
             
             if isempty(obj.dataSetName)
                 obj.dataSetName = ['r' num2str(metaXMLFile.animal) '_' num2str(metaXMLFile.date)];
-            end
-            
-
+            end     
         end
         
         %%
@@ -365,10 +365,10 @@ classdef npix < handle
                 
                 % interpolate sample times
                 interp_sampleT         = interp1(double(frameCount), sampleT, missFrames);
-                temp                   = zeros(length(led),1);
-                temp(missFrames,1)     = interp_sampleT;
-                temp(temp(:,1) == 0,1) = sampleT;
-                sampleT                = temp;
+                temp2                   = zeros(length(led),1);
+                temp2(missFrames,1)     = interp_sampleT;
+                temp2(temp2(:,1) == 0,1) = sampleT;
+                sampleT                = temp2;
             end
             
             ppm = nan(2,1);
@@ -412,7 +412,6 @@ classdef npix < handle
                 if ~circleFlag
                 	envSzInd = led(:,1,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,1,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,2,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(2,:)) | led(:,2,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(2,:)); 
                 else
-                    
                     envSzInd = (led(:,1,i) - xCenter).^2 + (led(:,2,i) - yCenter).^2 > radius^2; % points outside of environment
                 end
                 % filter out
@@ -496,15 +495,38 @@ classdef npix < handle
             if reloadFlag
                 syncTTLs = obj.trialMetaData(trialIterator).offSet;
             elseif ~isfield(obj.trialMetaData,'BonsaiCorruptFlag')
-                syncTTLs = scanpix.npixUtils.loadSyncData();
+                syncTTLs = scanpix.npixUtils.loadSyncData();  
             else
                 syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
+            end          
+%             % decide what to load - phy or kilosort          
+%             if obj.params('loadFromPhy') && ~reloadFlag
+%                 if exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
+%                     loadFromPhy = true;
+%                 else
+%                     warning('scaNpix::npix::loadSpikes:Can''t find ''cluster_info'' from phy output. Will try using kilosort data instead!');
+%                     loadFromPhy = false;
+%                 end
+%             else
+%                 loadFromPhy = false;
+%             end
+            %% load sorting resuts
+            % deal with directories in case of reload or KS output is in different directory to raw data
+            if reloadFlag || exist(fullfile(obj.dataPath{trialIterator},'spike_times.npy'),'file') ~= 2
+                % for a relaod we always request user interaction
+                [fName, path2data_A] = uigetfile(fullfile(obj.dataPath{trialIterator},'*.npy'),['Select spike_times.npy for ' obj.trialNames{trialIterator}]);
+                if isnumeric(fName)
+                    warning('Cannot continue reloading spike sorting results. Your journey ends here young padawan!');
+                    return
+                end
+                path2data_B = path2data_A;
+            else
+                 [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
             end
-
             
-            % decide what to load - phy or kilosort          
-            if obj.params('loadFromPhy') && ~reloadFlag
-                if exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
+             % decide what to load - phy or kilosort          
+            if obj.params('loadFromPhy')
+                if exist(fullfile(path2data_A,'cluster_info.tsv'),'file') == 2
                     loadFromPhy = true;
                 else
                     warning('scaNpix::npix::loadSpikes:Can''t find ''cluster_info'' from phy output. Will try using kilosort data instead!');
@@ -513,19 +535,27 @@ classdef npix < handle
             else
                 loadFromPhy = false;
             end
+                  
+           % try and load cluster IDs from back up folder if data was PHY'd as this will prevent issues further down in case you curated the data (and merged/split at least one cluster)
+           if ~loadFromPhy && exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
+                
+                if isfolder(fullfile(obj.dataPath{trialIterator},'backUpFiles'))
+                    path2data_A = fullfile(path2data_A,'backUpFiles');
+                else
+                    warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you merged/split clusters in PHY, loading raw kilosort results will fail shortly...');
+                end 
+            end
             
+            % load spike times
+            spikeTimes         = readNPY(fullfile(path2data_A,'spike_times.npy'));
+            spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+            obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+            % load cluster IDs
+            clustIDs           = readNPY(fullfile(path2data_A,'spike_clusters.npy')) + 1; % 0 based index
             
-            %% load sorting resuts
-            
-            if loadFromPhy    
-                % load spike times
-                spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
-                spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
-                obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
-                % load cluster IDs
-                clustIDs           = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
+            if loadFromPhy
                 % phy curated output - only load clusters labelled good
-                clu_info       = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'tab');
+                clu_info       = tdfread(fullfile(path2data_A,'cluster_info.tsv'),'tab');
                 goodLabel      = strcmp(cellstr(clu_info.group),'good');
                 try
                     good_clusts    = clu_info.id(goodLabel) + 1;
@@ -537,56 +567,7 @@ classdef npix < handle
                 cluLabel       = string(clu_info.group);
                 cluLabel       = cluLabel(goodLabel);
             else
-                if reloadFlag || exist(fullfile(obj.dataPath{trialIterator},'spike_times.npy'),'file') ~= 2
-                    % for a relaod we always request user interaction
-                    [fName, path2data_A] = uigetfile(fullfile(obj.dataPath{trialIterator},'*.npy'),['Select spike_times.npy for ' obj.trialNames{trialIterator}]);
-                    if isnumeric(fName)
-                        warning('Cannot continue reloading spike sorting results. Your journey ends here young padawan!');
-                        return
-                    end
-                    path2data_B = path2data_A;
-                % try and load cluster IDs from back up folder if data was PHY'd as this will prevent issues further down in case you curated the data (and merged/split at least one cluster)    
-                elseif exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
-                    
-                    if isfolder(fullfile(obj.dataPath{trialIterator},'backUpFiles'))
-                        path2data_A = fullfile(obj.dataPath{trialIterator},'backUpFiles');
-                        path2data_B = obj.dataPath{trialIterator};
-                    else
-                        [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
-                        warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you merged/split clusters in PHY, loading raw kilosort results will fail shortly...');
-                    end
-                else
-                    [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
-                end
-                
-                
-                % load spike times
-                spikeTimes         = readNPY(fullfile(path2data_A,'spike_times.npy'));
-                spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
-                obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
-                %
-                clustIDs  = readNPY(fullfile(path2data_A,'spike_clusters.npy')) + 1; % 0 based index
-                ks_labels = tdfread(fullfile(path2data_A,'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
-                
-%                 try
-%                     % try and load cluster IDs from back up folder as this will prevent issues further down in case you curated the data in phy (and merged/split at least one cluster)
-%                     % load spike times
-%                     spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'backUpFiles','spike_times.npy'));
-%                     spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
-%                     obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
-%                     %
-%                     clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'backUpFiles','spike_clusters.npy')) + 1; % 0 based index
-%                     ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'backUpFiles','cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
-%                 catch
-%                     warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you PHY''d the data and merged/split clusters, loading raw kilosort results will fail shortly...');
-%                     % load spike times
-%                     spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
-%                     spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
-%                     obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
-%                     % load cluster IDs
-%                     clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
-%                     ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
-%                 end
+                ks_labels = tdfread(fullfile(path2data_A,'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder? 
                 % raw kilosort output - we'll take everything in this case and can
                 % filter later if needed
                 cluLabel       = string(ks_labels.KSLabel); % this is either 'good' or 'mua'
@@ -703,9 +684,9 @@ classdef npix < handle
                 addParams = {'nch'; obj.trialMetaData(1).nChan};
             elseif strcmp(varargin{1},'ui')
                 % UI dialoge
-                prompts = {'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'unwhiten' };
-                varargs = {'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'unwhite'  };
-                defVals = { obj.trialMetaData(1).nChan,    250,                  5,                  40,                  0.375,             0,           0         };
+                prompts = {'mode', 'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'unwhiten' };
+                varargs = {'mode', 'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'unwhite'  };
+                defVals = {'raw',  obj.trialMetaData(1).nChan,    250,                  5,                  40,                  0.375,             0,           0         };
                 
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
@@ -750,4 +731,132 @@ classdef npix < handle
         
     end
     
+    methods % get methods
+        
+        function spatialInfo = get.spatialInfo(obj)
+            spatialInfo = nan(size(obj.cell_ID,1),length(obj.trialNames));
+            if isempty(obj.maps(1).rate{1})
+                warning('scaNpix::npix::spatialInfo:You need to make rate maps before demanding their spatial info.');
+                return
+            end
+            %
+            for i = 1:length(obj.trialNames)
+                spatialInfo(:,i) = cell2mat(cellfun(@(x,y) scanpix.analysis.spatial_info(x,y),obj.maps(1).rate{i},obj.maps.pos{i},'uni',0));
+            end
+        end
+        %
+        function rVect = get.rVect(obj)
+            rVect = nan(size(obj.cell_ID,1),length(obj.trialNames));
+            if isempty(obj.maps(1).dir{1})
+                warning('scaNpix::npix::RV:You need to make dir maps before demanding their rayleigh vector lengths.');
+                return
+            end
+            %
+            for i = 1:length(obj.trialNames)
+                rVect(:,i) = cell2mat(cellfun(@(x,y) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
+            end
+        end
+        %
+        function gridProps = get.gridProps(obj)
+            gridProps = nan(size(obj.cell_ID,1),5,length(obj.trialNames));
+            if isempty(obj.maps(1).sACs{1})
+                warning('scaNpix::npix::gridProps:You need to make spatial ACs before demanding grid properties.');
+                return
+            end
+            %
+            for i = 1:length(obj.trialNames)
+                [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,obj.mapParams.gridProps),obj.maps(1).sACs{i},'uni',0);
+                % for now just output the basics 
+                gridProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.waveLength x.orientation],temp,'uni',0));
+            end
+        end
+    end
+    
 end
+
+
+
+%             
+%             if loadFromPhy    
+%                 % load spike times
+%                 spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
+%                 spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+%                 obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+%                 % load cluster IDs
+%                 clustIDs           = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
+%                 % phy curated output - only load clusters labelled good
+%                 clu_info       = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'tab');
+%                 goodLabel      = strcmp(cellstr(clu_info.group),'good');
+%                 try
+%                     good_clusts    = clu_info.id(goodLabel) + 1;
+%                 catch
+%                     good_clusts    = clu_info.cluster_id(goodLabel) + 1;
+%                 end
+%                 clu_Depth      = clu_info.depth(goodLabel);  % I think this amd the following seem to not give correct results in somce cases?? Phy Issue?? 
+%                 clu_Ch         = clu_info.ch(goodLabel) + 1; % this is 0 based 
+%                 cluLabel       = string(clu_info.group);
+%                 cluLabel       = cluLabel(goodLabel);
+%             else
+%                 if reloadFlag || exist(fullfile(obj.dataPath{trialIterator},'spike_times.npy'),'file') ~= 2
+%                     % for a relaod we always request user interaction
+%                     [fName, path2data_A] = uigetfile(fullfile(obj.dataPath{trialIterator},'*.npy'),['Select spike_times.npy for ' obj.trialNames{trialIterator}]);
+%                     if isnumeric(fName)
+%                         warning('Cannot continue reloading spike sorting results. Your journey ends here young padawan!');
+%                         return
+%                     end
+%                     path2data_B = path2data_A;
+%                 % try and load cluster IDs from back up folder if data was PHY'd as this will prevent issues further down in case you curated the data (and merged/split at least one cluster)    
+%                 elseif exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
+%                     
+%                     if isfolder(fullfile(obj.dataPath{trialIterator},'backUpFiles'))
+%                         path2data_A = fullfile(obj.dataPath{trialIterator},'backUpFiles');
+%                         path2data_B = obj.dataPath{trialIterator};
+%                     else
+%                         [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
+%                         warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you merged/split clusters in PHY, loading raw kilosort results will fail shortly...');
+%                     end
+%                 else
+%                     [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
+%                 end
+                
+                
+                % load spike times
+%                 spikeTimes         = readNPY(fullfile(path2data_A,'spike_times.npy'));
+%                 spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+%                 obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+%                 %
+%                 clustIDs  = readNPY(fullfile(path2data_A,'spike_clusters.npy')) + 1; % 0 based index
+%                 ks_labels = tdfread(fullfile(path2data_A,'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
+%                 
+%                 try
+%                     % try and load cluster IDs from back up folder as this will prevent issues further down in case you curated the data in phy (and merged/split at least one cluster)
+%                     % load spike times
+%                     spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'backUpFiles','spike_times.npy'));
+%                     spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+%                     obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+%                     %
+%                     clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'backUpFiles','spike_clusters.npy')) + 1; % 0 based index
+%                     ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'backUpFiles','cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
+%                 catch
+%                     warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you PHY''d the data and merged/split clusters, loading raw kilosort results will fail shortly...');
+%                     % load spike times
+%                     spikeTimes         = readNPY(fullfile(obj.dataPath{trialIterator},'spike_times.npy'));
+%                     spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+%                     obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+%                     % load cluster IDs
+%                     clustIDs  = readNPY(fullfile(obj.dataPath{trialIterator},'spike_clusters.npy')) + 1; % 0 based index
+%                     ks_labels = tdfread(fullfile(obj.dataPath{trialIterator},'cluster_KSLabel.tsv'),'tab'); % we need the raw kilosort output here before you ran Phy as this file gets overwritten! - maybe point to backup folder?
+%                 end
+                % raw kilosort output - we'll take everything in this case and can
+                % filter later if needed
+%                 cluLabel       = string(ks_labels.KSLabel); % this is either 'good' or 'mua'
+%                 %     ind_good       = strcmp(cluLabel,'good') | strcmp(cluLabel,'mua');
+%                 good_clusts    = ks_labels.cluster_id + 1; % ID for clusters also 0 based
+%                 % get depth estimate for each cluster based on template ampl
+%                 % distribution across probe
+%                 templates          = readNPY(fullfile(path2data_B,'templates.npy'));
+%                 Winv               = readNPY(fullfile(path2data_B,'whitening_mat_inv.npy'));
+%                 chanPos            = readNPY(fullfile(path2data_B,'channel_positions.npy'));
+%                 chanMapKS          = double(readNPY(fullfile(path2data_B,'channel_map.npy'))) + 1;  % 
+%                 [clu_Depth,clu_Ch] = scanpix.npixUtils.getCluChDepthFromTemplates(templates, Winv, [chanMapKS(:) chanPos(:,2)]);
+%             end

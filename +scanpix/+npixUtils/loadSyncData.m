@@ -48,18 +48,36 @@ end
 % first try looking for .txt file output from CatGT...
 syncTTLFile = dir('*TTL.txt');
 
-if ~isempty(syncTTLFile)
-    % best case - note that CatGT only registers complete TTLs, so
-    % regularly drops last one
-    fid = fopen(syncTTLFile.name);
-    syncTTLs = textscan(fid,'%f');
-    syncTTLs = syncTTLs{1};
-    fclose(fid);    
+if isempty(syncTTLFile)
+    
+    [fName,fPath] = uigetfile(fullfile(cd,'*.txt'),'Select txt file with sync TTL times for current data set');
+    cd(fPath);
 else
-    % if we didn't run CatGT (legacy data..)..
-    % .. first try and load data
-    syncTTLs = loadSyncFromLFP(prms);    
+    fName = syncTTLFile.name;
 end
+
+fid = fopen(fName);
+syncTTLs = textscan(fid,'%f');
+syncTTLs = syncTTLs{1};
+fclose(fid);
+
+% if ~isempty(syncTTLFile)
+%     % best case - note that CatGT only registers complete TTLs, so
+%     % regularly drops last one
+%     fid = fopen(syncTTLFile.name);
+%     syncTTLs = textscan(fid,'%f');
+%     syncTTLs = syncTTLs{1};
+%     fclose(fid);    
+% else
+%     % if we didn't run CatGT (legacy data..)..
+%     % .. first try and load data
+%     syncTTLs = loadSyncFromLFP(prms);    
+% end
+
+
+    
+
+
 
 % in case we just wanted the sync data, we'll stop here and don't worry
 % about Bonsai
