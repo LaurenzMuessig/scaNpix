@@ -46,9 +46,11 @@ classdef dacq < handle
         maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[],'speed',[],'lin',[],'linPos',[]);
     end
     
-%     properties(Dependent)
-%         
-%     end
+    properties(Dependent,SetAccess=private)
+        spatialInfo
+        rVect
+        gridProps
+    end
     
     properties(Hidden)
         fileType              char    = '.set';
@@ -690,5 +692,44 @@ classdef dacq < handle
             
             obj.lfpData(1).lfpTet{trialIterator} = ceil(obj.trialMetaData(trialIterator).lfp_recordingChannel(:) ./ 4)';               
         end  
+    end
+    methods % get methods
+        function spatialInfo = get.spatialInfo(obj)
+            spatialInfo = nan(size(obj.cell_ID,1),length(obj.trialNames));
+            if isempty(obj.maps(1).rate{1})
+                warning('scaNpix::dacq::spatialInfo:You need to make rate maps before demanding their spatial info.');
+                return
+            end
+            %
+            for i = 1:length(obj.trialNames)
+                spatialInfo(:,i) = cell2mat(cellfun(@(x,y) scanpix.analysis.spatial_info(x,y),obj.maps(1).rate{i},obj.maps.pos{i},'uni',0));
+            end
+        end
+        %
+        function rVect = get.rVect(obj)
+            rVect = nan(size(obj.cell_ID,1),length(obj.trialNames));
+            if isempty(obj.maps(1).dir{1})
+                warning('scaNpix::dacq::rVect:You need to make dir maps before demanding their rayleigh vector lengths.');
+                return
+            end
+            %
+            for i = 1:length(obj.trialNames)
+                rVect(:,i) = cell2mat(cellfun(@(x,y) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
+            end
+        end
+        %
+        function gridProps = get.gridProps(obj)
+            gridProps = nan(size(obj.cell_ID,1),5,length(obj.trialNames));
+            if isempty(obj.maps(1).sACs{1})
+                warning('scaNpix::dacq::gridProps:You need to make spatial ACs before demanding grid properties.');
+                return
+            end
+            %
+            for i = 1:length(obj.trialNames)
+                [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,obj.mapParams.gridProps),obj.maps(1).sACs{i},'uni',0);
+                % for now just output the basics
+                gridProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.waveLength x.orientation],temp,'uni',0));
+            end
+        end
     end
 end

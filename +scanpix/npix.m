@@ -257,10 +257,10 @@ classdef npix < handle
             obj.trialMetaData(trialIterator).ppm_org = [];
             obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
             % spikeGLX meta data %
-            metaDataFile = dir(fullfile(obj.dataPath{trialIterator},'*.ap.meta'));
-            fidMeta  = fopen(fullfile(metaDataFile.folder,metaDataFile.name),'r');
-            C        = textscan(fidMeta, '%[^=] = %[^\r\n]');
-            fclose(fidMeta);
+%             metaDataFile = dir(fullfile(obj.dataPath{trialIterator},'*.ap.meta'));
+%             fidMeta  = fopen(fullfile(metaDataFile.folder,metaDataFile.name),'r');
+%             C        = textscan(fidMeta, '%[^=] = %[^\r\n]');
+%             fclose(fidMeta);
 %             obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
 %             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
             %%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
@@ -316,7 +316,7 @@ classdef npix < handle
             fID = fopen(fullfile(fName.folder,fName.name),'rt');
             header = textscan(fID,'%s',1);
             nColumns = length(strsplit(header{1}{1},','));
-            fmt = ['%u%f%f%f%f%u%u%f'];
+            fmt = '%u%f%f%f%f%u%u%f';
             % allow for any n of additonal fields from Bonsai output
             if nColumns > 8; fmt = [fmt repmat('%u',nColumns-8,1)]; end
             
@@ -453,9 +453,9 @@ classdef npix < handle
             
             % scale position
             boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
-            if ~circleFlag
-                scanpix.maps.scalePosition(obj, trialIterator, boxExt, 1); % need to enable this for circular env as well!
-            end
+%             if ~circleFlag
+                scanpix.maps.scalePosition(obj, trialIterator,'envszpix', boxExt,'circflag',circleFlag); % need to enable this for circular env as well!
+%             end
             
             % running speed
 %             pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm

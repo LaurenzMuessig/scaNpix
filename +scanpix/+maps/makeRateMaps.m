@@ -116,6 +116,12 @@ for i = 1:length(spkTimes)
     if isempty(spkTimes{i})
         rMaps{i} = zeros(size(posMapRaw));
         rMaps{i}(unVisPos) = NaN;
+        % need a dummy pos map for cells with 0 spikes when using adaptive smooth
+        if strcmp(prms.smooth,'adaptive')
+            tmpPos = posMapRaw;    
+            tmpPos(unVisPos) = nan;
+            sm_pMaps{i} = tmpPos;
+        end
         continue
     end
     

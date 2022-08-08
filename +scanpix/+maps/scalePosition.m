@@ -1,4 +1,4 @@
-function scalePosition(obj, trialIndex, envSzPix, minOccForEdge)
+function scalePosition(obj, trialIndex, varargin)
 % scalePosition - Find the edges of vis env, and scale path 
 % package: scanpix.maps
 % 
@@ -27,9 +27,21 @@ function scalePosition(obj, trialIndex, envSzPix, minOccForEdge)
 % LM/TW 2020
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+envSzPix       = [250 250];
+minOccForEdge  = 1;
+circleFlag     = false;
+
+p = inputParser;
+addParameter(p,'envszpix',envSzPix,@isnumeric);
+addParameter(p,'minoccedge',minOccForEdge,@isscalar);
+addParameter(p,'circflag',circleFlag,@islogical);
+parse(p,varargin{:});
+
+
 % parse input
 if nargin < 2
-    uiInput = inputdlg({'trialIndex','dwell thresh','Env. size X','Env. size Y (optional)'},'',1,{'','1','62.5',''});
+    uiInput = inputdlg({'trialIndex','dwell thresh','Env. size X','Env. size Y (optional)','circleFlag'},'',1,{'','1','62.5','','1'});
     if isempty(uiInput)
         warning('scaNpix::Maps::scalePosition:You don''t seem to enjoy scaling positions. Have to abort here...');
         return;
@@ -37,12 +49,12 @@ if nargin < 2
         trialIndex = str2double(uiInput{1});
         minOccForEdge = str2double(uiInput{2});
         envSzPix = [obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{3}), obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{4})];
+        circleFlag = logical(str2double(uiInput{5}));
     end
-elseif nargin < 3 % assume defaults is 'minOccForEdge' and/or 'boxExtent' aren't supplied
-    envSzPix = [250 250];
-    minOccForEdge = 1;
-elseif nargin < 4
-    minOccForEdge = 1;
+else 
+    envSzPix      = p.Results.envszpix;
+    minOccForEdge = p.Results.minoccedge;
+    circleFlag    = p.Results.circflag;
 end
 
 if length(envSzPix) == 1 || isnan(envSzPix(2))
@@ -55,13 +67,13 @@ for j = 1:2
     
     tempPos = obj.posData.XY{trialIndex}(:,j);
     
-    if isempty(obj.trialMetaData(trialIndex).envBorderCoords)
+    if isempty(obj.trialMetaData(trialIndex).envBorderCoords) || circleFlag
         pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % is this right? 768 is the maximum extent for the DACQ camera.
         
         lowerEdge = find(pathHist >= minOccForEdge, 1, 'first');
         upperEdge = find(pathHist >= minOccForEdge, 1, 'last');
     else
-        lowerEdge = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:)); 
+        lowerEdge = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:));
         upperEdge = max(obj.trialMetaData(trialIndex).envBorderCoords(j,:)); %
     end
     
@@ -74,9 +86,9 @@ for j = 1:2
     
     XYScaled(:,j) = tempPos;
 end
-
+        
 % For consistency, make sure that all x=nan and all y= nan match up %
-XYScaled(any(isnan(XYScaled),2),:) = nan;
+XYScaled(any(isnan(XYScaled),2),:) = NaN;
 % output
 obj.posData.XY{trialIndex} = XYScaled;
 
