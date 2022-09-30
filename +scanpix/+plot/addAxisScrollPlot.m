@@ -61,11 +61,11 @@ posAx       = get(hAx,'Position'); % current axis size/position
 p_hPan      = get(hScroll.hPan, 'Position'); % canvas size/position
 
 % horizontal size + slider
-if posAx(1) + posAx(3) > 0.95*p_hPan(3) && hScroll.hFig.UserData.plotArray(2) > (length(ax)+1)/hScroll.hFig.UserData.plotArray(1)
+if posAx(1) + posAx(3) > 0.95*p_hPan(3) && hScroll.hPan.UserData(2) > (length(ax)+1)/hScroll.hPan.UserData(1)
     if firstAxFlag
         set(hScroll.hPan, 'Position',[p_hPan(1:2) 1.05*+plotPos(3)+plotSep(1) p_hPan(4)]); % increase canvas size
     else
-        if hScroll.hFig.UserData.plotArray(2) > (length(ax)+1)/hScroll.hFig.UserData.plotArray(1)
+        if hScroll.hPan.UserData(2) > (length(ax)+1)/hScroll.hPan.UserData(1)
             set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3)+plotPos(3)+plotSep(1) p_hPan(4)]); % increase canvas size
         else
             set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3)+0.95*plotPos(3) p_hPan(4)]); % increase canvas size
@@ -80,7 +80,7 @@ if posAx(2) + posAx(4) > 0.95*p_hPan(4)
     if firstAxFlag
         set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3) 1.05*plotPos(4)+plotSep(2)]);
     else
-        if hScroll.hFig.UserData.plotArray(1)*hScroll.hFig.UserData.plotArray(2)-hScroll.hFig.UserData.plotArray(1) > length(ax)
+        if hScroll.hPan.UserData(1)*hScroll.hPan.UserData(2)-hScroll.hPan.UserData(1) > length(ax)
             set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3) p_hPan(4)+plotPos(4)+plotSep(2)]);
         else
             set(hScroll.hPan, 'Position',[p_hPan(1:2) p_hPan(3) p_hPan(4)+0.95*plotPos(4)]);
