@@ -47,7 +47,7 @@ if n_leds == 2 && not(isempty(posdata.led_pix)) % Only check if we actually have
 end
 
 % Filter points for those moving impossibly fast and set led_pos_x to NaN
-pix_per_metre = key_value('pixels_per_metre', posdata.header, 'num');
+pix_per_metre = scanpix.dacqUtils.getValue('pixels_per_metre', posdata.header, 'num');
 max_pix_per_sample = max_speed*pix_per_metre/pos_sample_rate;
 for led = 1:n_leds
     [n_jumpy, posdata.led_pos] = led_speed_filter( posdata.led_pos, max_pix_per_sample, led);
