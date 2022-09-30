@@ -48,12 +48,12 @@ classdef npix < handle
         maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[],'speed',[],'lin',[],'linPos',[]);
     end
     
-    properties(Dependent,SetAccess=private)
-        spatialInfo
-        rVect
-        gridProps
-    end
-    
+%     properties(Dependent,SetAccess=private)
+%         spatialInfo
+%         rVect
+%         gridProps
+%     end
+%     
     properties(Hidden)
         fileType              char    = '.ap.bin';
         %         uniqueCellIndex(:,1)  logical
@@ -453,9 +453,7 @@ classdef npix < handle
             
             % scale position
             boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
-%             if ~circleFlag
-                scanpix.maps.scalePosition(obj, trialIterator,'envszpix', boxExt,'circflag',circleFlag); % need to enable this for circular env as well!
-%             end
+            scanpix.maps.scalePosition(obj, trialIterator,'envszpix', boxExt,'circflag',circleFlag); % need to enable this for circular env as well!
             
             % running speed
 %             pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
@@ -731,46 +729,46 @@ classdef npix < handle
         
     end
     
-    methods % get methods
-        
-        function spatialInfo = get.spatialInfo(obj)
-            spatialInfo = nan(size(obj.cell_ID,1),length(obj.trialNames));
-            if isempty(obj.maps(1).rate{1})
-                warning('scaNpix::npix::spatialInfo:You need to make rate maps before demanding their spatial info.');
-                return
-            end
-            %
-            for i = 1:length(obj.trialNames)
-                spatialInfo(:,i) = cell2mat(cellfun(@(x,y) scanpix.analysis.spatial_info(x,y),obj.maps(1).rate{i},obj.maps.pos{i},'uni',0));
-            end
-        end
-        %
-        function rVect = get.rVect(obj)
-            rVect = nan(size(obj.cell_ID,1),length(obj.trialNames));
-            if isempty(obj.maps(1).dir{1})
-                warning('scaNpix::npix::RV:You need to make dir maps before demanding their rayleigh vector lengths.');
-                return
-            end
-            %
-            for i = 1:length(obj.trialNames)
-                rVect(:,i) = cell2mat(cellfun(@(x,y) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
-            end
-        end
-        %
-        function gridProps = get.gridProps(obj)
-            gridProps = nan(size(obj.cell_ID,1),5,length(obj.trialNames));
-            if isempty(obj.maps(1).sACs{1})
-                warning('scaNpix::npix::gridProps:You need to make spatial ACs before demanding grid properties.');
-                return
-            end
-            %
-            for i = 1:length(obj.trialNames)
-                [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,obj.mapParams.gridProps),obj.maps(1).sACs{i},'uni',0);
-                % for now just output the basics 
-                gridProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.waveLength x.orientation],temp,'uni',0));
-            end
-        end
-    end
+%     methods % get methods
+%         
+%         function spatialInfo = get.spatialInfo(obj)
+%             spatialInfo = nan(size(obj.cell_ID,1),length(obj.trialNames));
+%             if isempty(obj.maps(1).rate{1})
+%                 warning('scaNpix::npix::spatialInfo:You need to make rate maps before demanding their spatial info.');
+%                 return
+%             end
+%             
+%             for i = 1:length(obj.trialNames)
+%                 spatialInfo(:,i) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},obj.maps(1).pos{i});
+%             end
+%         end
+%         
+%         function rVect = get.rVect(obj)
+%             rVect = nan(size(obj.cell_ID,1),length(obj.trialNames));
+%             if isempty(obj.maps(1).dir{1})
+%                 warning('scaNpix::npix::rVect:You need to make dir maps before demanding their rayleigh vector lengths.');
+%                 return
+%             end
+%             
+%             for i = 1:length(obj.trialNames)
+%                 rVect(:,i) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
+%             end
+%         end
+%         
+%         function gridProps = get.gridProps(obj)
+%             gridProps = nan(size(obj.cell_ID,1),5,length(obj.trialNames));
+%             if isempty(obj.maps(1).sACs{1})
+%                 warning('scaNpix::npix::gridProps:You need to make spatial ACs before demanding grid properties.');
+%                 return
+%             end
+%             
+%             for i = 1:length(obj.trialNames)
+%                 [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,obj.mapParams.gridProps),obj.maps(1).sACs{i},'uni',0);
+%                 % for now just output the basics 
+%                 gridProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.waveLength x.orientation],temp,'uni',0));
+%             end
+%         end
+%     end
     
 end
 

@@ -59,6 +59,8 @@ prms.verbose=0;              % Print to screen prms struct
 prms.showCorrRing=0;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
 
 
+
+
 % ---------------------------------------------------------------------------------- %
 if ~isempty(varargin)                                                                %
     if ischar(varargin{1})                                                           %
@@ -346,12 +348,12 @@ aboveThrMask( aboveThrMask ~= aboveThrMask(centralPoint(1),centralPoint(2)) ) = 
 aboveThrMask( aboveThrMask == aboveThrMask(centralPoint(1),centralPoint(2)) ) = 1;
 aboveThrMask=logical(aboveThrMask);
 % If central peak bleeds to outside of AC, don't count field size %
-unVisMask=zeros(size(autoCorr));
-unVisMask(isnan(autoCorr))=1;
-tempLabel=bwlabel( unVisMask|aboveThrMask ,8);
-if length(unique(tempLabel))~=2
+% unVisMask=zeros(size(autoCorr));
+% unVisMask(isnan(autoCorr))=1;
+% tempLabel=bwlabel( unVisMask|aboveThrMask ,8);
+% if length(unique(tempLabel))~=2   %%%BUG?? - SHOULD BE ==???
     Props.fieldSize=sum(sum(aboveThrMask)); 
-end
+% end
 
 
 % -------------------------------------------------------------------------------------------------

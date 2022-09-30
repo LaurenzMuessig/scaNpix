@@ -36,7 +36,7 @@ function [ rMaps, sm_pMaps, sm_spkMaps ] = makeRateMaps(spkTimes, positions, sam
 % To do: mapsize defined by input rather than max bin visited
 
 %% params
-prms.smooth               = 'boxcar'; % 'boxcar; 'adaptive'
+prms.smooth               = 'boxcar'; % 'boxcar; 'adaptive'; 'none'
 prms.smoothKernel         = 5;
 prms.binSizeSpat          = 2.5; % in cm^2
 prms.posFs                = 50;

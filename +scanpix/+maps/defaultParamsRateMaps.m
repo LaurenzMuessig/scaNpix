@@ -82,7 +82,7 @@ prms.speed.confInt               = 95;    % confidence interval
 prms.speed.showWaitBar           = showWaitBar;
 
 %% spatial autocorellograms
-prms.sAC.dum                     = [];  % dummy field
+prms.sac.dum                     = [];  % dummy field
 
 %% grid props
 prms.gridProps.peakMode          = 'point';     % Are peaks local max points ('point'), or contig areas over corrThr ('area')?

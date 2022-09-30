@@ -68,7 +68,7 @@ for j = 1:2
     tempPos = obj.posData.XY{trialIndex}(:,j);
     
     if isempty(obj.trialMetaData(trialIndex).envBorderCoords) || circleFlag
-        pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % is this right? 768 is the maximum extent for the DACQ camera.
+        pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % using the max(pos) should make it unviversal between npix and dacq.
         
         lowerEdge = find(pathHist >= minOccForEdge, 1, 'first');
         upperEdge = find(pathHist >= minOccForEdge, 1, 'last');

@@ -93,6 +93,17 @@ switch type
                 if all(cellfun(@(x) size(x,1),obj.maps.(f{i})(~indEmpty)) == length(cellInd)) % standard and lin pos maps should be omitted
                     obj.maps.(f{i})(~indEmpty) = cellfun(@(x) x(cellInd,:),obj.maps.(f{i})(~indEmpty),'uni',0);
                 end
+                % lin maps are a pain to deal with - there must be an easier solution!
+                if strcmp(f{i},'lin')
+                    numInd = find(~indEmpty);
+                    for j = 1:length(numInd)
+                        tmpMaps = cell(3,1);
+                        for k = 1:3
+                            tmpMaps(k,1)  = cellfun(@(x) x{k}(cellInd,:),obj.maps.(f{i})(numInd(j)),'uni',0);
+                        end
+                        obj.maps.(f{i})(numInd(j)) = {tmpMaps};
+                    end
+                end
             end
         end
         obj.cell_ID = obj.cell_ID(cellInd,:);

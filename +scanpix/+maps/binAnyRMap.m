@@ -33,7 +33,7 @@ defaultCMapEdge  = [];
 
 p = inputParser;
 addParameter(p,'colmap',defaultColMap,@ischar);
-addParameter(p,'nsteps',defaultNSteps,@isscalar);
+addParameter(p,'nsteps',defaultNSteps,@isscalar); 
 addParameter(p,'rgb4nans',defaultRGB4nans);
 addParameter(p,'cmapEdge',defaultCMapEdge);
 parse(p,varargin{:});
@@ -49,7 +49,7 @@ switch lower(p.Results.colmap)
     case 'hcg' 
         temp = scanpix.maps.highContGrayColMap;
         ind  = round(linspace(1,length(temp),p.Results.nsteps));
-        cMap = colormap(temp(ind,:));   
+        cMap = temp(ind,:);   
         nSteps = p.Results.nsteps;
     case 'poulter'
         cMap = scanpix.maps.cm_Poulter;

@@ -111,7 +111,7 @@ medFiltRad = nanmedian(radiiUsedList);
 if 0
     hAllFigs = get(0, 'children');
     hFig = findobj(hAllFigs, 'flat', 'tag', 'adaptiveSmoothPlotWindow');
-    if isempty(hFig);
+    if isempty(hFig)
         hFig=figure;
         set(hFig,'tag','adaptiveSmoothPlotWindow');
     else
