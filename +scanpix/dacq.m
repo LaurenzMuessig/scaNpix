@@ -627,10 +627,16 @@ classdef dacq < handle
             if ischar(lfp2load)
                 lfp2load = {lfp2load}; % in case only 1 eeg
             end
+            % sometimes useful to not load the high Fs eeg to save time
+            if obj.params('loadHighFsLFP')
+                it = 1:2;
+            else
+                it = 1;
+            end
             
             sRateStr = {'lfpFs','lfpHighFs'};
             
-            for i = 1:2
+            for i = it
                 % switch extension
                 if i == 2
                     lfp2load = strrep(lfp2load,'.eeg','.egf');
