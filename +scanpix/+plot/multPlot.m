@@ -27,7 +27,7 @@ defaultPlotSize       = [75 75];  % pixel
 defaultPlotSep        = [50 30];  % pixel
 defaultOffsetBase     = [60 50];  % pixel
 defaultFigName        = 'multPlot';  
-defaultPolFlag        = false;  
+defaultPolFlag        = false(axArraySz);  
 % 
 p = inputParser;
 addParameter(p,'plotsize',defaultPlotSize);
@@ -86,7 +86,7 @@ for i = 1:axArraySz(1)
     for j = 1:axArraySz(2)
         
         % plot
-        axArray{i,j} = scanpix.plot.addAxisScrollPlot( hScroll, [offsets p.Results.plotsize], p.Results.plotsep, p.Results.polflag );
+        axArray{i,j} = scanpix.plot.addAxisScrollPlot( hScroll, [offsets p.Results.plotsize], p.Results.plotsep, p.Results.polflag(i,j) );
         
         % update
         offsets(1) = offsets(1) + p.Results.plotsize(1) + p.Results.plotsep(1);

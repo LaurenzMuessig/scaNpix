@@ -10,7 +10,7 @@ function addMetaData(obj,name,values)
 %
 % Inputs:
 %    name     - string, name of field to be added to obj.metaData. If ommited will open UI dialogue to fetch data
-%    values   - values for field 'name'. if sing;le value is given for dataset containing multiple trials value will
+%    values   - values for field 'name'. if single value is given for dataset containing multiple trials value will
 %               be expanded for all trials.
 % Outputs:
 %
