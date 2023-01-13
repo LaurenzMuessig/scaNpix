@@ -38,6 +38,7 @@ addParameter(p,'save',saveFig,@islogical);
 parse(p,varargin{:});
 
 % some sanity checcks should go here
+% TO fix: GRID MODE IS BROKEN CURRENTLY
 
 %%
 % gather plot tiling

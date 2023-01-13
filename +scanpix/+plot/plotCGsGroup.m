@@ -1,4 +1,4 @@
-function plotCGsGroup(spikeTimes,binSz,lag,trialDur,cell_IDs,figName)
+function plotCGsGroup(spikeTimes,binSz,lag,trialDur,varargin)
 % plot all possible temporal cross-correlograms (CGs) based on a cell array  
 % with spike times of different cells. Useful to check if clusters might
 % have to be merged. We'll make a figure that is scrollable.
@@ -24,29 +24,46 @@ function plotCGsGroup(spikeTimes,binSz,lag,trialDur,cell_IDs,figName)
 % text positioning doesn't work well across different screens
 
 
-% hard coded properties
-plotSize       = [75 75];
-plotSep        = [15 20];
-offsetBase     = [50 40];
-baseWdthFigure = 180;
-baseHghtFigure = 170;
-
 %% params
-if nargin < 5
-    cell_IDs = strcat({'cell_'},num2str((1:length(spikeTimes))'));
-    figName = 'scaNpix::CG_overview';
+rMaps          = {};
+cell_IDs      = strcat({'cell_'},num2str((1:length(spikeTimes))'));
+figName       = 'scaNpix::CG_overview';
+plotSize      = [75 75];
+plotSep       = [15 20];
+offsetBase    = [50 40];
+baseSzFigure  = [180 170];
+plotRMaps     = false;
+
+p = inputParser;
+addOptional(p,'maps',rMaps,@iscell);
+addParameter(p,'cellIDStr',cell_IDs,@(x) isstring(x) || iscell(x));
+addParameter(p,'figname',figName,@ischar);
+addParameter(p,'plotsize',plotSize);
+addParameter(p,'plotsep',plotSep);
+addParameter(p,'offsetbase',offsetBase);
+addParameter(p,'baseSz',baseSzFigure);
+addParameter(p,'plotmaps',plotRMaps,@islogical);
+parse(p,varargin{:});
+
+
+if p.Results.plotmaps
+    if isempty(p.Results.maps); error('You need to supply maps if you want to plot them. Not sure why I have to tell you that...'); end
+%     offsetBase   = p.Results.offsetbase +  p.Results.plotsize + p.Results.plotsep;
+else
+%     offsetBase   = p.Results.offsetbase ;
 end
+
 
 %% plot
 screenSz      = get(0,'screensize');
-wdthScaleFact = (length(spikeTimes)-1) * (baseWdthFigure/2); % add this to fig width for any additional cell
-figWdth       = baseWdthFigure + wdthScaleFact;
+wdthScaleFact = (length(spikeTimes)-1) * (p.Results.baseSz(1)/2); % add this to fig width for any additional cell
+figWdth       = p.Results.baseSz(1) + wdthScaleFact;
 % width
 if figWdth > 0.7*screenSz(3)
     figWdth = 0.7*screenSz(3);
 end
-hghtScaleFact = (length(spikeTimes)-1) * (baseHghtFigure/2); % add this to fig width for any additional cell
-figHght       = baseHghtFigure + hghtScaleFact;
+hghtScaleFact = (length(spikeTimes)-1) * (p.Results.baseSz(2)/2); % add this to fig width for any additional cell
+figHght       = p.Results.baseSz(2) + hghtScaleFact;
 % height
 if figHght > 0.7*screenSz(4)
     figHght = 0.7*screenSz(4);
@@ -55,18 +72,27 @@ end
 figSize     = [0.1*screenSz(3) 0.1*screenSz(4) figWdth figHght ]; 
 % open scrollable figure
 hScroll              = scanpix.plot.createScrollPlot(figSize); 
-hScroll.hFig.Name    = figName;
+hScroll.hFig.Name    = p.Results.figname;
 hScroll.hFig.Visible = 'off'; % hiding figure speeds up plotting by a fair amount
 %wait bar
 hWait         = waitbar(0); 
-nPlots        = (length(spikeTimes)*(length(spikeTimes)+1))/2;
+nPlots        = (length(spikeTimes)*(length(spikeTimes)+1))/2 + p.Results.plotmaps * length(spikeTimes) * 2;
 plotCount     = 1;
-offsets       = offsetBase;
+%
+offsets   = offsetBase;
+
 for i = 1:length(spikeTimes)
     % wait bar
     waitbar(plotCount/nPlots,hWait,'Plotting Correlograms, just bare with me!');
+    % 
+    if p.Results.plotmaps
+        hAx        = scanpix.plot.addAxisScrollPlot( hScroll,[offsets+[0 p.Results.plotsep(2)]+[0 p.Results.plotsize(2)] p.Results.plotsize], p.Results.plotsep);
+        scanpix.plot.plotRateMap(p.Results.maps{i},hAx);
+        text(hAx,-12,0.45*max(get(hAx,'ylim')),p.Results.cellIDStr{i},'Interpreter','none');
+    end
+    
     % plot AC
-    hAx       = scanpix.plot.addAxisScrollPlot( hScroll,[offsets plotSize], plotSep);
+    hAx       = scanpix.plot.addAxisScrollPlot( hScroll,[offsets p.Results.plotsize], p.Results.plotsep);
     scanpix.analysis.spk_crosscorr(spikeTimes{i},'AC',binSz,lag,trialDur,'plot',hAx); % autocorr
     yAxlim    = get(hAx,'ylim');
     if i ~= 1
@@ -75,36 +101,56 @@ for i = 1:length(spikeTimes)
         set(hAx,'xtick',[-lag 0 lag],'xticklabel',[-lag*1000,0,lag*1000]);
     end
     % update offsets
-    offsets(1) = offsets(1) + plotSize(1) + plotSep(1);
+    offsets(1) = offsets(1) + p.Results.plotsize(1) + p.Results.plotsep(1);
     % plot headers
-    text(hAx,-lag-0.025,0.5*max(yAxlim),cell_IDs{i},'Interpreter','none');
-    text(hAx,-0.3*lag,1.15*max(yAxlim),cell_IDs{i},'Interpreter','none');
+    if i==1 || ~p.Results.plotmaps 
+        text(hAx,-lag-0.15,0.5*max(yAxlim),p.Results.cellIDStr{i},'Interpreter','none');
+    end
+    text(hAx,-0.3*lag,1.15*max(yAxlim),p.Results.cellIDStr{i},'Interpreter','none');
     plotCount = plotCount + 1;
     for j = i+1:length(spikeTimes)
         waitbar(plotCount/nPlots,hWait,'Plotting Correlograms, just bare with me!');
         % add axis
-        hAx    = scanpix.plot.addAxisScrollPlot( hScroll,[offsets plotSize], plotSep );    
+        hAx    = scanpix.plot.addAxisScrollPlot( hScroll,[offsets p.Results.plotsize], p.Results.plotsep );    
         % plot cross corr
         scanpix.analysis.spk_crosscorr(spikeTimes{i},spikeTimes{j},binSz,lag,trialDur,'plot',hAx); % crosscorr
         yAxlim = get(hAx,'ylim');
          % plot comparison ID
-        text(hAx,-lag-0.0025,1.15*max(yAxlim),[cell_IDs{i} ' v ' cell_IDs{j}],'Interpreter','none','color','r');
+        text(hAx,-lag-0.0025,1.15*max(yAxlim),[p.Results.cellIDStr{i} ' v ' p.Results.cellIDStr{j}],'Interpreter','none','color','r');
         if i~=1
             set(hAx,'xtick',[-lag 0 lag],'xticklabel',{''});
         else
             set(hAx,'xtick',[-lag 0 lag],'xticklabel',[-lag*1000,0,lag*1000]);
         end
         if j == length(spikeTimes)
-            text(hAx,1.1*lag,0.5*max(yAxlim),cell_IDs{i},'Interpreter','none');   
+            if p.Results.plotmaps
+                offsets(1) = offsets(1) + p.Results.plotsize(1) + p.Results.plotsep(1);
+                hAx        = scanpix.plot.addAxisScrollPlot( hScroll,[offsets p.Results.plotsize], p.Results.plotsep);
+                scanpix.plot.plotRateMap(p.Results.maps{i},hAx);
+                text(hAx,max(get(hAx,'xlim'))+3,0.45*max(get(hAx,'ylim')),p.Results.cellIDStr{i},'Interpreter','none');
+                plotCount  = plotCount + 1;
+            else
+                text(hAx,1.1*lag,0.5*max(yAxlim),p.Results.cellIDStr{i},'Interpreter','none');
+            end
         end
         % update offsets    
-        offsets(1) = offsets(1) + plotSize(1) + plotSep(1);
+        offsets(1) = offsets(1) + p.Results.plotsize(1) + p.Results.plotsep(1);
         plotCount  = plotCount + 1;
     end
     % update offsets  
-    offsets(2)     = offsets(2) + plotSize(2) + plotSep(2);
-    offsets(1)     = i * (plotSize(1) + plotSep(1)) + offsetBase(1);
+    offsets(2)     = offsets(2) + p.Results.plotsize(2) + p.Results.plotsep(2);
+    offsets(1)     = i * (p.Results.plotsize(1) + p.Results.plotsep(1)) + offsetBase(1);
 end
+
+if p.Results.plotmaps
+    hAx        = scanpix.plot.addAxisScrollPlot( hScroll,[offsets - [0 p.Results.plotsize(2)] - [0 p.Results.plotsep(2)], p.Results.plotsize] , p.Results.plotsep);
+    scanpix.plot.plotRateMap(p.Results.maps{i},hAx);
+    text(hAx,max(get(hAx,'xlim'))+3,0.45*max(get(hAx,'ylim')),p.Results.cellIDStr{i},'Interpreter','none');
+else
+    text(hAx,1.1*lag,0.5*max(yAxlim),p.Results.cellIDStr{i},'Interpreter','none');
+end
+
+
 close(hWait);
 hScroll.hFig.Visible = 'on';
 end

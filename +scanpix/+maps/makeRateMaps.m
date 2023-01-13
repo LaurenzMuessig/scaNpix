@@ -119,7 +119,7 @@ for i = 1:length(spkTimes)
         % need a dummy pos map for cells with 0 spikes when using adaptive smooth
         if strcmp(prms.smooth,'adaptive')
             tmpPos = posMapRaw;    
-            tmpPos(unVisPos) = nan;
+            tmpPos(unVisPos) = NaN;
             sm_pMaps{i} = tmpPos;
         end
         continue
