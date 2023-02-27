@@ -181,7 +181,7 @@ scanpix.GUI.functionName(someInput);
 scanpix.helpers.functionName(someInput);
 ```
 
-#### maps plot package
+#### maps package
 
 • functions/code to generate various types of spatial rate maps
 ```
