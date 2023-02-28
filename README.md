@@ -68,7 +68,7 @@ obj.load({‘all},’SomeDataFileName’); % load all types data for trial ’So
 
 • You can start (a) GUI(s) by using a wrapper function (_scanpix.GUI.startGUI_) or by calling it directly (e.g. _mainGUI_)
 
-• When launching the main GUI, we will check if there are any matching data objects in the base workspace and ask user if he wants to import these, but you can also simply load the data from raw within the GUI or load a GUI state that you saved to disk previously.
+• When launching the main GUI, we will check if there are any matching data objects in the base workspace and ask user if they want to import these, but you can also simply load the data from raw within the GUI or load a GUI state that you saved to disk previously.
 
 • In the GUI you can load and inspect multiple datasets/data from multiple experiments
 
