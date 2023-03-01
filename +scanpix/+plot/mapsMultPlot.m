@@ -38,7 +38,7 @@ addParameter(p,'save',saveFig,@islogical);
 parse(p,varargin{:});
 
 % some sanity checcks should go here
-% TO fix: GRID MODE IS BROKEN CURRENTLY
+% TO fix: GRID MODE IS BROKEN CURRENTLY - I THINK FIXED! 
 
 %%
 % gather plot tiling
@@ -61,8 +61,9 @@ for n = 1:nFigs
     
     % gather plot tiling
     if ~noGridMode
-        nCols = p.Results.nplots; % in case just 1 trial, we want to make a compact plot...
+        nCols = min([maps2plot,p.Results.nplots]); % in case just 1 trial, we want to make a compact plot...
         nRows = ceil(maps2plot/nCols);
+        %nRows = maps2plot;
     else
         nCols = size(data,2) * size(data,3); % ...if it's several trials, we plot nCells across trials
         nRows = maps2plot;
@@ -74,7 +75,7 @@ for n = 1:nFigs
     axRow = 1;
     %
     
-    for i = 1:nRows
+    for i = 1:maps2plot%nRows
         
         for k = 1:size(data,2)
             
@@ -82,7 +83,7 @@ for n = 1:nFigs
                 
                 waitbar(plotCount/nPlots,hWait,'Making your precious figure, just bare with me!');
                 
-                if ~isempty(data{1,k,j}{rowCount})
+                if ~isempty(data{1,k,j}{i})
                     
                     
                     plotPeakRateFlag = false;
@@ -90,29 +91,29 @@ for n = 1:nFigs
                     hAx = axArray{axRow,axCol};
                     
                     if strcmpi(type{j},'rate') || strcmpi(type{j},'spike') || strcmpi(type{j},'pos')
-                        scanpix.plot.plotRateMap(data{1,k,j}{rowCount},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps);
+                        scanpix.plot.plotRateMap(data{1,k,j}{i},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps);
                         % scale all axes to the largest possible map here? makes
                         % everything appear in proportion
                         if i == 1
-                            axLims = max(cell2mat(cellfun(@size,vertcat(data{1,:,j}),'UniformOutput',false)));
+                            axLims = max(cell2mat(cellfun(@size,vertcat(data{1,:,j}),'UniformOutput',false)),2);
                         end
                         set(hAx,'ydir','reverse','xlim',[0 axLims(2)],'ylim',[0 axLims(1)]);
                         plotPeakRateFlag = true;
                     elseif  strcmp(type{j},'dir')
-                        scanpix.plot.plotDirMap(data{1,k,j}{rowCount},hAx);
+                        scanpix.plot.plotDirMap(data{1,k,j}{i},hAx);
                         plotPeakRateFlag = true;
                     elseif  strcmp(type{j},'lin')
-                        scanpix.plot.plotLinMaps( data{1,k,j}{rowCount}, hAx);
+                        scanpix.plot.plotLinMaps( data{1,k,j}{i}, hAx);
                     elseif  strcmpi(type{j},'sacs')
                         plotPeakRateFlag = true;
                         mapSz = max(cell2mat(cellfun(@(x) size(x),data{1,k,j},'uni',0)));
-                        imagesc(hAx,'CData',data{1,k,j}{rowCount}); colormap(hAx,jet);
+                        imagesc(hAx,'CData',data{1,k,j}{i}); colormap(hAx,jet);
                         %                 axis(hAx,'square');
                         
                         set(hAx,'xlim',[0 mapSz(1)],'ylim',[0 mapSz(1)]);
                         axis(hAx,'off');
                     elseif  strcmpi(type{j},'speed')
-                        scanpix.plot.plotSpeedMap(data{1,k,j}{rowCount},hAx);
+                        scanpix.plot.plotSpeedMap(data{1,k,j}{i},hAx);
                     elseif  strcmpi(type{j},'custom')
                         %%% PROBABLY WOULD REQUIRE SUPPLYING ANON FNCT TO PLOT
                     end
@@ -120,12 +121,12 @@ for n = 1:nFigs
                     % plot peak rate
                     if plotPeakRateFlag
                         t = text(hAx);
-                        set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',nanmax(data{1,k,j}{rowCount}(:)) ),'FontSize',8 ); % harcoded text pos
+                        set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',nanmax(data{1,k,j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
                     end
                     % plot cell ID string
                     if j == 1 && k == 1
                         t = text(hAx);
-                        set(t,'Units','pixels','position',[-40 hAx.Position(4)/2],'String',p.Results.cellIDStr{rowCount},'FontSize',8,'Interpreter','none' ); % harcoded text pos
+                        set(t,'Units','pixels','position',[-40 hAx.Position(4)/2],'String',p.Results.cellIDStr{i},'FontSize',8,'Interpreter','none' ); % harcoded text pos
                     end
                     
                     if i == nRows && noGridMode
@@ -142,7 +143,7 @@ for n = 1:nFigs
                 if axCol > nCols
                     axRow = axRow + 1;
                     axCol = 1;
-                    rowCount = rowCount + 1;
+                    %rowCount = rowCount + 1;
                 end
 
                 plotCount = plotCount + 1;
@@ -154,13 +155,14 @@ for n = 1:nFigs
         scanpix.helpers.saveFigAsPDF([p.Results.figname '_' num2str(n)], [cd filesep]);
         close(hScroll.hFig);
     end
+    %
+    if exist('hScroll','var') && ishandle(hScroll.hFig)
+        hScroll.hFig.Visible = 'on';
+    end
 end
 
 close(hWait);
-%
-if exist('hScroll','var') && ishandle(hScroll.hFig)
-    hScroll.hFig.Visible = 'on';
-end
+
 
 end
 

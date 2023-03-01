@@ -55,6 +55,8 @@ else
     firstAxFlag = false;
 end
 
+% disableDefaultInteractivity( hAx ); % global setting for whole figure is more efficient
+
 %increase panel height to fit all figures if necessary
 %current position of axis and canvas
 posAx       = get(hAx,'Position'); % current axis size/position
