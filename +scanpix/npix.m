@@ -372,7 +372,7 @@ classdef npix < handle
             end
             
             ppm = nan(2,1);
-            if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')) && size(obj.trialMetaData(trialIterator).envBorderCoords,2) < 3; circleFlag = false; else; circleFlag = true; end
+            if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')) && size(obj.trialMetaData(trialIterator).envBorderCoords,2) ~= 3; circleFlag = false; else; circleFlag = true; end
             % estimate ppm
             if isempty(obj.trialMetaData(trialIterator).envBorderCoords)
                 envSzPix  = [double(csvData{6}(1)) double(csvData{7}(1))];
@@ -380,12 +380,18 @@ classdef npix < handle
             else
                 % this case should be default
                 if ~circleFlag
-                    envSzPix  = [abs(obj.trialMetaData(trialIterator).envBorderCoords(1,1)-obj.trialMetaData(trialIterator).envBorderCoords(1,2)), abs(obj.trialMetaData(trialIterator).envBorderCoords(2,1)-obj.trialMetaData(trialIterator).envBorderCoords(2,2))];
+                    % recover all corner coords from 2 points - this should be independent of box misalignment with cam window 
+                    knownDist = sqrt( (obj.trialMetaData(trialIterator).envBorderCoords(1,1)-obj.trialMetaData(trialIterator).envBorderCoords(1,2))^2 + (obj.trialMetaData(trialIterator).envBorderCoords(2,1)-obj.trialMetaData(trialIterator).envBorderCoords(2,2))^2 );
+                    ppm(:) = round( mean( knownDist ./ (sqrt(sum(obj.trialMetaData(trialIterator).envSize.^2)) ./ 100) ) );
+                    % full set
+                    obj.trialMetaData(trialIterator).envBorderCoords = scanpix.helpers.findBoxCorners(obj.trialMetaData(trialIterator).envBorderCoords(:,1),ppm(1)*(obj.trialMetaData(trialIterator).envSize(1)/100), obj.trialMetaData(trialIterator).envBorderCoords(:,2),ppm(1)*(obj.trialMetaData(trialIterator).envSize(2)/100));
+%                     envSzPix  = [abs(obj.trialMetaData(trialIterator).envBorderCoords(1,1)-obj.trialMetaData(trialIterator).envBorderCoords(1,2)), abs(obj.trialMetaData(trialIterator).envBorderCoords(1,3)-obj.trialMetaData(trialIterator).envBorderCoords(2,3))];
                 else
                     [xCenter, yCenter, radius, ~] = scanpix.fxchange.circlefit(obj.trialMetaData(trialIterator).envBorderCoords(1,:), obj.trialMetaData(trialIterator).envBorderCoords(2,:));
                     envSzPix = [2*radius 2*radius];
+                    ppm(:) = round( mean( envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
                 end
-                ppm(:) = round( mean( envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
+%                 ppm(:) = round( mean( envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
             end
             
             %% post process - basically as scanpix.dacqUtils.postprocess_data_v2
@@ -405,7 +411,7 @@ classdef npix < handle
             for i = 1:2
                 % speed
                 pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1); % % distances in m
-                tempSpeed        = pathDists ./ diff(sampleT); % cm/s
+                tempSpeed        = pathDists ./ diff(sampleT); % m/s
                 tempSpeed(end+1) = tempSpeed(end);
                 speedInd = tempSpeed > obj.params('posMaxSpeed');
                 % env borders
