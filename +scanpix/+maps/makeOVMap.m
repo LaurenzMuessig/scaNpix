@@ -80,7 +80,7 @@ for i = 1:length(spikeTimes)
     else
 %         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleT - x)), spikeTimes{i}, 'UniformOutput', 0);
 %         spkPosBinInd = cell2mat(spkPosBinInd);
-        [~, spkPosBinInd] = min(abs(bsxfun(@minus, sampleTimes, spikeTimes{i}.')), [], 1);
+        [~, spkPosBinInd] = min(abs(bsxfun(@minus, sampleT, spikeTimes{i}.')), [], 1);
     end
     spkBinnedDist    = dist(spkPosBinInd); 
     spkBinnedTheta   = theta(spkPosBinInd); 

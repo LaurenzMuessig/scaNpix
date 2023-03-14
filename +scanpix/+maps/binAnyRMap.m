@@ -64,11 +64,12 @@ switch lower(p.Results.colmap)
 end
 
 % bin rMap
-rMapBinned = discretize(rMap,linspace(0,nanmax(rMap(:)),nSteps+1));
-if ~isempty(p.Results.cmapEdge)
-    rMapBinned(rMap < p.Results.cmapEdge(1)) = 1;
-    rMapBinned(rMap > p.Results.cmapEdge(2)) = max(rMapBinned(:));
+if isempty(p.Results.cmapEdge)
+    rMapBinned = discretize(rMap,linspace(0,nanmax(rMap(:)),nSteps+1));
+else
+    rMapBinned = discretize(rMap,linspace(p.Results.cmapEdge(1),p.Results.cmapEdge(2),nSteps+1));
 end
+%
 rMapBinned(isnan(rMap)) = 0;
 
 % color map
