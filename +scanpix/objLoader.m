@@ -47,6 +47,8 @@ if strcmpi(objType,'dacq')
     obj = scanpix.dacq('default',false); % assume default params
 elseif strcmpi(objType,'npix')
     obj = scanpix.npix('default',false); % assume default params
+elseif strcmpi(objType,'nexus')
+    obj = scanpix.nexus('default',false); % assume default params - added by IV
 else
 end
 % change params if desired
