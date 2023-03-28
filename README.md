@@ -29,12 +29,11 @@ scanpix.maps.makeRateMaps(someInput);
 
 ## 2. Create a class object and load some data:
 
-We first create a data object by grabbing some basic parameters (see also section about the parameter space) and then opening a UI dialogue to fetch which data to load. This will initialise the object into the Matlab workspace, but not load any data from disk yet. To select what data to load we first select a parent directory. Then we will get a list of all data files contained within any sub directories and from this list we select which data we want to load (so if your parent directory contains a lot of data files the list will be long). This data will then be treated as one experiment. 
+We first create a data object by grabbing some basic parameters (see also section about the parameter space) and then opening a UI dialogue to fetch which data type (e.g. DACQ or neuropixels) and whhat files to load. This will initialise the object into the Matlab workspace, but not load any data from disk yet. To select what data to load we first select a parent directory. Then we will get a list of all data files contained within any sub directories and from this list we select which data we want to load (so if your parent directory contains a lot of data files the list will be long). This data will then be treated as one experiment. 
 
 ### Syntax: 
 ```
-obj = scanpix.dacq(someInput);
-obj = scanpix.npix(someInput);
+obj = scanpix.ephys(someInput);
 ```
 Then we can use the class's load method to load the actual data, like so:
 
@@ -58,6 +57,9 @@ obj.load({‘pos’,’lfp’});            % load position and eeg data for all
 obj.load({‘all},’SomeDataFileName’); % load all types data for trial ’SomeDataFileName’
 ```
 
+### Other object methods
+* _add more info here_
+
 
 ## 3. Do something exciting with the data you loaded into Matlab
 
@@ -68,14 +70,14 @@ obj.load({‘all},’SomeDataFileName’); % load all types data for trial ’So
 
 • You can start (a) GUI(s) by using a wrapper function (_scanpix.GUI.startGUI_) or by calling it directly (e.g. _mainGUI_)
 
-• When launching the main GUI, we will check if there are any matching data objects in the base workspace and ask user if they want to import these, but you can also simply load the data from raw within the GUI or load a GUI state that you saved to disk previously.
+• When launching the main GUI, we will check if there are any objects matching the data type in the base workspace and ask user if they want to import these, but you can also simply load the data from raw within the GUI or load a GUI state that you saved to disk previously.
 
 • In the GUI you can load and inspect multiple datasets/data from multiple experiments
 
 
 #### Syntax:
 ```
-scanpix.GUI.startGUI(GUIType,classType);
+scanpix.GUI.startGUI(GUIType);
 ```
 or
 ```
@@ -90,12 +92,6 @@ mainGUI(classType);
    
       *	_‘lfpBrowser’_ – start GUI to browse EEG data (Note: Not implemented yet!)
 
-*	_classType_ (string) 
-
-      *	_‘dacq’_ – start GUI to inspect DACQ data
-   
-      *	_‘npix’_ – start GUI to inspect neuropixel data
-
 
 #### Main GUI:
 
@@ -103,7 +99,7 @@ mainGUI(classType);
 
 #### GUI menu bar:
 * File:
-     * _Load Data_ - Load Datasets from raw or a GUI state
+     * _Load Data_ - Load Datasets from raw, from a GUI state or reload sorting results
      * _Save Data_ - Save GUI state; either the currently selected dataset(s) or the full GUI content
      * _Delete Data_ - Delete currently selected dataset(s), trial(s) or cell(s)
      * _Help_ - Display help (will display available shortcuts in GUI) 
