@@ -25,6 +25,12 @@ dirIn = fullfile(p.Results.dirparent, ratStr);
 
 FolderStruct = dir(dirIn);
 dataOut = cell(0,3);
+
+if isempty(FolderStruct)
+    warning('scaNpix::npixUtils::getNExp:: Can''t find a folder called ''%s'' in ''%s''.',ratStr,p.Results.dirparent);
+    return
+end
+
 c = 1;
 for i = 1:length(FolderStruct)
    

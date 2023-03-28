@@ -85,6 +85,10 @@ for j = 1:2
     tempPos(tempPos > envSzPix(j)) = envSzPix(j);
     
     XYScaled(:,j) = tempPos;
+    
+    if isfield(obj.trialMetaData(trialIndex),'objectPos') && ~isempty(obj.trialMetaData(trialIndex).objectPos)
+        obj.trialMetaData(trialIndex).objectPos(j) = obj.trialMetaData(trialIndex).objectPos(j) - lowerEdge;
+    end
 end
         
 % For consistency, make sure that all x=nan and all y= nan match up %

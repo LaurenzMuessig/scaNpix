@@ -43,9 +43,10 @@ switch lower(defType)
         defStruct.filename_suffix  = datestr(now,'yymmdd');
         defStruct.WF_loadMode      = 'file';
     case 'maps'
-        defStruct                  = scanpix.maps.defaultParamsRateMaps;
-        defStruct.rate.showWaitBar = true;
-        defStruct.dir.showWaitBar  = true;
+        defStruct                     = scanpix.maps.defaultParamsRateMaps;
+        defStruct.rate.showWaitBar    = true;
+        defStruct.dir.showWaitBar     = true;
+        defStruct.objVect.showWaitBar = true;
 end
 %
 field = fieldnames(defStruct);

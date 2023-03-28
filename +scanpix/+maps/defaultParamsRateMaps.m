@@ -70,6 +70,7 @@ prms.objVect.binSz_dir           = 5;     % in degrees;  5deg in Høydal et al (2
 % prms.ov.posFs                  = 50;    % sample rate
 prms.objVect.smKernelSz_OV       = 5;
 prms.objVect.smSigma_OV          = 2;
+prms.objVect.showWaitBar         = showWaitBar;
 
 %% speed maps
 % prms.speed.posRate             = 50;    % Hz (50)

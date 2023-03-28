@@ -79,6 +79,7 @@ if isempty(prms.closePeakFilter); prms.closePeakFilter = [0 1 1 1 0; ones(3,5); 
 % Preallocate output Props %
 gridness=nan;
 Props.waveLength=NaN;
+Props.waveLengthFull=nan(1,3);
 Props.gridness=NaN;
 Props.orientation=nan(1,3);
 Props.fieldSize=NaN;
@@ -97,7 +98,13 @@ autoCorr(isnan(autoCorr)) = -1;
 if strcmp(prms.peakMode,'point')
     % Find peaks by looking for regional maxima. 
     autoCorrTemp = autoCorr;
-    autoCorrTemp(isnan(autoCorrTemp))=-1;   %Sub nans for -1
+    %
+%     nanInd = isnan(autoCorrTemp);
+%     autoCorrTemp(nanInd) = 0;
+%     autoCorrTemp = imfilter(autoCorrTemp,20,5);
+%     autoCorrTemp(nanInd) = -1;
+    %
+%     autoCorrTemp(isnan(autoCorrTemp))=-1;   %Sub nans for -1
     if ~isempty(prms.corrThr)
         if strcmp(prms.corrThrMode,'abs')
             autoCorrTemp(autoCorr<=prms.corrThr) = -1;   % Do not allow local max that have r-value below threshold, absolute.
@@ -128,9 +135,21 @@ if length(unique(lableMask))<=2;   return;    end
 %In case adjacent points share maxima find the centroid of them - NB returns structure array
 %stats(n).Centroid containing for each peak the x,y position of the centroid but y is
 %counting down from origin at top left
-stats=regionprops(lableMask, 'Centroid');
+stats=regionprops(lableMask,autoCorr, 'Centroid','MaxIntensity','Area');
+% experimental - remove peaks that 1 SD below mean
+% if length(stats) > 7
+%     remInd = [stats(:).MaxIntensity] < mean([stats(:).MaxIntensity]) -  std([stats(:).MaxIntensity]);
+%     if length(stats) - sum(remInd) >= 7
+%         stats = stats(~remInd);
+%     else
+%         [~, ind] = sort([stats(remInd).MaxIntensity]);
+%         numInd = find(remInd);
+%         stats(numInd(ind(1:length(stats)-7))) = [];
+%     end
+% end
 %NL. [n x 2] pairs of x,y coord for max points
-xyCoordMaxBin=round(reshape([stats.Centroid], 2,[])'); %Still x,y pair
+% xyCoordMaxBin=round(reshape([stats.Centroid], 2,[]))'; %Still x,y pair
+xyCoordMaxBin=reshape([stats.Centroid], 2,[])'; %Still x,y pair
 
 % Convert to a new reference frame which as the origin at the centre of the autocorr
 % NB autocorr will always have sides with odd number of bins
@@ -141,6 +160,8 @@ xyCoordMaxBinCentral=xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordM
 %disregard this)
 distFromCentre=sum(xyCoordMaxBinCentral.^2,2).^0.5;
 [dummy, orderOfClose]= sort(distFromCentre);
+
+
 
 %Get id of closest peaks and central peak
 centralPeak=orderOfClose(1);
@@ -180,7 +201,9 @@ if prms.crossCorrMode
 end
 
 %x,y pairs in cartesian coords with y counting down from top
-Props.closestPeaksCoord=xyCoordMaxBin(closestPeaks,:);
+% Props.closestPeaksCoord=xyCoordMaxBin(closestPeaks,:);
+Props.closestPeaksCoord=round(xyCoordMaxBin(closestPeaks,:));
+
 
 % -------------------------------------------------------------------------------------------------
 % --- MEAN X & y OFFSET OF 6 CENTRAL PEAKS --------------------------------------------------------
@@ -241,31 +264,61 @@ else
     Props.centralPeakMask=false(size(autoCorr));
 end
 
-% -------------------------------------------------------------------------------------------------
-% --- WAVELENGTH ----------------------------------------------------------------------------------
-% -------------------------------------------------------------------------------------------------
-
-%Calculate wavelength measured in bins
-% waveLength=median(distFromCentre(closestPeaks));
-Props.waveLength=mean(distFromCentre(closestPeaks));
+% % -------------------------------------------------------------------------------------------------
+% % --- WAVELENGTH ----------------------------------------------------------------------------------
+% % -------------------------------------------------------------------------------------------------
+% 
+% %Calculate wavelength measured in bins
+% % waveLength=median(distFromCentre(closestPeaks));
+% Props.waveLength=mean(distFromCentre(closestPeaks));
 
 % -------------------------------------------------------------------------------------------------
 % --- ORIENTATION ---------------------------------------------------------------------------------
 % -------------------------------------------------------------------------------------------------
 %Calculate orientation of grid - note orientation is measured counterclockwise from horizontal so
 %basically polar coordinates
-[th, dummy]=cart2pol(xyCoordMaxBinCentral(closestPeaks,1), -xyCoordMaxBinCentral(closestPeaks,2)); % TW: Modified to take account of inverted y-axis.
-th=th(th>=0); %Remove negative values - can do this as peaks are 180deg radially symetrical
-if ~isempty(th)
-%     Props.orientation=(min(th)/(2*pi))*360;
-    tmp = (sort(th)./(2*pi))*360;
-    if length(tmp) > 3
-        Props.orientation=tmp(1:3)';
+[th, ~]=cart2pol(xyCoordMaxBinCentral(closestPeaks,1), -xyCoordMaxBinCentral(closestPeaks,2)); % TW: Modified to take account of inverted y-axis.
+% this should follow the Moser's convention
+[th, sortInd] = sort(th);
+[~,idx] = min(abs(circ_dist(th,0)));
+if length(th) > 3
+    if idx==1
+        finInd = [idx idx+1 length(th)];
+        Props.orientation = th(finInd)';
     else
-        Props.orientation(1:length(th))=tmp;
+        finInd = [idx idx+1 idx-1];
+        Props.orientation = th(finInd)';
     end
+    peaksAboveXaxis = sort(sortInd(finInd)); 
+else
+    idx2 = true(1,length(th));
+    idx2(idx) = false;
+    Props.orientation(1:length(th)) = [th(idx) sort(th(idx2),'descend')];
+    peaksAboveXaxis = sort(sortInd([idx find(idx2)])); 
 end
-clear r th
+clear th idx idx2
+
+% peaksAboveXaxis = find(th>=0); 
+% th=th(th>=0); %Remove negative values - can do this as peaks are 180deg radially symetrical
+% if ~isempty(th)
+% %     Props.orientation=(min(th)/(2*pi))*360;
+%     tmp = (sort(th)./(2*pi))*360;
+%     if length(tmp) > 3
+%         Props.orientation=tmp(1:3)';
+%     else
+%         Props.orientation(1:length(th))=tmp;
+%     end
+% end
+% clear r th
+
+% -------------------------------------------------------------------------------------------------
+% --- WAVELENGTH ----------------------------------------------------------------------------------
+% -------------------------------------------------------------------------------------------------
+
+%Calculate wavelength measured in bins
+% waveLength=median(distFromCentre(closestPeaks));
+Props.waveLength=mean(distFromCentre(closestPeaks(peaksAboveXaxis)));
+Props.waveLengthFull(1:sum(~isnan(Props.orientation))) = distFromCentre(closestPeaks(peaksAboveXaxis));
 
 % --------------------------------------------------------------------------------------------------
 % ---- GRIDNESS ------------------------------------------------------------------------------------
@@ -324,7 +377,7 @@ clear meshX meshY
 %%%%%%%%%%%%%% Calculate gridness correlations %%%%%%%%%%%%
 selA=autoCorr;
 selA(~gridnessMask)=NaN;
-if prms.showCorrRing;	figure;  imagesc(selA);  end  % For easy testing of what gridness calcualtion is working with.
+% if prms.showCorrRing;	figure;  imagesc(selA);  end  % For easy testing of what gridness calcualtion is working with.
 rotAmnt = [60, 120, 30, 90, 150];
 rotatedCorr = nan(1,5);
 for ii=1:length(rotAmnt)
@@ -355,6 +408,12 @@ aboveThrMask=logical(aboveThrMask);
     Props.fieldSize=sum(sum(aboveThrMask)); 
 % end
 
+if prms.showCorrRing
+    % make a nice figure with auto corr props - stolen from Dan Manson
+    plotGridProps(autoCorr,gridnessMask,fieldsMask,peaksAboveXaxis,Props.closestPeaksCoord,size(autoCorr),Props.waveLength,Props.orientation',centralPoint, gridness);
+end
+
+end
 
 % -------------------------------------------------------------------------------------------------
 % --- INLINE FUNCTIONS ----------------------------------------------------------------------------
@@ -372,7 +431,84 @@ peakIdTemp=aboveHalfHeightMask(peakCoord(1),peakCoord(2));
 peakMask(aboveHalfHeightMask==peakIdTemp)=peakId;
 perimeterMask(bwperim(aboveHalfHeightMask==peakIdTemp))=peakId;
 
+end
 
+
+function plotGridProps(sac,gridnessMask,fieldsMask,peaksAboveXaxis,...
+    closestPeaksCoord,sizeAC,scale,orientation,centralPoint, gridness)
+
+figure; 
+%a. get the outer ring of autoCorr in gray, but in an rgb matrix
+im = sac;
+im = (im+1)/2;
+im2 = min(max(im,0),1); %cap any values that were over or under 1
+im2(isnan(im)) = 1; %will be white
+im2 = repmat(im2,[1 1 3]);
+
+%b. get the region used in gridness calculation in jet colors
+cm = jet(60);
+im3 = round(im*60.999 + 0.5);
+im3 = ind2rgb(im3,cm);
+msk = gridnessMask & ~isnan(im);
+msk = repmat(msk,[1 1 3]);
+im2(msk) = im3(msk);
+
+%c. display the image we've made
+image(im2);
+axis image
+xlabel('bins'); ylabel('bins');
+hold on;
+
+%d. plot the field boundaries in a black on white double line
+fields = bwboundaries(fieldsMask);
+for k = 1:numel(fields)
+    plot(fields{k}(:,2), fields{k}(:,1), 'w', 'Linewidth', 3)
+    plot(fields{k}(:,2), fields{k}(:,1), 'k', 'Linewidth', 1)
+end
+
+%e. plot blue horizontal line to show where angle is measured from
+for k=peaksAboveXaxis'
+    plot([centralPoint(1) closestPeaksCoord(k,1)],[centralPoint(2) closestPeaksCoord(k,2)],'k','Linewidth',2);
+end
+
+%f. plot a red curve to show the orientation
+plot([centralPoint(1,1) sizeAC(2)],centralPoint([1 1],[2 2]),'--b','Linewidth',2);
+plot([centralPoint(1,1) centralPoint(1,1)],[centralPoint(1,2) 0.5],'--b','Linewidth',2);
+[offset, idx] = min(abs(circ_dist(deg2rad(orientation'),[0,pi/2, pi])) * 180/pi,[],2);
+% depending on which wall grid is anchored to, we need to bake in a shift for y
+% axis
+if rem(idx,2) == 0
+    shift = pi/2;
+else
+    shift = 0;
+end
+
+mag = scale*.75;
+th = shift:0.05:deg2rad(offset)+shift;
+[x,y] = pol2cart(th,mag);
+%
+plot(x + centralPoint(2),  centralPoint(1)-y,'r','Linewidth',2);
+
+%g. plot peak centres, starting from the second ring of peaks
+% for k=2:8
+%     mag = scale*k;
+%     th = deg2rad((0:60/k:360)+orientation(1));
+%     [centres_x, centres_y] = pol2cart(th,mag);
+%     centres(:,1) = centres_x + centralPoint(2);
+%     centres(:,2) = centralPoint(1) - centres_y;
+%     %seems that Matlab actually does the clipping for us, but I'm not
+%     %sure if it's supposed to, so lets do it anyway
+%     clipped = centres(:,2) < 0 | centres(:,2) > sizeAC(1) | centres(:,1) < 0 | centres(:,1) > sizeAC(2);
+%     centres(clipped,:) = [];
+%     plot(centres(:,1),centres(:,2),'o','MarkerEdgeColor','r','MarkerFaceColor','w','MarkerSize',3);
+%     clear centres
+% end
+hold off;
+axis off;
+lastBins = (fliplr(size(im2)));
+text(lastBins(2)+1, lastBins(2),num2str(gridness));
+text(lastBins(2)+1, lastBins(2)/2,num2str(scale));
+end
 
 
 

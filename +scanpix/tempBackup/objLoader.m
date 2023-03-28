@@ -9,7 +9,7 @@ function obj = objLoader(objType,dataPath, varargin )
 %           obj = objLoader( objType, dataPath, 'inputName', inputVal, .. etc .. )
 %
 % Inputs:
-%    objType   - 'npix' or 'dacq' - data type
+%    objType   - 'npix' or 'dacq' - class object type
 %    dataPath  - path to data can be cell array of path strings
 %    objParams - optional; containers.Map (see 'scanpix.helpers.defaultParamsContainer' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat')
 %    mapParams - optional; mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat') 
@@ -43,13 +43,17 @@ loadStr = {'pos','spikes','lfp'};
 classFolder = what('+scanpix');
 
 %% Load Data (create class object)
-obj = scanpix.ephys(objType,'default',false); % assume default params
-
+if strcmpi(objType,'dacq')
+    obj = scanpix.ephys('default',false); % assume default params
+elseif strcmpi(objType,'npix')
+    obj = scanpix.npix('default',false); % assume default params
+else
+end
 % change params if desired
 if ~isempty(p.Results.objParams)
     if ischar(p.Results.objParams) 
         if exist(fullfile(classFolder.path,'files',[p.Results.objParams '.mat']),'file') == 2
-            obj.changeParams(obj,'file', fullfile(classFolder.path,'files',[p.Results.objParams '.mat']) );
+            scanpix.helpers.changeParams(obj,'file', fullfile(classFolder.path,'files',[p.Results.objParams '.mat']) );
         else
             error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.objParams '.mat']));
         end

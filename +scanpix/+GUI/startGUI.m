@@ -1,4 +1,4 @@
-function startGUI(GUIType,classType)
+function startGUI(GUIType)
 % startGUI - start a GUI to browse various aspects of a data object of
 % class dacq or npix
 % package: scanpix.GUI
@@ -33,7 +33,7 @@ end
 
 switch lower(GUIType)
     case 'main'
-        scanpix.GUI.mainGUI(classType);  
+        scanpix.GUI.mainGUI;  
     case 'lfpbrowser'
         % TO DO %
     
