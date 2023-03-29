@@ -12,11 +12,11 @@ function [borderScore, mainWall] = getBorderScore(map,binSize,varargin)
 % Usage:
 %
 %       [BS, mainWall] = map_bordercell(map, binSizeInCmSq);
-%       B = map_bordercell(map, binSizeInCmSq, optionalInputStruct );
-%       B = map_bordercell(map, binSizeInCmSq, 'inputName', inputVal, .. etc .. );
+%       BS = map_bordercell(map, binSizeInCmSq, optionalInputStruct );
+%       BS = map_bordercell(map, binSizeInCmSq, 'inputName', inputVal, .. etc .. );
 %
 % Inputs:   map           - rate map
-%           binSizeInCmSq - bin size of rate map in cm^2
+%           binSize       - bin size of rate map in cm^2
 %
 %
 % Options:
