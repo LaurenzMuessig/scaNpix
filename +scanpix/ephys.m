@@ -50,13 +50,6 @@ classdef ephys < handle
     properties % maps %
         maps                  struct  = struct('rate',[],'spike',[],'pos',[],'dir',[],'sACs',[],'OV',[],'speed',[],'lin',[],'linPos',[]);
     end
-    
-    properties(Dependent)
-        spatialInfo
-        rVect
-        gridProps
-        borderScore
-    end
 %     
     properties(Hidden)
         fileType              char    = '';
@@ -98,7 +91,7 @@ classdef ephys < handle
                 str = {'dacq','npix','nexus'};
                 [select, loadCheck] = listdlg('PromptString','Select what data tickles your fancy:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
                 if ~loadCheck
-                    warning('scaNpix::maps::addMaps: No data selected. No maps will be created. Boring...');
+                    warning('scaNpix::ephys:: Object creation aborted. And I thought you loved ephys class objects...');
                     return;
                 else
                     obj.type = str{select};
@@ -422,11 +415,10 @@ classdef ephys < handle
             % delete
             switch type
                 case 'trials'
-                    dependentInd = obj.checkPropDepend;
                     deleteInd = ismember(obj.trialNames,trialStr);
                     fields = fieldnames(obj);
                     for i = 1:length(fields)
-                        if ~dependentInd(i) && ~any(strcmp(fields{i},obj.fields2spare)) && ~isempty(obj.(fields{i}))
+                        if ~any(strcmp(fields{i},obj.fields2spare)) && ~isempty(obj.(fields{i}))
                             if isstruct(obj.(fields{i})) && isscalar(obj.(fields{i}))
                                 obj.(fields{i}) = structfun(@(x) x(~deleteInd),obj.(fields{i}),'uni',0);
                             else
@@ -517,9 +509,8 @@ classdef ephys < handle
             
             % re-order
             fields = fieldnames(obj);
-            dependentInd = obj.checkPropDepend;
             for i = 1:length(fields)
-                if ~dependentInd(i) && ~any(strcmp(fields{i},obj.fields2spare)) && ~isempty(obj.(fields{i}))
+                if ~any(strcmp(fields{i},obj.fields2spare)) && ~isempty(obj.(fields{i}))
                     if isstruct(obj.(fields{i})) && isscalar(obj.(fields{i}))
                         obj.(fields{i}) = structfun(@(x) x(orderIndex),obj.(fields{i}),'uni',0);
                     else
@@ -555,8 +546,13 @@ classdef ephys < handle
             reloadFlag = false;
             check0spikeCells = false;
             
+            if strcmp(obj.type,'init')
+                warning('scaNpix::ephys::load: You haven''t set the data type for the object yet (and probably neither the param space. Are you serious?');
+            end
+            
             if isempty(obj.dataPath)
                 obj.fetchFileNamesAndPath(obj.fileType, obj.params('defaultDir'));
+                if isempty(obj.trialNames); return; end
                 obj.selectTrials(obj.trialNames);
             end
             
@@ -841,6 +837,7 @@ classdef ephys < handle
             dirList = scanpix.fxchange.uigetfile_n_dir(defaultDir,'Select Top Level Folder(s) With Session Data');
             if isempty(dirList)
                 warning('scaNpix::ephys::fetchFileNamesAndPath:Loading Aborted. Und tschuess!');
+                [trialNames, dataDir] = deal(NaN);
                 return
             end
             
@@ -1204,6 +1201,60 @@ classdef ephys < handle
             end
             
         end
+        
+        %%
+        function spatProps = getSpatialProps(obj, score)
+            
+            switch lower(score)
+                case {'spatialinfo','si'}
+                    if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
+                        warning('scaNpix::ephys::spatialInfo:You need to make rate maps before demanding their spatial info.');
+                        spatProps = [];
+                        return
+                    end
+                    
+                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
+                    for i = 1:length(obj.trialNames)
+                        spatProps(:,i) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},obj.maps(1).pos{i});
+                    end
+                case {'raleighvect','rv'}
+                    if isempty(obj.maps(1).dir) || isempty(obj.maps(1).dir{1})
+                        warning('scaNpix::ephys::rVect:You need to make dir maps before demanding their rayleigh vector lengths.');
+                        spatProps = [];
+                        return
+                    end
+                    
+                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
+                    for i = 1:length(obj.trialNames)
+                        spatProps(:,i) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
+                    end
+                case {'gridprops','grid'}
+                    if isempty(obj.maps(1).sACs) || isempty(obj.maps(1).sACs{1})
+                        warning('scaNpix::ephys::gridProps:You need to make spatial ACs before demanding grid properties.');
+                        spatProps = [];
+                        return
+                    end
+                    
+                    spatProps = nan(size(obj.cell_ID,1),5,length(obj.trialNames));
+                    for i = 1:length(obj.trialNames)
+                        [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,obj.mapParams.gridProps),obj.maps(1).sACs{i},'uni',0);
+                        % for now just output the basics
+                        spatProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.waveLength x.orientation],temp,'uni',0));
+                    end
+                case {'borderscore','bs'}
+                    if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
+                        warning('scaNpix::ephys::borderScore:You need to make rate maps before demanding their border score.');
+                        spatProps = [];
+                        return
+                    end
+                    
+                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
+                    for i = 1:length(obj.trialNames)
+                        [spatProps(:,i), ~] = scanpix.analysis.getBorderScore(obj.maps(1).rate{i},obj.mapParams.rate.binSizeSpat);
+                    end
+                otherwise
+            end
+        end
     end
     
     %%
@@ -1288,59 +1339,6 @@ classdef ephys < handle
             end
         end
         
-    end
-    
-    methods % get methods
-         
-        function spatialInfo = get.spatialInfo(obj)
-            spatialInfo = nan(size(obj.cell_ID,1),length(obj.trialNames));
-            if isempty(obj.maps(1).rate{1})
-                warning('scaNpix::ephys::spatialInfo:You need to make rate maps before demanding their spatial info.');
-                return
-            end
-            
-            for i = 1:length(obj.trialNames)
-                spatialInfo(:,i) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},obj.maps(1).pos{i});
-            end
-        end
-        %%
-        function rVect = get.rVect(obj)
-            rVect = nan(size(obj.cell_ID,1),length(obj.trialNames));
-            if isempty(obj.maps(1).dir{1})
-                warning('scaNpix::ephys::rVect:You need to make dir maps before demanding their rayleigh vector lengths.');
-                return
-            end
-            
-            for i = 1:length(obj.trialNames)
-                rVect(:,i) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
-            end
-        end
-        %%
-        function gridProps = get.gridProps(obj)
-            gridProps = nan(size(obj.cell_ID,1),5,length(obj.trialNames));
-            if isempty(obj.maps(1).sACs{1})
-                warning('scaNpix::ephys::gridProps:You need to make spatial ACs before demanding grid properties.');
-                return
-            end
-            
-            for i = 1:length(obj.trialNames)
-                [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,obj.mapParams.gridProps),obj.maps(1).sACs{i},'uni',0);
-                % for now just output the basics 
-                gridProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.waveLength x.orientation],temp,'uni',0));
-            end
-        end
-        %%
-         function borderScore = get.borderScore(obj)
-            borderScore = nan(size(obj.cell_ID,1),length(obj.trialNames));
-            if isempty(obj.maps(1).rate{1})
-                warning('scaNpix::ephys::borderScore:You need to make rate maps before demanding their border score.');
-                return
-            end
-            
-            for i = 1:length(obj.trialNames)
-                borderScore(:,1)  = cellfun(@(x) scanpix.analysis.getBorderScore(x,obj.mapParams.rate.binSizeSpat),obj.maps(1).rate{i},'uni',0);
-            end
-        end
     end
     
 end
