@@ -1,22 +1,25 @@
 classdef ephys < handle
-    % npix data class. Let's you load in neuropixel data into a class
+    % ephys data class. Let's you load in different types of ephys data into a class
     % object for analysis or data inspection
     %
-    % Class constructor: scanpix.npix
+    % Class constructor: scanpix.ephys
     % Construct class obj
     %
     % Usage:
-    %       obj = scanpix.npix;
-    %       obj = scanpix.npix(prmsMode);
-    %       obj = scanpix.npix(prmsMode, uiFlag);
+    %       obj = scanpix.ephys;
+    %       obj = scanpix.ephys(type);
+    %       obj = scanpix.ephys(type,prmsMode);
+    %       obj = scanpix.ephys(type,prmsMode,setDirFlag);
     %
     % Inputs:
-    %       prmsMode: 'default' - uses default parameter (default)
-    %                 'ui'      - opens UI dialogue
-    %                 'file'    - load params from file
+    %       type:       data type ('dacq', 'npix', 'nexus')
     %
-    %         uiFlag: true (default) or false
-    %                 - if false will skip UI dialogue for data selection
+    %       prmsMode:   'default' - uses default parameter (default)
+    %                   'ui'      - opens UI dialogue
+    %                   'file'    - load params from file
+    %
+    %       setDirFlag: true (default) or false
+    %                   - if false will skip UI dialogue for data selection
     %                   (e.g. when you use constructor programmatically)
     %
     % LM 2020
