@@ -49,7 +49,7 @@ obj = scanpix.ephys(objType,'default',false); % assume default params
 if ~isempty(p.Results.objParams)
     if ischar(p.Results.objParams) 
         if exist(fullfile(classFolder.path,'files',[p.Results.objParams '.mat']),'file') == 2
-            obj.changeParams(obj,'file', fullfile(classFolder.path,'files',[p.Results.objParams '.mat']) );
+            obj.changeParams('file', fullfile(classFolder.path,'files',[p.Results.objParams '.mat']) );
         else
             error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.objParams '.mat']));
         end

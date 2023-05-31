@@ -102,11 +102,10 @@ classdef ephys < handle
 
             %
             switch obj.type
-                case 'dacq'
+                case {'dacq','nexus'}
                     obj.fileType = '.set';
                 case 'npix'
                     obj.fileType = '.ap.bin';
-                case 'nexus'
             end
             %
             if nargin <= 1
@@ -1300,7 +1299,7 @@ classdef ephys < handle
                 
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
-                    warning('scaNpix::ephys::loadWaves:Wave form loading aborted. That lacks class mate...');
+                    warning('scaNpix::ephys::loadWaves:Waveform loading aborted. That lacks class mate...');
                     return;
                 end
                 

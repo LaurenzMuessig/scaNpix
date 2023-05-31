@@ -34,6 +34,11 @@ if ~iscell(maps)
    error('Gimme some cell array of maps as input please, will ya?'); 
 end
 
+if isempty(maps)
+   error('How would I get the correlations for an empty array of maps? Doesn''t work or does it?'); 
+end
+
+
 % switch between modes
 if size(maps,2) > 1
     % A v B
