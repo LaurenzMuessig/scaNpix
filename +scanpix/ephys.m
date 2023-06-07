@@ -20,7 +20,7 @@ classdef ephys < handle
     %
     %       setDirFlag: true (default) or false
     %                   - if false will skip UI dialogue for data selection
-    %                   (e.g. when you use constructor programmatically)
+    %                   (e.g. when you use constructor programatically)
     %
     % LM 2020
     
@@ -248,7 +248,7 @@ classdef ephys < handle
                 % add meta data per UI input
                 uiInput = inputdlg(['Metadata field name'; strcat(obj.trialNames,' - value')'],'Please indicate meta data field you want to add',1);
                 if isempty(uiInput)
-                    warning('scaNpix: Cancelled adding meta data to object. It would have been so nice to get some more of it...');
+                    warning('scaNpix::ephys::addMetaData: Cancelled adding meta data to object. It would have been so nice to get some more of it...');
                     return;
                 end
                 name   = uiInput{1};
@@ -303,10 +303,10 @@ classdef ephys < handle
             %
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            warning('scaNpix: All existing rate maps and metadata fields will be removed when adding data to object. You''ll need to re-generate these.'); % could add UI confirmation box?
+            warning('scaNpix::ephys::addData:All existing rate maps and metadata fields will be removed when adding data to object. You''ll need to re-generate these.'); % could add UI confirmation box?
             
             if ~obj.loadFlag
-                warning('scaNpix: You need to load data into the object first before you can use ''obj.addData''.');
+                warning('scaNpix::ephys::addData:You need to load data into the object first before you can use ''obj.addData''.');
                 return;
             end
             
@@ -316,6 +316,14 @@ classdef ephys < handle
                     return
                 end
                 [newTrialNames, ind] = obj.selectTrials(newTrialNames);
+            else
+                % this only works for 1 trial currently! 
+                [path,newTrialNames] = fileparts(newTrialNames);
+                newDataDir = {[path filesep]};
+                ind = 1;
+                if strcmp(obj.type,'npix')
+                    [~,newTrialNames] = fileparts(newTrialNames);
+                end
             end
             
             if nargin < 3
@@ -336,7 +344,7 @@ classdef ephys < handle
             end
             
             if any(strcmp(obj.trialNames,newTrialNames))
-                warning('scaNpix: The dataset you want to add is already in object, so it will just be reloaded.');
+                warning('scaNpix::ephys::addData:The dataset you want to add is already in object, so it will just be reloaded.');
             else
                 obj.trialNames = horzcat(obj.trialNames, newTrialNames);
                 obj.dataPath   = horzcat(obj.dataPath, newDataDir(ind));
@@ -386,7 +394,7 @@ classdef ephys < handle
                     if nargin < 3
                         [select, loadCheck] = listdlg('PromptString','Select what data to delete:','ListString',obj.trialNames,'ListSize',[160 100]);
                         if ~loadCheck
-                            warning('scaNpix: Deleting data aborted. More data is better anyway.');
+                            warning('scaNpix::ephys::deleteData: Deleting data aborted. More data is better anyway.');
                             return;
                         end
                         trialStr = obj.trialNames(select);
@@ -436,7 +444,7 @@ classdef ephys < handle
                         obj.loadFlag  = false;
                         obj.changeParams('default'); % reset defaults
                         obj.mapParams = scanpix.maps.defaultParamsRateMaps(class(obj)); % reset defaults
-                        warning('scaNpix::ephys:: Back to square one...');
+                        warning('scaNpix::ephys::deleteData: Back to square one...');
                     end
                     
                 case 'cells'
@@ -495,7 +503,7 @@ classdef ephys < handle
             if nargin < 2
                 uiInput = inputdlg({obj.trialNames{:}},'Please indicate new index for each trial');
                 if isempty(uiInput)
-                    warning('scaNpix: Reordering of trials aborted. Just ask yourself why you started it then...');
+                    warning('scaNpix::ephys::reorderData: Reordering of trials aborted. Just ask yourself why you started it then...');
                     return;
                 end
                 orderIndex = str2num(cell2mat(uiInput))';
@@ -785,7 +793,7 @@ classdef ephys < handle
                     classFolder = what('scanpix');
                     [fNames, dataDir] = uigetfile(fullfile(classFolder.path,'files','*.mat'),'Select params containers Map to load.');
                     if isnumeric(fNames)
-                        warning('scaNpix: Loading of params container aborted!');
+                        warning('scaNpix::ephys::getParams: Loading of params container aborted!');
 %                         prmsMap = containers.Map;
                         return;
                     end
@@ -835,7 +843,7 @@ classdef ephys < handle
             
             dirList = scanpix.fxchange.uigetfile_n_dir(defaultDir,'Select Top Level Folder(s) With Session Data');
             if isempty(dirList)
-                warning('scaNpix::ephys::fetchFileNamesAndPath:Loading Aborted. Und tschuess!');
+                warning('scaNpix::ephys::fetchFileNamesAndPath: Loading Aborted. Und tschuess!');
                 [trialNames, dataDir] = deal(NaN);
                 return
             end
@@ -847,7 +855,7 @@ classdef ephys < handle
             end
             
             if isempty(trialStruct)
-                warning('scaNpix::ephys::fetchFileNamesAndPath:No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
+                warning('scaNpix::ephys::fetchFileNamesAndPath: No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
                 return
             end
             
@@ -884,7 +892,7 @@ classdef ephys < handle
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             % skip if only one trial in object
-            if length(trialNameStrIn) == 1
+            if ischar(trialNameStrIn)
                 trialNameStrOut = trialNameStrIn;
                 select = true;
                 return;
@@ -949,11 +957,11 @@ classdef ephys < handle
     
     methods(Static)
         
-        function dependentInd = checkPropDepend
-            metaClass = ?scanpix.ephys;
-            dependentInd = [metaClass.PropertyList.Dependent];
-            dependentInd = dependentInd(~[metaClass.PropertyList.Hidden]); 
-        end
+%         function dependentInd = checkPropDepend
+%             metaClass = ?scanpix.ephys;
+%             dependentInd = [metaClass.PropertyList.Dependent];
+%             dependentInd = dependentInd(~[metaClass.PropertyList.Hidden]); 
+%         end
     end
     
 
@@ -1136,7 +1144,7 @@ classdef ephys < handle
                         else
                             uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
                             if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps:No track properties, no linear rate maps...');
+                                warning('scaNpix::ephys::addMaps: No track properties, no linear rate maps...');
                                 return;
                             else
                                 trackProps.type = uiInput{1};
@@ -1153,7 +1161,7 @@ classdef ephys < handle
                         elseif ~skipNextUI
                             uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
                             if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps:No track length, no linear rate maps...');
+                                warning('scaNpix::ephys::addMaps: No track length, no linear rate maps...');
                                 return;
                             else
                                 trackProps.length = str2double(uiInput{1});
@@ -1170,7 +1178,7 @@ classdef ephys < handle
                 case 'sac'
                     
                     if isempty(obj.maps(1).rate{1})
-                        warning('scaNpix::ephys::addMaps:You need to generate rate maps before demanding spatial autocorrelograms.')
+                        warning('scaNpix::ephys::addMaps: You need to generate rate maps before demanding spatial autocorrelograms.')
                         return
                     end
                     
@@ -1184,7 +1192,7 @@ classdef ephys < handle
                         if isfield(obj.trialMetaData(i),'objectPos') && ~isempty(obj.trialMetaData(i).objectPos)
                             obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
                         else
-                            warning('scaNpix::ephys::addMaps:If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
+                            warning('scaNpix::ephys::addMaps: If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
                         end
                     end
                     
@@ -1207,7 +1215,7 @@ classdef ephys < handle
             switch lower(score)
                 case {'spatialinfo','si'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
-                        warning('scaNpix::ephys::spatialInfo:You need to make rate maps before demanding their spatial info.');
+                        warning('scaNpix::ephys::getSpatialProps::spatialInfo: You need to make rate maps before demanding their spatial info.');
                         spatProps = [];
                         return
                     end
@@ -1218,7 +1226,7 @@ classdef ephys < handle
                     end
                 case {'raleighvect','rv'}
                     if isempty(obj.maps(1).dir) || isempty(obj.maps(1).dir{1})
-                        warning('scaNpix::ephys::rVect:You need to make dir maps before demanding their rayleigh vector lengths.');
+                        warning('scaNpix::ephys::getSpatialProps::rVect:You need to make dir maps before demanding their rayleigh vector lengths.');
                         spatProps = [];
                         return
                     end
@@ -1229,7 +1237,7 @@ classdef ephys < handle
                     end
                 case {'gridprops','grid'}
                     if isempty(obj.maps(1).sACs) || isempty(obj.maps(1).sACs{1})
-                        warning('scaNpix::ephys::gridProps:You need to make spatial ACs before demanding grid properties.');
+                        warning('scaNpix::ephys::getSpatialProps::gridProps:You need to make spatial ACs before demanding grid properties.');
                         spatProps = [];
                         return
                     end
@@ -1242,7 +1250,7 @@ classdef ephys < handle
                     end
                 case {'borderscore','bs'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
-                        warning('scaNpix::ephys::borderScore:You need to make rate maps before demanding their border score.');
+                        warning('scaNpix::ephys::getSpatialProps::borderScore:You need to make rate maps before demanding their border score.');
                         spatProps = [];
                         return
                     end
@@ -1283,7 +1291,7 @@ classdef ephys < handle
             
             
             if srcmp(obj.type,'dacq')
-                warning('scaNpix::ephys::loadWaves:Waveforms for DACQ type objects are auto loaded, No need to ask for that again here compadre...');
+                warning('scaNpix::ephys::loadWaves: Waveforms for DACQ type objects are auto loaded, No need to ask for that again here compadre...');
                 return
             end
             
@@ -1299,7 +1307,7 @@ classdef ephys < handle
                 
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
-                    warning('scaNpix::ephys::loadWaves:Waveform loading aborted. That lacks class mate...');
+                    warning('scaNpix::ephys::loadWaves: Waveform loading aborted. That lacks class mate...');
                     return;
                 end
                 

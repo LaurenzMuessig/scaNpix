@@ -1,4 +1,4 @@
-function output = makeCustomUIDialogue(prompts, defaultVals)
+function output = makeCustomUIDialogue(prompts, defaultVals,fillBoxLength)
 % makeCustomUIDialogue - create a custom UI dialogue
 % This opens a figure where you can request setting an arbitrary amount of
 % fields (e.g. parameter collection through UI) and then when finished
@@ -36,15 +36,21 @@ end
 logInd = cellfun(@islogical,defaultVals);
 if any(logInd); defaultVals(logInd) = num2cell(double([defaultVals{logInd}])); end
 
-%% create the dialogue
+
 nLines   = 20;
 lineSz1 = [120 20]; % need to check if this scales well on e.g. laptop!
-lineSz2 = [120 lineSz1(2)];  % need to check if this scales well on e.g. laptop!
+if nargin < 3
+    lineSz2 = [120 20];  % need to check if this scales well on e.g. laptop!
+else
+    lineSz2 = [fillBoxLength 20]; 
+end
+
+%% create the dialogue
 screenSz = get(0,'screensize');
 % dynamically control figure size
 if length(prompts) <= nLines
     ySF   = 0.7*(length(prompts)/nLines);
-    figSz = [0.425*screenSz(3) (1-ySF)/2*screenSz(4)-25 0.15*screenSz(3) ySF*screenSz(4)+25];
+    figSz = [0.425*screenSz(3) (1-ySF)/2*screenSz(4)-25 1.2*(lineSz1(1) + lineSz2(1)) ySF*screenSz(4)+25];
 else
     xSF   = 0.2 * ceil(length(prompts)/nLines);
     figSz = [(1-xSF)/2*screenSz(3) 0.175*screenSz(4)-25 xSF*screenSz(3) 0.7*screenSz(4)+25];   % will fail for too many lines, but that seems unlikely? Should maybe include a graceful exit
@@ -53,7 +59,7 @@ end
 % open figure
 fH      = figure('units', 'pixel', 'position', figSz, 'NumberTitle', 'off', 'Name', 'GimmeSomeInput');
 figSz   = get(fH,'position');
-offSetX = 0.08 * figSz(3);
+offSetX = 0.015 * figSz(3);
 offSetY = figSz(4) - 1.2*lineSz1(2);
 
 for i = 1:length(prompts)

@@ -34,8 +34,14 @@ parse(p,varargin{:});
 expInfo = scanpix.helpers.readExpInfo( cribSheetPath, method );
 
 objData = cell(length(expInfo), 1);
+c = 1;
 for i = 1:length(expInfo.animal)
-    objData{i} = scanpix.objLoader(dataType, expInfo.fullPath{i}, 'objParams', p.Results.objParams, 'mapParams', p.Results.mapParams);
+    try
+        objData{c} = scanpix.objLoader(dataType, expInfo.fullPath{i}, 'objParams', p.Results.objParams, 'mapParams', p.Results.mapParams);
+    catch
+        warning('Couldn''t load dataset from rat %s starting with trial %s',expInfo.animal{i}, expInfo.fullPath{i}{1});
+    end
+    c = c + 1;
 end
 
 end

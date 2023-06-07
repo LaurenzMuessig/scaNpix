@@ -29,6 +29,22 @@ elseif ~isfield(obj.trialMetaData,'BonsaiCorruptFlag')
 else
     syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
 end
+
+% in 1 single trial there are a bunch of sync pulses missing in middle of
+% trial - not sure what happened there. hopefully it's a one off 
+missedSyncs = find(diff(syncTTLs) > 1.5*1/obj.params('posFs'));
+if ~isempty(missedSyncs)
+    nMissedPulses = floor((syncTTLs(missedSyncs+1) - syncTTLs(missedSyncs)) * obj.params('posFs'));
+    missedPulses  = missedSyncs+1:missedSyncs+nMissedPulses;
+    interp_pulseT          = interp1([1:missedSyncs,missedSyncs+nMissedPulses+1:length(syncTTLs)+nMissedPulses], syncTTLs', missedPulses);
+    temp                   = zeros(length(syncTTLs)+nMissedPulses,1);
+    temp(missedPulses,1)   = interp_pulseT;
+    temp(temp(:,1) == 0,1) = syncTTLs;
+    syncTTLs               = temp;
+    warning('scaNpix::ephys::loadSpikes:Missing sync pulses in neuropixel datastream. Interpolated missing samples, but better go and check that');
+end
+
+
 %             % decide what to load - phy or kilosort
 %             if obj.params('loadFromPhy') && ~reloadFlag
 %                 if exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
@@ -59,7 +75,7 @@ if obj.params('loadFromPhy')
     if exist(fullfile(path2data_A,'cluster_info.tsv'),'file') == 2
         loadFromPhy = true;
     else
-        warning('scaNpix::npix::loadSpikes:Can''t find ''cluster_info'' from phy output. Will try using kilosort data instead!');
+        warning('scaNpix::ephys::loadSpikes:Can''t find ''cluster_info'' from phy output. Will try using kilosort data instead!');
         loadFromPhy = false;
     end
 else
@@ -72,7 +88,7 @@ if ~loadFromPhy && exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'
     if isfolder(fullfile(obj.dataPath{trialIterator},'backUpFiles'))
         path2data_A = fullfile(path2data_A,'backUpFiles');
     else
-        warning('scaNpix::npix::loadSpikes:Can''t find folder with BackUp files! If you merged/split clusters in PHY, loading raw kilosort results will fail shortly...');
+        warning('scaNpix::ephys::loadSpikes:Can''t find folder with BackUp files! If you merged/split clusters in PHY, loading raw kilosort results will fail shortly...');
     end
 end
 

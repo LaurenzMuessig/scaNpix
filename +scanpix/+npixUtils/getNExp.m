@@ -8,7 +8,7 @@ function dataOut = getNExp(ratStr,varargin)
 
 
 %% parse varargin
-dirParent = 'S:\1postDoc\Neuropixels\rawData';
+dirParent = 'S:\1postDoc\Neuropixels\rawData\';
 trialType = 'fam';
 nPre      = 0;
 
