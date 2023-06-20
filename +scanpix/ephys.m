@@ -1280,70 +1280,55 @@ classdef ephys < handle
             % Inputs:
             %    varargin - 'ui' - bring up UI dialoge to select params
             %             - name-value: comma separated list of name-value
-            %               pairs for params (see scanpix.npixUtils.getWaveforms)
+            %               pairs for params (see scanpix.npixUtils.extract_waveforms)
             %
             % Outputs:
             %
-            % See also: scanpix.npixUtils.getWaveforms
+            % See also: scanpix.npixUtils.extract_waveforms
             %
             % LM 2020
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             
-            if srcmp(obj.type,'dacq')
-                warning('scaNpix::ephys::loadWaves: Waveforms for DACQ type objects are auto loaded, No need to ask for that again here compadre...');
+            if strcmp(obj.type,'dacq')
+                warning('scaNpix::ephys::loadWaves: Waveforms for DACQ type objects are auto loaded. No need to ask for that again here compadre...');
                 return
             end
             
             % deal with loading params
-            if nargin == 1
-                % use defaults, only add channel n from object metadata
-                addParams = {'nch'; obj.trialMetaData(1).nChan};
-            elseif strcmp(varargin{1},'ui')
+%             if nargin == 1
+%                 % use defaults, only add channel n from object metadata
+%                 addParams = {'nch'; obj.trialMetaData(1).nChan};
+            if strcmp(varargin{1},'ui')
                 % UI dialoge
-                prompts = {'mode', 'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'unwhiten' };
-                varargs = {'mode', 'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'unwhite'  };
-                defVals = {'raw',  obj.trialMetaData(1).nChan,    250,                  5,                  40,                  0.375,             0,           0         };
-                
+%                 prompts = {'mode',    'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'save' };
+%                 varargs = {'mode',    'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'save' };
+%                 defVals = {'single',  obj.trialMetaData(1).nChanTot, 250,                  5,                  40,                  0.375,             0,           0,     };
+                prompts = {'mode',    'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'save' };
+                varargs = {'mode',    'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'save' };
+                defVals = {'single',  250,                  5,                  40,                  0.375,             0,           0,     };
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
                     warning('scaNpix::ephys::loadWaves: Waveform loading aborted. That lacks class mate...');
                     return;
                 end
-                
-%                 addParams = cell(2,size(rtn,1)-1);
-%                 for i = 2:size(rtn,1)
-%                     addParams{1,i-1} = varargs{i};
-%                     addParams{2,i-1} = rtn{i,2};
-%                 end
+
                 addParams = cell(2,size(rtn,1));
                 for i = 1:size(rtn,1)
                     addParams{1,i} = varargs{i};
                     addParams{2,i} = rtn{i,2};
                 end
-            else
+            elseif length(varargin) > 1
                 % name-value pairs
                 addParams = {varargin{1:2:end};varargin{2:2:end}};
-                % always add channel n unless already supplied
-                if ~any(strcmp(addParams(1,:),'nch'))
-                    addParams(:,end+1) = {'nch'; obj.trialMetaData(1).nChan};
-                end
+%                 % always add channel n unless already supplied
+%                 if ~any(strcmp(addParams(1,:),'nch'))
+%                     addParams(:,end+1) = {'nch'; obj.trialMetaData(1).nChanTot};
+%                 end
 
             end
-            
-            if any(strcmp(addParams(1,:),'save'))
-                saveWFs = addParams{2,strcmp(addParams(1,:),'save')};
-            else
-                saveWFs = false;
-            end
-
-            for i = 1:length(obj.trialNames)
-                [obj,tmpWF,tmpCH] = scanpix.npixUtils.extract_waveforms(obj,i,addParams{:});
-                if saveWFs
-                    waveforms = [tmpWF tmpCH];
-                    save(fullfile(obj.dataPath{i},'waveforms.mat'),'waveforms');
-                end
-            end
+            % extract waveforms
+            scanpix.npixUtils.extract_waveforms(obj,1:length(obj.trialNames),addParams{:});
         end
         
     end

@@ -37,8 +37,8 @@ if ~isfield(metaXMLFile,'posFs')
     obj.trialMetaData(trialIterator).posFs = 50; % HARCODED ATM! Should maybe be added to xml file?
 end
 
-obj.trialMetaData(trialIterator).ppm = [];
-obj.trialMetaData(trialIterator).ppm_org = [];
+obj.trialMetaData(trialIterator).ppm         = [];
+obj.trialMetaData(trialIterator).ppm_org     = [];
 obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
 % spikeGLX meta data %
 %             metaDataFile = dir(fullfile(obj.dataPath{trialIterator},'*.ap.meta'));
@@ -61,7 +61,8 @@ f = fieldnames(chanMapStruct);
 for i = 1:length(f)
     obj.chanMap(trialIterator).(f{i})  = chanMapStruct.(f{i});
 end
-obj.trialMetaData(trialIterator).nChan = sum(chanMapStruct.connected);
+obj.trialMetaData(trialIterator).nChanSort = sum(chanMapStruct.connected);
+obj.trialMetaData(trialIterator).nChanTot  = 385;
 
 if isempty(obj.dataSetName)
     obj.dataSetName = ['r' num2str(metaXMLFile.animal) '_' num2str(metaXMLFile.date)];

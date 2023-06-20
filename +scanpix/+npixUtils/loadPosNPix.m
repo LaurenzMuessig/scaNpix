@@ -64,7 +64,7 @@ end
 
 % deal with missing frames (if any) - this currently doesn't take into
 % account if 1st frame(s) would be missing, but I am not sure this would
-% actually ever happen (as 1st fame should always be triggered fine)
+% actually ever happen (as 1st frame should always be triggered fine)
 % first check if there are any...
 missFrames       = find(~ismember(1:frameCount(end),frameCount));
 nMissFrames      = length(missFrames);
@@ -77,11 +77,20 @@ if ~isempty(missFrames)
     led                    = temp;
     
     % interpolate sample times
-    interp_sampleT         = interp1(double(frameCount), sampleT, missFrames);
-    temp2                   = zeros(length(led),1);
-    temp2(missFrames,1)     = interp_sampleT;
+    interp_sampleT           = interp1(double(frameCount), sampleT, missFrames);
+    temp2                    = zeros(length(led),1);
+    temp2(missFrames,1)      = interp_sampleT;
     temp2(temp2(:,1) == 0,1) = sampleT;
-    sampleT                = temp2;
+    sampleT                  = temp2;
+    
+    
+%     nMissedPulses = floor((syncTTLs(missedSyncs+1) - syncTTLs(missedSyncs)) * obj.params('posFs'));
+%     missedPulses  = missedSyncs+1:missedSyncs+nMissedPulses;
+%     interp_pulseT          = interp1([1:missedSyncs,missedSyncs+nMissedPulses+1:length(syncTTLs)+nMissedPulses], syncTTLs', missedPulses);
+%     temp                   = zeros(length(syncTTLs)+nMissedPulses,1);
+%     temp(missedPulses,1)   = interp_pulseT;
+%     temp(temp(:,1) == 0,1) = syncTTLs;
+%     syncTTLs               = temp;
 end
 
 ppm = nan(2,1);
