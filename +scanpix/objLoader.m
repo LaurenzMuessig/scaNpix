@@ -78,7 +78,7 @@ if ischar(dataPath)
 end
 % parse directories and trialnames
 [filepath,name,~] = cellfun(@fileparts,dataPath,'uni',0);
-obj.dataPath = [filepath filesep];
+obj.dataPath = filepath;
 
 if strcmpi(objType,'npix')
     trialNames = cellfun(@(x) x{1}, cellfun(@(x) regexp(x,'[.]ap','split'),name,'uni',0),'uni',0);
