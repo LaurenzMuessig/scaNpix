@@ -1,3 +1,4 @@
+% function [ampScaling, spkTemps] = loadSpikesNPix(obj, trialIterator, reloadFlag, loadAmps)
 function loadSpikesNPix(obj, trialIterator, reloadFlag)
 % loadSpikes - load spike data from neuropixel files
 % We will just load spike times
@@ -66,9 +67,17 @@ if reloadFlag || exist(fullfile(obj.dataPath{trialIterator},'spike_times.npy'),'
         return
     end
     path2data_B = path2data_A;
+    obj.dataPathSort{trialIterator} = path2data_A;
 else
-    [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
+    if isempty(obj.dataPathSort) || isempty(obj.dataPathSort{trialIterator})
+        [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
+        obj.dataPathSort{trialIterator} = path2data_A; 
+    else
+       [path2data_A,path2data_B] = deal(obj.dataPathSort{trialIterator});
+    end
 end
+%
+
 
 % decide what to load - phy or kilosort
 if obj.params('loadFromPhy')
@@ -98,6 +107,10 @@ spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % a
 obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
 % load cluster IDs
 clustIDs           = readNPY(fullfile(path2data_A,'spike_clusters.npy')) + 1; % 0 based index
+% load amplitude
+% amps               = readNPY(fullfile(path2data_A,'amplitudes.npy')) + 1; % 0 based index
+% spkTemps           = readNPY(fullfile(path2data_A,'spike_templates.npy')) + 1; % 0 based index
+
 
 if loadFromPhy
     % phy curated output - only load clusters labelled good
@@ -141,13 +154,19 @@ ind2keep       = indGood ~= 0 & indSTimes;
 % remove from data
 clustIDs       = clustIDs(ind2keep);
 spikeTimes     = spikeTimes(ind2keep);
+% amps           = amps(ind2keep);
+% spkTemps       = spkTemps(ind2keep);
 
 % sort clusters, so accumarray output is sorted
 [clustIDs, sortInd] = sort(clustIDs);
 spikeTimes          = spikeTimes(sortInd);
+% amps                = amps(sortInd);
+% spkTemps            = spkTemps(sortInd);
 
 % reformat into more convenient form
 spikeTimesFin  = accumarray(clustIDs,spikeTimes,[max([unGoodClustIDs;good_clusts]) 1],@(x) {x});
+% amps           = accumarray(clustIDs,amps,[max([unGoodClustIDs;good_clusts]) 1],@(x) {x});
+% spkTemps       = accumarray(clustIDs,spkTemps,[max([unGoodClustIDs;good_clusts]) 1],@(x) {x});
 % remove empty clusters - need to make sure not to remove cells that
 % only fire in some trials of a trial sequence (we are assuming here that
 % you clustered all data together and then split back into individual
@@ -156,6 +175,8 @@ OtherClusters    = true(length(spikeTimesFin),1);
 OtherClusters(good_clusts) = false;
 indEmpty       = cellfun('isempty',spikeTimesFin) & OtherClusters;
 spikeTimesFin  = spikeTimesFin(~indEmpty);
+% amps           = amps(~indEmpty);
+% spkTemps       = spkTemps(~indEmpty);
 
 %%%%%%%% I SHOULD CHECK WHETHER THIS WORKS FOR ALL CIRCUMSTANCES!!!!!!!
 if ~loadFromPhy
@@ -165,6 +186,11 @@ end
 % sort by depth
 [clu_Depth, indSort] = sort(clu_Depth,'ascend'); % should be changed to descent to be sorted naturally
 spikeTimesFin        = spikeTimesFin(indSort);
+% ampScaling           = amps(indSort);
+% spkTemps             = spkTemps(indSort);
+%
+% if loadAmps; return; end
+
 %% output
 obj.spikeData(1).spk_Times{trialIterator} = spikeTimesFin;
 if ~reloadFlag

@@ -34,6 +34,7 @@ classdef ephys < handle
     
     properties % meta data %
         dataPath(1,:)         string
+        dataPathSort(1,:)     string
         dataSetName(1,:)      char
         trialNames(1,:)       string
         cell_ID(:,4)          double %{mustBePositive, mustBeNonNan, mustBeNonzero}
@@ -114,6 +115,7 @@ classdef ephys < handle
             else
                 obj.getParams(prmsMode); 
             end
+            if isempty(obj.params); return; end
             
             if nargin <= 2
                 setDirFlag = true;
@@ -716,6 +718,7 @@ classdef ephys < handle
                 case 'dacq'
                     cellIDs = scanpix.dacqUtils.loadSpikes(obj,trialIterator);
                 case 'npix'
+%                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag, false);
                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag);
                 case 'nexus'
             end
@@ -1304,9 +1307,9 @@ classdef ephys < handle
 %                 prompts = {'mode',    'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'save' };
 %                 varargs = {'mode',    'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'save' };
 %                 defVals = {'single',  obj.trialMetaData(1).nChanTot, 250,                  5,                  40,                  0.375,             0,           0,     };
-                prompts = {'mode',    'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'save' };
-                varargs = {'mode',    'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'save' };
-                defVals = {'single',  250,                  5,                  40,                  0.375,             0,           0,     };
+                prompts = {'mode',    'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply filter', 'save' };
+                varargs = {'mode',    'nwave',              'getnch',           'nsamp',             'prepeak',         'filter',       'save' };
+                defVals = {'single',  250,                  5,                  40,                  0.375,             0,              0,     };
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
                     warning('scaNpix::ephys::loadWaves: Waveform loading aborted. That lacks class mate...');
@@ -1325,7 +1328,6 @@ classdef ephys < handle
 %                 if ~any(strcmp(addParams(1,:),'nch'))
 %                     addParams(:,end+1) = {'nch'; obj.trialMetaData(1).nChanTot};
 %                 end
-
             end
             % extract waveforms
             scanpix.npixUtils.extract_waveforms(obj,1:length(obj.trialNames),addParams{:});
