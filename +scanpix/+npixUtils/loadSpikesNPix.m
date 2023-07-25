@@ -69,12 +69,12 @@ if reloadFlag || exist(fullfile(obj.dataPath{trialIterator},'spike_times.npy'),'
     path2data_B = path2data_A;
     obj.dataPathSort{trialIterator} = path2data_A;
 else
-    if isempty(obj.dataPathSort) || isempty(obj.dataPathSort{trialIterator})
-        [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
-        obj.dataPathSort{trialIterator} = path2data_A; 
-    else
+%     if isempty(obj.dataPathSort) || isempty(obj.dataPathSort{trialIterator})
+%         [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
+%         obj.dataPathSort{trialIterator} = path2data_A; 
+%     else
        [path2data_A,path2data_B] = deal(obj.dataPathSort{trialIterator});
-    end
+%     end
 end
 %
 

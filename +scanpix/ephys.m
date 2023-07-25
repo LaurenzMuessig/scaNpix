@@ -871,7 +871,8 @@ classdef ephys < handle
                 % remove extentions
                 trialNames = cellfun(@(x) x{1}, C,'uni',0);
             else
-                obj.dataPath = strcat({trialStruct(ind).folder}', filesep);
+                obj.dataPath     = strcat({trialStruct(ind).folder}', filesep);
+                obj.dataPathSort = strcat({trialStruct(ind).folder}', filesep);
                 % remove extentions
                 obj.trialNames = cellfun(@(x) x{1}, C,'uni',0);
             end
