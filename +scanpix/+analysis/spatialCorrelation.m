@@ -64,7 +64,7 @@ end
 
 if nargin == 2
     % Here we run A v B pairwise correlations
-    unVisInd = isnan(mapsA{1}) | isnan(mapsB{1});
+    unVisInd  = isnan(mapsA{1}) | isnan(mapsB{1});
     unVisIndA = repmat(unVisInd, 1,1, length(mapsA)); % get into correct format;
     unVisIndB = repmat(unVisInd, 1,1, length(mapsB)); % get into correct format;
 
@@ -76,8 +76,8 @@ if nargin == 2
     rMapArrayB(unVisIndB) = NaN;
     B                     = bsxfun(@minus, rMapArrayB , nanmean( nanmean(rMapArrayB ,1), 2 ) );
     %
-    AB = bsxfun(@times, A, B);
-    sumAB =  nansum(nansum(AB,1),2);                          % This is a 1x1xnCorr vector, one sum(AB) for each corr.
+    AB    = bsxfun(@times, A, B);
+    sumAB = nansum(nansum(AB,1),2);                  % This is a 1x1xnCorr vector, one sum(AB) for each corr.
     sqrAA = sqrt( nansum(nansum(A.^2,1),2) );        % This is a 1x1 integer
     sqrBB = sqrt( nansum(nansum(B.^2,1),2) );        % This is a 1x1xnCorr vector, one sqrt(B.^2) for each corr.
     r     = squeeze(sumAB ./ bsxfun(@times, sqrAA, sqrBB));
@@ -89,14 +89,14 @@ else
     rMapArrayA = reshape(horzcat(mapsA{:}), numel(mapsA{1}), length(mapsA));
     rMapArrayA = bsxfun(@minus, rMapArrayA, nanmean(rMapArrayA, 1) ); % subtract mean/cell
     %    
-    A         = rMapArrayA(:);                                                     % this is column vector of all rate maps ([rateMap_cell1; rateMap_cell2;...;rateMap_cellN])
-    B         = repmat( rMapArrayA, length(mapsA), 1 );                            % these are all ratemap column vectors copied nCell times (row wise), so in the end is ratemap_colVector*nCells x nCells
-    AB        = reshape( bsxfun(@times, A, B), numel(mapsA{1}), length(mapsA)^2 ); % need to reshape so each column corresponds to a ratemap col vector for doing the sums
-    sumAB     = nansum(AB, 1);                                                     % This is a 1 x nCells^2 vector, one sum(AB) for each ratemap comparison.
-    sqrAA     = sqrt( nansum(rMapArrayA.^2, 1) )';                                 % only need to calculate once as product sqrt(AA) x sqrt(BB) == sqrt(AA) x transpose(sqrt(AA))
-    sqrAABB   = sqrAA * sqrAA';
-    r         = sumAB ./ sqrAABB(:)';                                              % this is a length(maps)^2 row vector of all correlations
-    r         = reshape(r, length(mapsA), length(mapsA));                          % reshape into confusion matrix, so rows = 1:cellN vs column 1:cellN ( r(i,j) == r(j,i) )
+    A          = rMapArrayA(:);                                                     % this is column vector of all rate maps ([rateMap_cell1; rateMap_cell2;...;rateMap_cellN])
+    B          = repmat( rMapArrayA, length(mapsA), 1 );                            % these are all ratemap column vectors copied nCell times (row wise), so in the end is ratemap_colVector*nCells x nCells
+    AB         = reshape( bsxfun(@times, A, B), numel(mapsA{1}), length(mapsA)^2 ); % need to reshape so each column corresponds to a ratemap col vector for doing the sums
+    sumAB      = nansum(AB, 1);                                                     % This is a 1 x nCells^2 vector, one sum(AB) for each ratemap comparison.
+    sqrAA      = sqrt( nansum(rMapArrayA.^2, 1) )';                                 % only need to calculate once as product sqrt(AA) x sqrt(BB) == sqrt(AA) x transpose(sqrt(AA))
+    sqrAABB    = sqrAA * sqrAA';
+    r          = sumAB ./ sqrAABB(:)';                                              % this is a length(maps)^2 row vector of all correlations
+    r          = reshape(r, length(mapsA), length(mapsA));                          % reshape into confusion matrix, so rows = 1:cellN vs column 1:cellN ( r(i,j) == r(j,i) )
  
 end
 
