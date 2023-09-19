@@ -42,7 +42,7 @@ if nargin == 2
    
     sizeA = length(mapsA);
     sizeB = length(mapsA);
-    if ~any(sizeA==1 | sizeB==1) || sizeA ~= sizeB
+    if ~any(sizeA==1 | sizeB==1) && sizeA ~= sizeB
         error('Dimensions of map arrays are wrong. You can either have a 1x1 map array vs. nx1 map array or an nx1 map array vs. nx1 map array! Now go back and try harder.')
     end
     
@@ -77,9 +77,9 @@ if nargin == 2
     B                     = bsxfun(@minus, rMapArrayB , nanmean( nanmean(rMapArrayB ,1), 2 ) );
     %
     AB = bsxfun(@times, A, B);
-    sumAB =  nansum(nansum(AB,1),2);                    % This is a 1x1xnMod vector, one sum(AB) for each model.
-    sqrAA = sqrt( nansum(nansum(rMapArrayA.^2,1),2) );           % This is a 1x1 integer
-    sqrBB = sqrt( nansum(nansum(rMapArrayB.^2,1),2) );           % This is a 1x1xnMod vector, one sqrt(B.^2) for each model.
+    sumAB =  nansum(nansum(AB,1),2);                          % This is a 1x1xnCorr vector, one sum(AB) for each corr.
+    sqrAA = sqrt( nansum(nansum(A.^2,1),2) );        % This is a 1x1 integer
+    sqrBB = sqrt( nansum(nansum(B.^2,1),2) );        % This is a 1x1xnCorr vector, one sqrt(B.^2) for each corr.
     r     = squeeze(sumAB ./ bsxfun(@times, sqrAA, sqrBB));
     
 else
@@ -95,7 +95,7 @@ else
     sumAB     = nansum(AB, 1);                                                     % This is a 1 x nCells^2 vector, one sum(AB) for each ratemap comparison.
     sqrAA     = sqrt( nansum(rMapArrayA.^2, 1) )';                                 % only need to calculate once as product sqrt(AA) x sqrt(BB) == sqrt(AA) x transpose(sqrt(AA))
     sqrAABB   = sqrAA * sqrAA';
-    r         = sumAB ./ sqrAABB(:)';                                            % this is a length(maps)^2 row vector of all correlations
+    r         = sumAB ./ sqrAABB(:)';                                              % this is a length(maps)^2 row vector of all correlations
     r         = reshape(r, length(mapsA), length(mapsA));                          % reshape into confusion matrix, so rows = 1:cellN vs column 1:cellN ( r(i,j) == r(j,i) )
  
 end
