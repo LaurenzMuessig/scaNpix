@@ -1,4 +1,4 @@
-function [gridness, Props] = gridprops(autoCorr,varargin)
+function [gridness, Props, PropsEllipse] = gridprops(autoCorr,varargin)
 % Using autocorrelogram calculates grid wavelength, orientation, gridness and x,y
 % offset of peaks
 % package: scanpix.analysis
@@ -13,404 +13,242 @@ function [gridness, Props] = gridprops(autoCorr,varargin)
 %
 % Optional input parameters: 
 %
-%   'peakMode'    - 'point' or 'area'
-%   'corrThr'     - Peaks are r > this value
-%   'areaThr'     - Peaks are > this many bins (in peakMode=area)
-%   'corrThrMode' - 'abs' or 'rel'. Does corrThr refer to absolute  r-value (default) or r relative to central point ('rel', only use for time-win ACs).
-%   'radius'      - Radius finding method. 'fieldExtent' (Outermost extent of six peaks), 'est' (mean peak distance *1.25),
-%                                          'fix:X' (X=nBin), or 'none' (use whole AC).
-%   'fieldExtentMethod'   - 'halfHeight' or 'watershed'. 
-%   'cenPkThr     - Threshold used to define extent of central peak (removed from gridness corrs). Relative to central point.
-%   'gridMaskSizeThr - If (central peak area)/(outer peak circle area) > centreMaskSizeThr, reject as grid cell. Using this option ..
-%                      checks that the AC has a well-defined central peak, otherwise it's not a grid. Default=0.5. Set to [] to inactivate.
-%   'crossCorrMode'  - 1 or <0>. Assumes CG is a cross-cell CG. Looks for closest peak to centre, treats this point as the centre of the CG and proceeds
-%                      to calculate gridness around this point.  Set 'centreMaskSizeThr' to [], as this code hasn't been fixed for cross-corrs.
-%   'verbose'     - Print to screen prms struct
-%   'showCorrRing'  - If 1, Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
+%   'corrThr'        - Peaks are r > this value
+%   'getprops'       - calculate all grid props; if 0 only gridness is calculated
+%   'getellgridness' - get grid props by regularising autoCorr from ellipse
+%   'minor'          - 
+%   'plot'           - make a nice plot showing all grid properties
+%   'ax'             - axis handle in case you want plot somewhere specific
+
 %
 %  Fields of additional output properties structure ('Props'):
 %
-%  .waveLength       NB. Unit for wavelength is bins of autocorr
 %  .gridness
+%  .waveLength       NB. Unit for wavelength is bins of autocorr
+%  .waveLengthFull   NB. Unit for wavelength is bins of autocorr
 %  .orientation
+%  .orientationFull
+%  .offSet         
 %  .fieldSize
 %  .closestPeaksCoord 
-%  .maxDistFromCentre 
-%  .centralPeakMask
-%  .crossCorrClosestPeak   NB. x,y coords, relative to centre pixel. Only valid for cross-corrs.
 %
 % Note: In the autocorrelogram it is sensible to exclude bins that were constructed with relatively
 % small overlap between the ratemap1 and ratemap2 (Hafting excludes bins with an overlap of 20 or
 % less). Set these bins to 0 before passing to this function
+%
+% this function is a re-write of the original gridness calculation written by Tom and Caswell which for several properties didn't work very well in case 
+% the grid pattern was slightly irregular. I have tried to more or less replaicate what the Mosers are using.
+% 
+% LM 2022
 
-prms.peakMode = 'point';     % Are peaks local max points ('point'), or contig areas over corrThr ('area')?
-prms.corrThr = 0.3;          % For peakMode='point', points must be >corrThr. For peakMode='area', look for contig regions over corrThr.
-prms.fieldExtentMethod = 'watershed'; % How do we find the extent of the peaks. 'halfHeight' or 'watershed'.
-prms.corrThrMode = 'abs';    % Does corrThr refer to absolute r-value (default) or r relative to central point ('rel', for time-win ACs).
-prms.areaThr = 20;           % Min size of contig areas when peakMode='area'. 100(MoserThr) * 1.5^2(MoserBin) / 1.92^2(WillsBin) = 61
-prms.closePeakFilter = [0 1 1 1 0; ones(3,5); 0 1 1 1 0];    % When peakMode='point', this filter defines area within which two peaks are counted as one.
-prms.radius = 'est';         % How are peaks used to estimate gridness ring. 
-prms.cenPkThr=0.5;           % Threshold used to define extent of central peak (removed from gridness corrs). Relative to central point.
-prms.centreMaskSizeThr=0.5;    % If (central peak area)/(outer peak circle area) > centreMaskSizeThr, reject as grid cell. Using this option ..
-                             %  .. checks that the AC has a well-defined central peak, otherwise it's not a grid. Set to [] to inactivate.
-prms.crossCorrMode=0;        % Assumes CG is a cross-cell CG. Looks for closest peak to centre, treats this point as the centre of the CG and proceeds
-                             % to calculate gridness. Set 'centreMaskSizeThr' to [], as this code hasn't been fixed for cross-corrs.
-prms.verbose=0;              % Print to screen prms struct
-prms.showCorrRing=0;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
+% corrThr               = 0.1; 
+centrPeakThr          = 0.5;
+peakDetectMode        = 'zscore';
+zScoreThr             = 1.282; % 90th percentile in units of std
+peakCorrThr           = 0.25;
+% closePeakFilter       = [0 1 1 1 0; ones(3,5); 0 1 1 1 0];    % When peakMode='point', this filter defines area within which two peaks are counted as one.
+getGridProps          = true;
+getEllipticalGridness = false;
+minOrient             = 20; % degrees
+plotProps             = false;  
+axArr                 = {};
+%
+p = inputParser;
+% addParameter(p,'corrthr',corrThr,@isscalar);
+addParameter(p,'centthr',centrPeakThr,@isscalar);
+addParameter(p,'peakmode',peakDetectMode,(@(x) isstring(x) | ischar(x)));
+addParameter(p,'zscorethr',zScoreThr,@isscalar);
+addParameter(p,'peakthr',peakCorrThr,@isscalar);
+% addParameter(p,'peakfilt',closePeakFilter);
+addParameter(p,'getprops',getGridProps,@islogical);
+addParameter(p,'getellgridness',getEllipticalGridness,@islogical);
+addParameter(p,'minor',minOrient,@isscalar);
+addParameter(p,'plot',plotProps,@islogical);
+addParameter(p,'ax',axArr,@iscell);
 
-
-
-
-% ---------------------------------------------------------------------------------- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-
-if prms.verbose;  disp(prms);   end
-
-if isempty(prms.closePeakFilter); prms.closePeakFilter = [0 1 1 1 0; ones(3,5); 0 1 1 1 0]; end % this is just for compatability with the GUI 
+parse(p,varargin{:});
+%
+minOr = p.Results.minor * pi/180;
+getGridProps = p.Results.getprops;
+axArr = p.Results.ax;
 
 % Preallocate output Props %
-gridness=nan;
-Props.waveLength=NaN;
-Props.waveLengthFull=nan(1,3);
-Props.gridness=NaN;
-Props.orientation=nan(1,3);
-Props.fieldSize=NaN;
-Props.closestPeaksCoord=NaN; 
-Props.maxDistFromCentre=NaN;
-Props.centralPeakMask=NaN;
-Props.crossCorrClosestPeak=NaN;
+gridness                = [NaN NaN];
+Props.wavelength        = NaN;
+Props.wavelengthFull    = nan(6,1);
+Props.gridness          = NaN;
+Props.orientation       = NaN;
+Props.orientationFull   = nan(6,1);
+Props.closestPeaksCoord = nan(6,2);
+Props.offset            = NaN;
+Props.phaseOffset       = NaN;
+Props.centralPeakMask   = nan(size(autoCorr));
+Props.fieldSize         = NaN;
+Props.ellOrient         = NaN;
+Props.ellAbScale        = NaN;
+%
+PropsEllipse.ellOrient  = NaN;
+PropsEllipse.ellAbScale = [NaN NaN];
+
+% Props.fieldSize=NaN;
+% Props.maxDistFromCentre=NaN;
+% Props.centralPeakMask=NaN;
+% Props.crossCorrClosestPeak=NaN;
+
 
 % Protect against all(autocorr==nan) (when rate map is 0Hz) %
 if all(isnan(autoCorr));   return;     end
 
+if nargout > 1 || p.Results.plot; getGridProps = true; end
+
+if  p.Results.plot && isempty(axArr)
+    axArr = scanpix.plot.multPlot([1 1+p.Results.getellgridness.*2  ],'plotsize',[150 150],'plotsep',[75 40]);
+elseif isempty(axArr)
+    axArr = cell(1, 1+p.Results.getellgridness.*2 );
+end
+
 % Pre-treat the AC to remove NaNs  %
-autoCorr(isnan(autoCorr)) = -1;
-
-% Find Peaks %
-if strcmp(prms.peakMode,'point')
-    % Find peaks by looking for regional maxima. 
-    autoCorrTemp = autoCorr;
-    %
-%     nanInd = isnan(autoCorrTemp);
-%     autoCorrTemp(nanInd) = 0;
-%     autoCorrTemp = imfilter(autoCorrTemp,20,5);
-%     autoCorrTemp(nanInd) = -1;
-    %
-%     autoCorrTemp(isnan(autoCorrTemp))=-1;   %Sub nans for -1
-    if ~isempty(prms.corrThr)
-        if strcmp(prms.corrThrMode,'abs')
-            autoCorrTemp(autoCorr<=prms.corrThr) = -1;   % Do not allow local max that have r-value below threshold, absolute.
-        elseif strcmp(prms.corrThrMode,'rel')
-            autoCorrTemp(autoCorr<=(prms.corrThr*max(max(autoCorr)))) = -1;   % Do not allow local max that have r-value below threshold, relative to peak.
-        end
-    end
-    peaksAutoCorr = imregionalmax(autoCorrTemp);    % Find local maxima
-    peaksAutoCorr = imdilate(peaksAutoCorr, prms.closePeakFilter); % TW: dilate peaks, so peaks within 4-6 bins are counted as one.
-    [lableMask, dummy]=bwlabel(peaksAutoCorr, 8);
-elseif strcmp(prms.peakMode,'area')
-    % Peaks are areas of contiguous bins larger than areaThr, with corr
-    % greater than corrThr (e.g. Sargolini et al, 2006).
-    peaksAutoCorr=autoCorr>prms.corrThr;
-    [lableMask, dummy]=bwlabel(peaksAutoCorr, 8);
-    areas = regionprops(lableMask,'area');
-    for ii=1:length(areas)
-        if areas(ii).Area < prms.areaThr
-            lableMask(lableMask==ii)=0;
-        end
-    end
-    [lableMask, dummy]=bwlabel(lableMask, 8);    % Re-find surviving peaks
-end
-% If no peaks not found, reject as grid cell %
-if length(unique(lableMask))<=2;   return;    end
-
-    
-%In case adjacent points share maxima find the centroid of them - NB returns structure array
-%stats(n).Centroid containing for each peak the x,y position of the centroid but y is
-%counting down from origin at top left
-stats=regionprops(lableMask,autoCorr, 'Centroid','MaxIntensity','Area');
-% experimental - remove peaks that 1 SD below mean
-% if length(stats) > 7
-%     remInd = [stats(:).MaxIntensity] < mean([stats(:).MaxIntensity]) -  std([stats(:).MaxIntensity]);
-%     if length(stats) - sum(remInd) >= 7
-%         stats = stats(~remInd);
-%     else
-%         [~, ind] = sort([stats(remInd).MaxIntensity]);
-%         numInd = find(remInd);
-%         stats(numInd(ind(1:length(stats)-7))) = [];
-%     end
-% end
-%NL. [n x 2] pairs of x,y coord for max points
-% xyCoordMaxBin=round(reshape([stats.Centroid], 2,[]))'; %Still x,y pair
-xyCoordMaxBin=reshape([stats.Centroid], 2,[])'; %Still x,y pair
-
-% Convert to a new reference frame which as the origin at the centre of the autocorr
-% NB autocorr will always have sides with odd number of bins
-centralPoint=ceil(size(autoCorr)/2); %m,n pair
-xyCoordMaxBinCentral=xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
-
-%Calculate distance of peaks from centre point and find seven closest (one will be central peak
-%disregard this)
-distFromCentre=sum(xyCoordMaxBinCentral.^2,2).^0.5;
-[dummy, orderOfClose]= sort(distFromCentre);
-
-
-
-%Get id of closest peaks and central peak
-centralPeak=orderOfClose(1);
-if length(orderOfClose)>=7; closestPeaks=orderOfClose(2:7); %Might be fewer than 7 peaks
-else closestPeaks=orderOfClose(2:end);
-end
-
-%%%% Cross-correlogram Mode. To measure gridness in a cross-correlogram, find closest peak to centre        %%%%%
-%%%% and subtract all other peak positions from this, ie treat this point as the centre of the correlogram. %%%%%
-if prms.crossCorrMode
-    closestPeakCoordsCentre = xyCoordMaxBinCentral(centralPeak,:);
-    Props.crossCorrClosestPeak = closestPeakCoordsCentre;   % Assign this peak to output structure.
-    Props.corrCorrOriginalClosestPeaksCoord = xyCoordMaxBin([centralPeak; closestPeaks],:);  % This is a record of where the peaks were before shifting.
-
-    % STEP 1: Offset the CG so that closest peak is at centre
-    padAC = nan(size(autoCorr).*3);
-    shiftIndexRow = (size(autoCorr,1)+1 : size(autoCorr,1)*2) - closestPeakCoordsCentre(2);
-    shiftIndexCol = (size(autoCorr,2)+1 : size(autoCorr,2)*2) - closestPeakCoordsCentre(1);
-    padAC(shiftIndexRow,shiftIndexCol) = autoCorr;
-    
-    % STEP 2: Also subtract closest peak co-ords from all, so that closest becomes centre, all other shift in unison with CG
-    xyCoordMaxBin =  xyCoordMaxBin - repmat(closestPeakCoordsCentre, size(xyCoordMaxBin,1), 1) + repmat( fliplr(size(autoCorr)), size(xyCoordMaxBin,1), 1 );
-     
-    % STEP 3: Re-find closest peaks, same code as previously should work.
-    autoCorr=padAC;
-    centralPoint=ceil(size(autoCorr)/2); % r,c pair
-    xyCoordMaxBinCentral=xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
-    %Calculate distance of peaks from centre point and find seven closest (one will be central peak disregard this)
-    distFromCentre=sum(xyCoordMaxBinCentral.^2,2).^0.5;
-    [dummy, orderOfClose]= sort(distFromCentre);
-    % Get id of closest peaks and central peak centralPeak=orderOfClose(1) ;
-    centralPeak=orderOfClose(1);
-    if length(orderOfClose)>=7; closestPeaks=orderOfClose(2:7); %Might be fewer than 7 peaks
-    else closestPeaks=orderOfClose(2:end);
-    end
-    
-end
-
-%x,y pairs in cartesian coords with y counting down from top
-% Props.closestPeaksCoord=xyCoordMaxBin(closestPeaks,:);
-Props.closestPeaksCoord=round(xyCoordMaxBin(closestPeaks,:));
-
-
-% -------------------------------------------------------------------------------------------------
-% --- MEAN X & y OFFSET OF 6 CENTRAL PEAKS --------------------------------------------------------
-% -------------------------------------------------------------------------------------------------
-
-meanXyOffset=mean((xyCoordMaxBinCentral(closestPeaks,:).^2).^0.5,1);
-
-
-% -------------------------------------------------------------------------------------------------
-% --- FIND FIELD AROUND EACH PEAK -----------------------------------------------------------------
-% -------------------------------------------------------------------------------------------------
-%As we've just defined peak of each field (when prms.peakMode='point') need to find the extent of the field around it. Define
-%this as the area enclosed within the half-height of the peak. Do this by looping through eack peak:
-%find areas of SAC above the half height, then find the patch that includes the peak of interest.
-% TW: original CB code introduced 'perimeterMask' variable, to help recover peak extent when peaks
-%     overlapped. Note that this isn't used in current code (as only use for peak extents is to look 
-%     for the furthest from the centre), but the variable is retained.
-
-% Find extent of 6-closest peaks %
-if strcmp(prms.peakMode,'point')
-    if strcmp(prms.fieldExtentMethod,'halfHeight')
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Find the half-height around each peak %
-        % Preassign output: Two 3d mats [sizeAutoCorr1, sizeAutoCorr2, numberPeaks]
-        peakMasks=zeros([size(autoCorr), size(Props.closestPeaksCoord,1)]);
-        perimeterMasks=zeros([size(autoCorr), size(Props.closestPeaksCoord,1)]);
-        for n=1:size(Props.closestPeaksCoord,1)
-            %NB. Have to flip dimensions as these are x,y pairs and need to be m,n
-            [peakMasks(:,:,n+1), perimeterMasks(:,:,n+1)]=findPeakExtent(autoCorr, closestPeaks(n), [Props.closestPeaksCoord(n,2), Props.closestPeaksCoord(n,1)]);
-        end
-        lableMask=max(peakMasks, [], 3);
-        perimeterMask=max(perimeterMasks,[],3);
-        
-    elseif strcmp(prms.fieldExtentMethod,'watershed')
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %2a. Find the inverse-drainage-basin for each peak.
-        fieldsLabel = watershed(-autoCorr) + 1; %plus 1, because we want to be able to use label as index
-
-        %2b. Work out what threshold to use in each drainage-basin
-        nZones = max(fieldsLabel(:));
-        closePeakInds = sub2ind(size(autoCorr),Props.closestPeaksCoord(:,2),Props.closestPeaksCoord(:,1));
-        closesPeaksNewId = fieldsLabel(closePeakInds);
-        thresholds = Inf(nZones,1);
-        thresholds(closesPeaksNewId) = autoCorr(closePeakInds)/2;
-
-        %2c. Apply thresholds to get a mask and updated labels
-        fieldsMask = autoCorr > thresholds(fieldsLabel);
-        fieldsLabel(~fieldsMask) = 0; %note label numbers are the ones from watershed not from finding peaks
-
-    end
-end
-% Modified, TW. Treat central peak separately. Has a dedicated threshold (prms.cenPkThr). Always look for extent, and keep this in a dedicated variable %
-if ~isempty(prms.cenPkThr)
-    Props.centralPeakMask=findPeakExtent(autoCorr,centralPeak,centralPoint,prms.cenPkThr);
-    Props.centralPeakMask(Props.centralPeakMask>0)=1;
-    Props.centralPeakMask=logical(Props.centralPeakMask);
-else
-    Props.centralPeakMask=false(size(autoCorr));
-end
-
-% % -------------------------------------------------------------------------------------------------
-% % --- WAVELENGTH ----------------------------------------------------------------------------------
-% % -------------------------------------------------------------------------------------------------
-% 
-% %Calculate wavelength measured in bins
-% % waveLength=median(distFromCentre(closestPeaks));
-% Props.waveLength=mean(distFromCentre(closestPeaks));
-
-% -------------------------------------------------------------------------------------------------
-% --- ORIENTATION ---------------------------------------------------------------------------------
-% -------------------------------------------------------------------------------------------------
-%Calculate orientation of grid - note orientation is measured counterclockwise from horizontal so
-%basically polar coordinates
-[th, ~]=cart2pol(xyCoordMaxBinCentral(closestPeaks,1), -xyCoordMaxBinCentral(closestPeaks,2)); % TW: Modified to take account of inverted y-axis.
-% this should follow the Moser's convention
-[th, sortInd] = sort(th);
-[~,idx] = min(abs(circ_dist(th,0)));
-if length(th) > 3
-    if idx==1
-        finInd = [idx idx+1 length(th)];
-        Props.orientation = th(finInd)';
-    else
-        finInd = [idx idx+1 idx-1];
-        Props.orientation = th(finInd)';
-    end
-    peaksAboveXaxis = sort(sortInd(finInd)); 
-else
-    idx2 = true(1,length(th));
-    idx2(idx) = false;
-    Props.orientation(1:length(th)) = [th(idx) sort(th(idx2),'descend')];
-    peaksAboveXaxis = sort(sortInd([idx find(idx2)])); 
-end
-clear th idx idx2
-
-% peaksAboveXaxis = find(th>=0); 
-% th=th(th>=0); %Remove negative values - can do this as peaks are 180deg radially symetrical
-% if ~isempty(th)
-% %     Props.orientation=(min(th)/(2*pi))*360;
-%     tmp = (sort(th)./(2*pi))*360;
-%     if length(tmp) > 3
-%         Props.orientation=tmp(1:3)';
-%     else
-%         Props.orientation(1:length(th))=tmp;
-%     end
-% end
-% clear r th
-
-% -------------------------------------------------------------------------------------------------
-% --- WAVELENGTH ----------------------------------------------------------------------------------
-% -------------------------------------------------------------------------------------------------
-
-%Calculate wavelength measured in bins
-% waveLength=median(distFromCentre(closestPeaks));
-Props.waveLength=mean(distFromCentre(closestPeaks(peaksAboveXaxis)));
-Props.waveLengthFull(1:sum(~isnan(Props.orientation))) = distFromCentre(closestPeaks(peaksAboveXaxis));
+autoCorr(isnan(autoCorr)) = 0;
 
 % --------------------------------------------------------------------------------------------------
 % ---- GRIDNESS ------------------------------------------------------------------------------------
 % --------------------------------------------------------------------------------------------------
-[meshX, meshY]=meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
-%Change coordinates so that origin is at centre and to facilitate pythag
-meshXCentre=(meshX-centralPoint(2)).^2;
-meshYCentre=(meshY-centralPoint(1)).^2;
-distToCentre = (meshXCentre+meshYCentre).^0.5;
 
-% Find outer radius of the gridness calculation zone (maxDistFromCentre) %
-if strcmp(prms.radius,'fieldExtent')
-    
-    % Method 1: Find extent of the 6 closest peaks and take the max %
-    if strcmp(prms.fieldExtentMethod,'halfHeight')
-        maxDistTemp=zeros(length(closestPeaks),1);
-        for ii=1:length(closestPeaks)
-            isPresent = lableMask==closestPeaks(ii);
-            %Deal with situations where the mask of one peak has bloted out another entirely
-            if ~sum(isPresent(:)), maxDistTemp(ii)=0; continue, end
-            maxDistTemp(ii)=max((meshXCentre(lableMask==closestPeaks(ii)) + meshYCentre(lableMask==closestPeaks(ii))).^0.5);
-        end
-    elseif strcmp(prms.fieldExtentMethod,'watershed')
-        maxDistTemp = accumarray(fieldsLabel(fieldsMask),distToCentre(fieldsMask),[],@max);
+% ---- Find central peak in auto corr --- %
+autoCorrTemp = autoCorr;
+%
+
+autoCorrTemp(autoCorr <= p.Results.centthr) = 0; 
+[centrPeakMask,~]    = bwlabel(autoCorrTemp, 8);
+stats                = regionprops(centrPeakMask,autoCorr, 'Centroid','Area','EquivDiameter','Eccentricity');
+xyCoordMaxBin        = reshape([stats.Centroid], 2,[])'; %Still x,y pair
+% Convert to a new reference frame which as the origin at the centre of the autocorr
+% NB autocorr will always have sides with odd number of bins
+centralPoint         = ceil([size(autoCorr,2)/2,size(autoCorr,1)/2]); %m,n pair
+xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
+%find central peak
+distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;
+[~, orderOfClose]    = sort(distFromCentre);
+%
+centrPeakMask(centrPeakMask~=orderOfClose(1)) = 0;
+centrPeakDiam = stats(orderOfClose(1)).EquivDiameter;
+% sanity checks for central peak
+if centrPeakDiam >= length(autoCorr)/2 
+    warning('scaNpix::analysis::gridprops: Central peak of autoCorr is too large. Skipping grid cell properties calculation'); return;
+elseif stats(orderOfClose(1)).Eccentricity > 0.9
+    warning('scaNpix::analysis::gridprops: Central peak of autoCorr has bad shape. Skipping grid cell properties calculation'); return;
+end
+
+% radii for annuli increasing in size around the central peak
+radii = linspace(centrPeakDiam,length(autoCorr)/2,length(autoCorr)/2-centrPeakDiam/2);
+% make annulus mask
+[colsIm, rowsIm]            = meshgrid(1:length(autoCorr), 1:length(autoCorr));
+distMap                     = sqrt((rowsIm-centralPoint(1)).^2 + (colsIm-centralPoint(2)).^2);
+annMask                     = ones(size(autoCorr));
+annMask(distMap<radii(1)/2) = 0; % mask central peak
+% make all rotated sac's
+rotAngle = [60, 120, 30, 90, 150];
+autoCorr_rot = nan(length(autoCorr),length(autoCorr),length(rotAngle));
+for i=1:length(rotAngle)
+    autoCorr_rot(:,:,i) = imrotate(autoCorr, rotAngle(i), 'bilinear', 'crop');
+end
+% correlate annulus regions of rotated sacs with original sac
+annCorr = nan(length(radii),length(rotAngle));
+for i = 1:length(radii)
+    % create annulus for current step
+    tmpMask = annMask & distMap < radii(i);
+    % loop over rotations
+    for j = 1:length(rotAngle)
+        % correlate annuli across rotated versions of autocorr
+        tmpMask( isnan(autoCorr) | isnan(autoCorr_rot(:,:,j)) ) = 0;
+        annCorr(i,j) = corr(autoCorr(tmpMask),autoCorr_rot(find(tmpMask) + numel(tmpMask)*(j-1)));
     end
-    Props.maxDistFromCentre=max(maxDistTemp);
+end    
+% gridnesss
+[gridness(1,1), maxInd] = max(min(annCorr(:,1:2),[],2) - max(annCorr(:,3:end),[],2)); % standard from Hafting et al.
+Props.gridness = gridness(1,1);
+
+%%
+% --- get props for grid cell --- %
+if getGridProps || p.Results.getellgridness
     
-elseif strcmp(prms.radius,'est') 
-    % Method 2: wavelength plus assumed half-height %
-    Props.maxDistFromCentre = Props.waveLength * 1.25;
-elseif strcmp(prms.radius(1:3),'fix')
-    Props.maxDistFromCentre = str2double(prms.radius(5:end));
-elseif strcmp(prms.radius,'none')
-    Props.maxDistFromCentre = min(floor(size(autoCorr)/2));   % Find max radius fitting in AC
+    annMask = distMap < radii(maxInd) * 1.15 & distMap > radii(1); % extent outer radius a bit to capture all peaks well
+    % find peaks
+    if strcmp(p.Results.peakmode,'log')
+        [xyCoordMaxBin, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.peakthr,centrPeakMask,centrPeakDiam); 
+    else
+        [xyCoordMaxBin, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.zscorethr); 
+    end
+    
+    if failFlag; warning('Not enough peaks detected'); return; end
+    
+    xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
+    distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;   
+    % orientation
+    orientation          = atan2(xyCoordMaxBinCentral(:,1),xyCoordMaxBinCentral(:,2));
+    
+    % don't allow peaks which are too close - only keep closer one to centre.
+    [r,c] = find(triu( abs(circ_dist2(orientation)) < minOr, 1 ));
+    delInd = [];
+    for i = 1:length(r)
+        if distFromCentre(r(i)) < distFromCentre(c(i))
+            delInd = [delInd;c(i)];
+        else
+            delInd = [delInd;r(i)];
+        end
+    end
+    delInd = unique(delInd);
+    % remove peaks
+    orientation(delInd)     = [];
+    xyCoordMaxBin(delInd,:) = [];
+    distFromCentre(delInd)  = [];
+    [~, orderOfClose]       = sort(distFromCentre);
+    orderOfClose            = orderOfClose(1:min([6,length(orientation)])); % in case there >6 peaks keep 6 closest ones
+    % order by distance
+    orientation   = mod(orientation(orderOfClose),2*pi);
+    wavelength    = distFromCentre(orderOfClose); % wavelength
+    xyCoordMaxBin = xyCoordMaxBin(orderOfClose,:);
+    %
+    [orientation, sortInd]                        = sort(orientation);
+    Props.orientation                             = circ_mean(mod(orientation,30*pi/180)); % is that right?
+    Props.orientationFull(1:length(orderOfClose)) = orientation;
+    Props.wavelength                              = nanmean(wavelength);
+    Props.wavelengthFull(1:length(orderOfClose))  = wavelength(sortInd);
+    %
+    Props.closestPeaksCoord                       = round(xyCoordMaxBin(sortInd,:));
+    %
+    Props.offset = min(pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4)); % from Stensola at al.
+%     Props.centralPeakMask = annulus;
+    % field size
+    aboveThrMask               = bwlabel(autoCorr>0.4,8);
+    aboveThrMask( aboveThrMask ~= aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 0;
+    aboveThrMask( aboveThrMask == aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 1;
+    Props.fieldSize = sum(logical(aboveThrMask(:)));
+
+    if p.Results.plot
+        % make a nice figure with auto corr props - adapted from Dan Manson's code
+        plotGridProps(autoCorr,annMask,Props.closestPeaksCoord,size(autoCorr),Props.wavelength,Props.orientationFull(1:3), centralPoint, gridness, axArr{1});
+    end
 end
 
-%MaxDistFromCentre can not be greater than the distance from the centre to the nearest edge of
-%autoCorr - if it is larger reset it to this lower value
-if Props.maxDistFromCentre>min(floor(size(autoCorr)/2))
-    Props.maxDistFromCentre=min(floor(size(autoCorr)/2));
-end
+% --------------------------------------------------------------------------------------------------
+% ---- Regularise by fitting ellipse to AC ---------------------------------------------------------
+% --------------------------------------------------------------------------------------------------
+if p.Results.getellgridness
 
-%Create a circular mask using the meshgrids I've created above
-gridnessMaskOuter=distToCentre<=Props.maxDistFromCentre; % Mask for points within bound of outer peak
-gridnessMask=gridnessMaskOuter & ~(Props.centralPeakMask);                   % Gridness 'ring' is this minus central peak.
-if ~isempty(prms.centreMaskSizeThr)
-    % Following line says that if the central peak is > prms.centreMaskSizeThr (e.g. 0.5) than the area within
-    % the outer peak, reject as possible grid cell. Protects against ACs that
-    % have large central peak with a few wispy bits on the edge that are hexagonal.
-    % Has additional effect that time-win ACs without well-defined central peak will be
-    % rejected, as central peak will be large. (prms.cenPkThr is always relative to max r of peak).
-    if sum(sum(Props.centralPeakMask))/sum(sum(gridnessMaskOuter)) > prms.centreMaskSizeThr;   return;   end
-end
-clear meshX meshY
-
-%%%%%%%%%%%%%% Calculate gridness correlations %%%%%%%%%%%%
-selA=autoCorr;
-selA(~gridnessMask)=NaN;
-% if prms.showCorrRing;	figure;  imagesc(selA);  end  % For easy testing of what gridness calcualtion is working with.
-rotAmnt = [60, 120, 30, 90, 150];
-rotatedCorr = nan(1,5);
-for ii=1:length(rotAmnt)
-    selB=imrotate(autoCorr,rotAmnt(ii), 'bilinear', 'crop');
-    selB(~gridnessMask)=NaN;
-    visMask = intersect( find(~isnan(selA)), find(~isnan(selB)) );
-    visA=selA(visMask);   visB=selB(visMask);
-    rotatedCorr(ii)=corr2(visA,visB);
-end
-
-%Finally gridness is the difference between the lowest correlation at 60degand 120deg and the highest correlation at 30, 90 and 150deg
-gridness= min(rotatedCorr([1, 2])) - max(rotatedCorr([3, 4, 5])); %This one for quick verison
-Props.gridness = gridness;
-
-% -------------------------------------------------------------------------
-% --- FIELD SIZE (Hafting 2005)--------------------------------------------
-% -------------------------------------------------------------------------
-% Size of central peak, using r=0.4 as threshold.
-aboveThrMask = bwlabel((autoCorr>0.4),8); 
-aboveThrMask( aboveThrMask ~= aboveThrMask(centralPoint(1),centralPoint(2)) ) = 0;
-aboveThrMask( aboveThrMask == aboveThrMask(centralPoint(1),centralPoint(2)) ) = 1;
-aboveThrMask=logical(aboveThrMask);
-% If central peak bleeds to outside of AC, don't count field size %
-% unVisMask=zeros(size(autoCorr));
-% unVisMask(isnan(autoCorr))=1;
-% tempLabel=bwlabel( unVisMask|aboveThrMask ,8);
-% if length(unique(tempLabel))~=2   %%%BUG?? - SHOULD BE ==???
-    Props.fieldSize=sum(sum(aboveThrMask)); 
-% end
-
-if prms.showCorrRing
-    % make a nice figure with auto corr props - stolen from Dan Manson
-    plotGridProps(autoCorr,gridnessMask,fieldsMask,peaksAboveXaxis,Props.closestPeaksCoord,size(autoCorr),Props.waveLength,Props.orientation',centralPoint, gridness);
+    [ ~, ~, orient, abScale ] = gridEllipse_fit( autoCorr, xyCoordMaxBin, p.Results.plot, axArr{2} );
+    if ~isnan(abScale)
+        autoCorrReg = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
+        [tmp, PropsEllipse] = scanpix.analysis.gridprops(autoCorrReg,'peakmode',p.Results.peakmode,'centthr',p.Results.centthr,'zscorethr',p.Results.zscorethr,'getprops',getGridProps,'getellgridness',false,'minor',p.Results.minor,'plot',p.Results.plot,'ax',axArr(3));
+        gridness(1,2) = tmp(1,1);
+        if gridness(2) > gridness(1)
+            PropsEllipse.ellOrient = orient;
+            PropsEllipse.ellAbScale = abScale;
+        else
+            PropsEllipse.ellOrient = 0; 
+            PropsEllipse.ellAbScale = [mean(abScale) mean(abScale)];
+        end
+    end   
 end
 
 end
@@ -418,26 +256,76 @@ end
 % -------------------------------------------------------------------------------------------------
 % --- INLINE FUNCTIONS ----------------------------------------------------------------------------
 % -------------------------------------------------------------------------------------------------
+function [xyCoordMaxBin, failFlag] = findGridPeaks(autoCorr,annMask,mode,thr,varargin)
+%%
+centPeakMask = [];  
+peakDiameter = [];
 
-function [peakMask, perimeterMask]=findPeakExtent(autoCorr,peakId,peakCoord,varargin)
-%Finds extent of field that belongs to each peak - defined as area in half-height and also
-%perimieter. NB. peakCoord must by m,n pair in normal matrix coords
-% The last argument defines the threshold level. This can be omitted, and is 0.5 by default.
-if isempty(varargin);   pkThr=0.5;  else   pkThr=varargin{1};   end
-peakMask=zeros(size(autoCorr));
-perimeterMask=zeros(size(autoCorr));
-aboveHalfHeightMask=bwlabel( autoCorr > (autoCorr(peakCoord(1),peakCoord(2))*pkThr ),8); 
-peakIdTemp=aboveHalfHeightMask(peakCoord(1),peakCoord(2));
-peakMask(aboveHalfHeightMask==peakIdTemp)=peakId;
-perimeterMask(bwperim(aboveHalfHeightMask==peakIdTemp))=peakId;
+p = inputParser;
+addOptional(p,'centmask',centPeakMask);
+addOptional(p,'dia',peakDiameter,(@(x) isscalar(x) || isempty(x)));
+
+parse(p,varargin{:});
+
+failFlag = false;
+
+%%
+ % --------------------------------------------------------------------------------------------------
+ % ---- GET FINAL PEAK COORDS -----------------------------------------------------------------------
+ % --------------------------------------------------------------------------------------------------
+ autoCorrTemp = autoCorr;
+ autoCorrTemp(~annMask) = 0;
+ 
+ switch mode
+     case 'log'
+         
+         [X, Y] = meshgrid(1:size(autoCorrTemp,1),1:size(autoCorrTemp,2));
+         
+         [~, rho] = cart2pol(X(logical(p.Results.centmask)),Y(logical(p.Results.centmask)));
+         pd = fitdist(rho,'Normal');
+         %  diameter = ceil(2*sqrt(stats(orderOfClose(1)).Area/pi)); % use field size as proxy for kernel size
+         % covolve rate map with LoG
+         kernel = fspecial('log',ceil([p.Results.dia p.Results.dia]),pd.sigma);
+         filtMap = imfilter(autoCorrTemp,kernel);
+         filtMap(autoCorrTemp==0) = 0;
+         % local minima correspond to peak positions
+         bw = imregionalmin(filtMap,8);
+         %     bw(autoCorrTemp==0 | lableMask) = 0;
+         stats = regionprops(bw,autoCorrTemp,'MaxIntensity','PixelList');
+         % filter fields
+         % rate
+         stats = stats([stats(:).MaxIntensity] > thr);
+         % overlap - if peaks overlap, only keep the one with higher rate
+         while ~all(pdist(vertcat(stats.PixelList)) >= 1.5*p.Results.dia)
+             dists = triu(squareform(pdist(vertcat(stats.PixelList))));
+             dists(dists==0) = NaN;
+             [r,c] = find(dists < 1.5*p.Results.dia);
+             if stats(r(1)).MaxIntensity > stats(c(1)).MaxIntensity
+                 stats(c(1)) = [];
+             else
+                 stats(r(1)) = [];
+             end
+         end
+         xyCoordMaxBin = vertcat(stats.PixelList);
+         %
+     case 'zscore'
+         zAutoCorr = (autoCorrTemp - nanmean(autoCorrTemp(autoCorrTemp~=0))) ./ nanstd(autoCorrTemp(autoCorrTemp~=0));
+         peaksAutoCorr = zAutoCorr > thr;
+         stats = regionprops(peaksAutoCorr,autoCorr, 'Centroid');
+         xyCoordMaxBin = reshape([stats.Centroid], 2,[])'; %r         
+ end
+ 
+ if length(xyCoordMaxBin) < 3
+     failFlag = true;
+     return
+ end
 
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plotGridProps(sac,gridnessMask,fieldsMask,peaksAboveXaxis,...
-    closestPeaksCoord,sizeAC,scale,orientation,centralPoint, gridness)
+function plotGridProps(sac,gridnessMask,closestPeaksCoord,sizeAC,scale,orientation,centralPoint, gridness,ax)
 
-figure; 
 %a. get the outer ring of autoCorr in gray, but in an rgb matrix
 im = sac;
 im = (im+1)/2;
@@ -454,40 +342,48 @@ msk = repmat(msk,[1 1 3]);
 im2(msk) = im3(msk);
 
 %c. display the image we've made
-image(im2);
-axis image
-xlabel('bins'); ylabel('bins');
-hold on;
+image(ax,im2);
+axis(ax,'image')
+xlabel(ax,'bins'); ylabel(ax,'bins');
+hold(ax,'on');
 
 %d. plot the field boundaries in a black on white double line
-fields = bwboundaries(fieldsMask);
-for k = 1:numel(fields)
-    plot(fields{k}(:,2), fields{k}(:,1), 'w', 'Linewidth', 3)
-    plot(fields{k}(:,2), fields{k}(:,1), 'k', 'Linewidth', 1)
-end
+% fields = bwboundaries(fieldsMask);
+% for k = 1:numel(fields)
+%     plot(fields{k}(:,2), fields{k}(:,1), 'w', 'Linewidth', 3)
+%     plot(fields{k}(:,2), fields{k}(:,1), 'k', 'Linewidth', 1)
+% end
 
 %e. plot blue horizontal line to show where angle is measured from
-for k=peaksAboveXaxis'
-    plot([centralPoint(1) closestPeaksCoord(k,1)],[centralPoint(2) closestPeaksCoord(k,2)],'k','Linewidth',2);
+for k=1:3
+    plot(ax,[centralPoint(1) closestPeaksCoord(k,1)],[centralPoint(2) closestPeaksCoord(k,2)],'k','Linewidth',2);
 end
 
-%f. plot a red curve to show the orientation
-plot([centralPoint(1,1) sizeAC(2)],centralPoint([1 1],[2 2]),'--b','Linewidth',2);
-plot([centralPoint(1,1) centralPoint(1,1)],[centralPoint(1,2) 0.5],'--b','Linewidth',2);
-[offset, idx] = min(abs(circ_dist(deg2rad(orientation'),[0,pi/2, pi])) * 180/pi,[],2);
+%f. plot white horizontal line as cartesian reference frame
+plot(ax,[0.5 sizeAC(2)],centralPoint([1 1],[2 2]),'--w','Linewidth',2);
+plot(ax,[centralPoint(1,1) centralPoint(1,1)],[0.5 sizeAC(2)],'--w','Linewidth',2);
+
+%g. plot a red curve to show the orientation
+[offset, idx] = min(abs(circ_dist(orientation',[0,pi/2, pi])),[],2);
 % depending on which wall grid is anchored to, we need to bake in a shift for y
 % axis
-if rem(idx,2) == 0
-    shift = pi/2;
+if idx == 1
+    shift = -pi/2;
+elseif idx == 3
+    shift = pi/2 - offset;
 else
-    shift = 0;
+    if all(closestPeaksCoord(idx,:) > sizeAC/2)
+        shift = -offset;
+    else
+        shift = 0;
+    end
 end
 
-mag = scale*.75;
-th = shift:0.05:deg2rad(offset)+shift;
+mag = scale*.60;
+th = shift:0.05:offset+shift;
 [x,y] = pol2cart(th,mag);
 %
-plot(x + centralPoint(2),  centralPoint(1)-y,'r','Linewidth',2);
+plot(ax,x + centralPoint(2),  centralPoint(1)-y,'-r','Linewidth',3);
 
 %g. plot peak centres, starting from the second ring of peaks
 % for k=2:8
@@ -503,49 +399,495 @@ plot(x + centralPoint(2),  centralPoint(1)-y,'r','Linewidth',2);
 %     plot(centres(:,1),centres(:,2),'o','MarkerEdgeColor','r','MarkerFaceColor','w','MarkerSize',3);
 %     clear centres
 % end
-hold off;
-axis off;
+hold(ax,'off');
+axis(ax,'off');
 lastBins = (fliplr(size(im2)));
-text(lastBins(2)+1, lastBins(2),num2str(gridness));
-text(lastBins(2)+1, lastBins(2)/2,num2str(scale));
+text(ax,lastBins(2)+1, 0.5,num2str(round(gridness(1,1),3)));
+text(ax,lastBins(2)+1, lastBins(2),sprintf('%s\n%s','scale:',num2str(round(scale,2))));
+if rem(idx,2) ~= 0 
+    text(ax,lastBins(2)/2, lastBins(2)+2,sprintf('%s\n%s','offset:',num2str(round(offset*180/pi,2))));
+else
+   text(ax,lastBins(2)+1, lastBins(2)/2,sprintf('%s\n%s','offset:',num2str(round(offset*180/pi,2))));
+end
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% From Barry lab:
+function [ xyScale, eccent, orient, abScale ] = gridEllipse_fit( sac, closestPeaksCoord, plotEllipse, hAx )
+%GRIDELLIPSE_FIT Fits elipse to grid sac - esimates xy scale
+% Grids are often not regular. This code takes a sac and attempts to fit an
+% elipse to the central six peaks. This enables an estimate of the scale in
+% x and y dimenson as well as measurement of how eliptical the grid is.
+% Scale in x dim is defined as point in which the elipse passes through y=0
+% and vice versa
+%
+% IMPORTANT. Code must find 6 peaks in the sac otherwise it cannot fit an
+% ellipse using the least squares method (even though one is actually
+% defined). In these situations all values are returned as nan.
+%
+% WARNING. Not fully tested values that this function produces. xyScale
+% seems to be broadly correct but might be out by a small factor. Requires
+% further testing before publishing results.
+% 
+%
+% ARGS
+% sac      spatial autocorr of a grid, best to construct from smoothed ratemap
+% showElipseFig [not required - default 'false'] 'true' or 'false'
+%
+% RETURNS
+% xyScale [1x2] - scale in x dimension and scale in y dimension in bins
+% eccent [1] - eccentricity of the elipse, 0=circular.
+% orient [1] - orientation of major axis anti-cw from x-axis in rads [for
+%           ij orientation of image]
+% abScale [1x2] - scale of major and minor axis (a is major, b is minor]
+%
+% EXAMPLE
+% [ xyScale, eccent, orient, abScale ] = gridElipse_fit(sac, true, 4);
+% [ xyScale, eccent, orient, abScale ] = gridElipse_fit(sac);
+
+
+% -------------------------------------------------------------------------
+% --- PARSE ARGUMENTS AND VARIABLES ---------------------------------------
+% -------------------------------------------------------------------------
+
+% -------------------------------------------------------------------------
+% --- MAIN FUNCTION -------------------------------------------------------
+% -------------------------------------------------------------------------
+%FIRST BLOCK
+%Note first blocks of code borrows heavily from autoCorrProps and does
+%basic processing of SAC to get six central points not including the
+%central peak.
+% 
+% sac(isnan(sac))=-1; %Sub nans for -1
+% autoCorrTemp = sac;        % TW. Do not allow local max that have .. [lines addopted from TW code]
+% autoCorrTemp(sac<=0) = -1; %  .. r-value below zero.
+% %Don't consider imaginary components which some times appear in shuffled data
+% autoCorrTemp=real(autoCorrTemp);
+% peaksAutoCorr= imregionalmax(autoCorrTemp); %Find local maxima
+% clear autoCorrTemp
+% 
+% [lableMask, ~]=bwlabel(peaksAutoCorr, 8);
+% 
+% %In case adjacent points share maxima find the centroid of them - NB returns structure array
+% %stats(n).Centroid containing for each peak the x,y position of the centroid but y is
+% %counting down from origin at top left
+% stats=regionprops(lableMask, 'Centroid');
+% %NL. [n x 2] pairs of x,y coord for max points
+% xyCoordMaxBin=reshape([stats.Centroid], 2,[])'; %Still x,y pair
+% 
+% % Convert to a new reference frame which as the origin at the centre of the autocorr
+% % and with y negative at top and y positive at bottom, x negative on left and postive on
+% % right
+% % NB autocorr will always have sides with odd number of bins
+% centralPoint=ceil(size(sac)/2); %m,n pair
+% xyCoordMaxBinCentral=xyCoordMaxBin-repmat(fliplr(centralPoint), [size(xyCoordMaxBin,1), 1]);
+% 
+% %Calculate distance of peaks from centre point and find seven closest (one will be central peak
+% %disregard this)
+% distFromCentre=sum(xyCoordMaxBinCentral.^2,2).^0.5;
+% [~, orderOfClose]= sort(distFromCentre);
+% 
+% %Get id of closest peaks - note closest peak 1 will be centre
+% if length(orderOfClose)>=7; closestPeaks=orderOfClose(1:7); %Might be fewer than 7 peaks
+% else closestPeaks=orderOfClose(1:end);
+% end
+% 
+% %x,y pairs in cartesian coords with y counting down from top and origin at top left.
+% closestPeaksCoord=xyCoordMaxBin(closestPeaks,:);
+% closestPeaksCoord=closestPeaksCoord([2:end],:); %But not central one
+
+%Check how many peaks are found - must be ==6 to proceed
+if length(closestPeaksCoord)<6
+    [ xyScale, eccent, orient, abScale ] =deal(nan);
+    warning('Too few peaks to define elipse - returning nan');
+    return
+end
+
+
+% SECOND BLOCK
+% Fit ellipse to the central points
+
+%Option to draw elipse onto sac - useful for debugging - do this is second
+%arg is true
+if ~plotEllipse %Don't draw
+    elipseData=sf_fit_ellipse(closestPeaksCoord(:,1), closestPeaksCoord(:,2));
+elseif plotEllipse %Do draw
+    imagesc(hAx,sac); %draw sac
+    axis(hAx,'equal');
+    hold(hAx,'on');
+    scatter(hAx,closestPeaksCoord(:,1), closestPeaksCoord(:,2)); %Draw on peaks
+    elipseData=sf_fit_ellipse(closestPeaksCoord(:,1), closestPeaksCoord(:,2), hAx);
+    hold(hAx,'off');
+end
+
+%Check if an ellipse was fit - if not elipseData will be empty
+if isempty(elipseData) || isempty(elipseData.a) %No ellipse found; LM EDIT!!! 
+    warning('Failed to fit ellipse - returning nan');
+    [ xyScale, eccent, orient, abScale ] = deal(nan);
+    return
+end
+
+%Pull out data about elipse from structure returned by sub functions
+a=elipseData.a; %Length of major axis - conventionally 'a'
+b=elipseData.b; %Length of minor axis - conventionally 'b'
+abScale=[a,b];
+
+%NL is orient of major axis anticlockwise from x-axis in rads but note this
+%is for mn coordinates (i.e. origin top left) so in conventional xy
+%coordinates there should be a negative sign in front of this value
+orient=elipseData.phi; % orient of major axis anticlock from x-axis in rads
+
+%Code sometimes flips a and b
+if a<b %Flipped
+    b=elipseData.a;
+    a=elipseData.b;
+    orient=mod(elipseData.phi+(pi/2), 2*pi); %Add 90deg to orient
+end
+
+eccent=sqrt((a^2 - b^2)/a^2 ); %Eccentricity where 0 is a circle
+
+%Now get xy scale - use equation for elipse to find value of x when y=0 &
+%vice versa
+%First working in polar coordinates define where x and y aixs would lie on
+%equivalent non-rotated elipse. Again note we're working in mn coords
+theta_r_axis = [orient, pi/2+orient]; %pol coord in rads equivalent to x-axis and y-axis
+ellipse_x = a*cos( theta_r_axis ); %x value for cart coord
+ellipse_y =  b*sin( theta_r_axis );%y value for cart coord
+xyScale=sqrt(sum([ellipse_x; ellipse_y].^2,1)); %[xScale, yScale]
+
+
+end
+
+% From Barry lab (based on fxchange function):
+function ellipse_t = sf_fit_ellipse( x,y,axis_handle )
+%
+% fit_ellipse - finds the best fit to an ellipse for the given set of points.
+%
+% Format:   ellipse_t = fit_ellipse( x,y,axis_handle )
+%
+% Input:    x,y         - a set of points in 2 column vectors. AT LEAST 5 points are needed !
+%           axis_handle - optional. a handle to an axis, at which the estimated ellipse
+%                         will be drawn along with it's axes
+%
+% Output:   ellipse_t - structure that defines the best fit to an ellipse
+%                       a           - sub axis (radius) of the X axis of the non-tilt ellipse
+%                       b           - sub axis (radius) of the Y axis of the non-tilt ellipse
+%                       phi         - orientation in radians of the ellipse (tilt)
+%                       X0          - center at the X axis of the non-tilt ellipse
+%                       Y0          - center at the Y axis of the non-tilt ellipse
+%                       X0_in       - center at the X axis of the tilted ellipse
+%                       Y0_in       - center at the Y axis of the tilted ellipse
+%                       long_axis   - size of the long axis of the ellipse
+%                       short_axis  - size of the short axis of the ellipse
+%                       status      - status of detection of an ellipse
+%
+% Note:     if an ellipse was not detected (but a parabola or hyperbola), then
+%           an empty structure is returned
+
+% =====================================================================================
+%                  Ellipse Fit using Least Squares criterion
+% =====================================================================================
+% We will try to fit the best ellipse to the given measurements. the mathematical
+% representation of use will be the CONIC Equation of the Ellipse which is:
+%
+%    Ellipse = a*x^2 + b*x*y + c*y^2 + d*x + e*y + f = 0
+%
+% The fit-estimation method of use is the Least Squares method (without any weights)
+% The estimator is extracted from the following equations:
+%
+%    g(x,y;A) := a*x^2 + b*x*y + c*y^2 + d*x + e*y = f
+%
+%    where:
+%       A   - is the vector of parameters to be estimated (a,b,c,d,e)
+%       x,y - is a single measurement
+%
+% We will define the cost function to be:
+%
+%   Cost(A) := (g_c(x_c,y_c;A)-f_c)'*(g_c(x_c,y_c;A)-f_c)
+%            = (X*A+f_c)'*(X*A+f_c)
+%            = A'*X'*X*A + 2*f_c'*X*A + N*f^2
+%
+%   where:
+%       g_c(x_c,y_c;A) - vector function of ALL the measurements
+%                        each element of g_c() is g(x,y;A)
+%       X              - a matrix of the form: [x_c.^2, x_c.*y_c, y_c.^2, x_c, y_c ]
+%       f_c            - is actually defined as ones(length(f),1)*f
+%
+% Derivation of the Cost function with respect to the vector of parameters "A" yields:
+%
+%   A'*X'*X = -f_c'*X = -f*ones(1,length(f_c))*X = -f*sum(X)
+%
+% Which yields the estimator:
+%
+%       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%       |  A_least_squares = -f*sum(X)/(X'*X) ->(normalize by -f) = sum(X)/(X'*X)  |
+%       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+%
+% (We will normalize the variables by (-f) since "f" is unknown and can be accounted for later on)
+%
+% NOW, all that is left to do is to extract the parameters from the Conic Equation.
+% We will deal the vector A into the variables: (A,B,C,D,E) and assume F = -1;
+%
+%    Recall the conic representation of an ellipse:
+%
+%       A*x^2 + B*x*y + C*y^2 + D*x + E*y + F = 0
+%
+% We will check if the ellipse has a tilt (=orientation). The orientation is present
+% if the coefficient of the term "x*y" is not zero. If so, we first need to remove the
+% tilt of the ellipse.
+%
+% If the parameter "B" is not equal to zero, then we have an orientation (tilt) to the ellipse.
+% we will remove the tilt of the ellipse so as to remain with a conic representation of an
+% ellipse without a tilt, for which the math is more simple:
+%
+% Non tilt conic rep.:  A`*x^2 + C`*y^2 + D`*x + E`*y + F` = 0
+%
+% We will remove the orientation using the following substitution:
+%
+%   Replace x with cx+sy and y with -sx+cy such that the conic representation is:
+%
+%   A(cx+sy)^2 + B(cx+sy)(-sx+cy) + C(-sx+cy)^2 + D(cx+sy) + E(-sx+cy) + F = 0
+%
+%   where:      c = cos(phi)    ,   s = sin(phi)
+%
+%   and simplify...
+%
+%       x^2(A*c^2 - Bcs + Cs^2) + xy(2A*cs +(c^2-s^2)B -2Ccs) + ...
+%           y^2(As^2 + Bcs + Cc^2) + x(Dc-Es) + y(Ds+Ec) + F = 0
+%
+%   The orientation is easily found by the condition of (B_new=0) which results in:
+%
+%   2A*cs +(c^2-s^2)B -2Ccs = 0  ==> phi = 1/2 * atan( b/(c-a) )
+%
+%   Now the constants   c=cos(phi)  and  s=sin(phi)  can be found, and from them
+%   all the other constants A`,C`,D`,E` can be found.
+%
+%   A` = A*c^2 - B*c*s + C*s^2                  D` = D*c-E*s
+%   B` = 2*A*c*s +(c^2-s^2)*B -2*C*c*s = 0      E` = D*s+E*c
+%   C` = A*s^2 + B*c*s + C*c^2
+%
+% Next, we want the representation of the non-tilted ellipse to be as:
+%
+%       Ellipse = ( (X-X0)/a )^2 + ( (Y-Y0)/b )^2 = 1
+%
+%       where:  (X0,Y0) is the center of the ellipse
+%               a,b     are the ellipse "radiuses" (or sub-axis)
+%
+% Using a square completion method we will define:
+%
+%       F`` = -F` + (D`^2)/(4*A`) + (E`^2)/(4*C`)
+%
+%       Such that:    a`*(X-X0)^2 = A`(X^2 + X*D`/A` + (D`/(2*A`))^2 )
+%                     c`*(Y-Y0)^2 = C`(Y^2 + Y*E`/C` + (E`/(2*C`))^2 )
+%
+%       which yields the transformations:
+%
+%           X0  =   -D`/(2*A`)
+%           Y0  =   -E`/(2*C`)
+%           a   =   sqrt( abs( F``/A` ) )
+%           b   =   sqrt( abs( F``/C` ) )
+%
+% And finally we can define the remaining parameters:
+%
+%   long_axis   = 2 * max( a,b )
+%   short_axis  = 2 * min( a,b )
+%   Orientation = phi
+%
+%
+
+% initialize
+orientation_tolerance = 1e-3;
+
+% empty warning stack
+warning( '' );
+
+% prepare vectors, must be column vectors
+x = x(:);
+y = y(:);
+
+% remove bias of the ellipse - to make matrix inversion more accurate. (will be added later on).
+mean_x = mean(x);
+mean_y = mean(y);
+x = x-mean_x;
+y = y-mean_y;
+
+% the estimation for the conic equation of the ellipse
+X = [x.^2, x.*y, y.^2, x, y ];
+a = sum(X)/(X'*X);
+
+% check for warnings
+if ~isempty( lastwarn )
+    disp( 'stopped because of a warning regarding matrix inversion' );
+    ellipse_t = [];
+    return
+end
+
+% extract parameters from the conic equation
+[a,b,c,d,e] = deal( a(1),a(2),a(3),a(4),a(5) );
+
+% remove the orientation from the ellipse
+if ( min(abs(b/a),abs(b/c)) > orientation_tolerance )
+    
+    orientation_rad = 1/2 * atan( b/(c-a) );
+    cos_phi = cos( orientation_rad );
+    sin_phi = sin( orientation_rad );
+    [a,b,c,d,e] = deal(...
+        a*cos_phi^2 - b*cos_phi*sin_phi + c*sin_phi^2,...
+        0,...
+        a*sin_phi^2 + b*cos_phi*sin_phi + c*cos_phi^2,...
+        d*cos_phi - e*sin_phi,...
+        d*sin_phi + e*cos_phi );
+    [mean_x,mean_y] = deal( ...
+        cos_phi*mean_x - sin_phi*mean_y,...
+        sin_phi*mean_x + cos_phi*mean_y );
+else
+    orientation_rad = 0;
+    cos_phi = cos( orientation_rad );
+    sin_phi = sin( orientation_rad );
+end
+
+% check if conic equation represents an ellipse
+test = a*c;
+switch (1)
+    case (test>0),  status = '';
+    case (test==0), status = 'Parabola found';  warning( 'fit_ellipse: Did not locate an ellipse' );
+    case (test<0),  status = 'Hyperbola found'; warning( 'fit_ellipse: Did not locate an ellipse' );
+end
+
+% if we found an ellipse return it's data
+if (test>0)
+    
+    % make sure coefficients are positive as required
+    if (a<0), [a,c,d,e] = deal( -a,-c,-d,-e ); end
+    
+    % final ellipse parameters
+    X0          = mean_x - d/2/a;
+    Y0          = mean_y - e/2/c;
+    F           = 1 + (d^2)/(4*a) + (e^2)/(4*c);
+    [a,b]       = deal( sqrt( F/a ),sqrt( F/c ) );
+    long_axis   = 2*max(a,b);
+    short_axis  = 2*min(a,b);
+    
+    % rotate the axes backwards to find the center point of the original TILTED ellipse
+    R           = [ cos_phi sin_phi; -sin_phi cos_phi ];
+    P_in        = R * [X0;Y0];
+    X0_in       = P_in(1);
+    Y0_in       = P_in(2);
+    
+    % pack ellipse into a structure
+    ellipse_t = struct( ...
+        'a',a,...
+        'b',b,...
+        'phi',orientation_rad,...
+        'X0',X0,...
+        'Y0',Y0,...
+        'X0_in',X0_in,...
+        'Y0_in',Y0_in,...
+        'long_axis',long_axis,...
+        'short_axis',short_axis,...
+        'status','' );
+else
+    % report an empty structure
+    ellipse_t = struct( ...
+        'a',[],...
+        'b',[],...
+        'phi',[],...
+        'X0',[],...
+        'Y0',[],...
+        'X0_in',[],...
+        'Y0_in',[],...
+        'long_axis',[],...
+        'short_axis',[],...
+        'status',status );
+end
+
+% check if we need to plot an ellipse with it's axes.
+if (nargin>2) && ~isempty( axis_handle ) && (test>0)
+    
+    % rotation matrix to rotate the axes with respect to an angle phi
+    R = [ cos_phi sin_phi; -sin_phi cos_phi ];
+    
+    % the axes
+    ver_line        = [ [X0 X0]; Y0+b*[-1 1] ];
+    horz_line       = [ X0+a*[-1 1]; [Y0 Y0] ];
+    new_ver_line    = R*ver_line;
+    new_horz_line   = R*horz_line;
+    
+    % the ellipse
+    theta_r         = linspace(0,2*pi);
+    ellipse_x_r     = X0 + a*cos( theta_r );
+    ellipse_y_r     = Y0 + b*sin( theta_r );
+    rotated_ellipse = R * [ellipse_x_r;ellipse_y_r];
+    
+    % draw
+%     hold_state = get( axis_handle,'NextPlot' );
+%     set( axis_handle,'NextPlot','add' );
+    plot(axis_handle, new_ver_line(1,:),new_ver_line(2,:),'r' );
+    plot(axis_handle, new_horz_line(1,:),new_horz_line(2,:),'r' );
+    plot(axis_handle, rotated_ellipse(1,:),rotated_ellipse(2,:),'r' );
+%     set( axis_handle,'NextPlot',hold_state );
+end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% From Barry lab:
+function [ regSac ] = regularise_eliptic_grid( sac, abScale, orient  )
+%REGULARISE_ELIPTIC_GRID Reshapes eliptical grid to be regular
+% Similar to analyses run by other groups - having found elipticalness of
+% grid using grid_xy_elipse_scale.m can then use this function to make grid
+% points lie on circle and then redo gridness.
+%
+% Method is to first rotate the sac so that the major axis is aligned to
+% the y-axis. Then use the major minor axis to adjust scale. Finally rotate
+% back
+%
+% ARGS
+% sac - spatial autocorr
+% abScale - scale of major and minor axis
+% orient - orientation in deg of major axis antiC from x-axis
+
+%--- House keeping
+abScale=sort(abScale, 'descend'); %Sometimes ab scale is mixed up - major shoudl be first
+
+
+%--- Main function
+%First check if need to do anything
+if abScale(1)==abScale(2) %Grid is already regular
+     regSac=sac;
+    return
+end
+
+%Grids aren't regular to start to regularise
+%1)First rotate so major axis aligns to x-axis
+regSac=imrotate(sac, -orient, 'bilinear');
+
+%2)Decide by how much to resize - major axis is x so work on y axis to
+%bring to same scale
+sacSize=size(regSac);
+xStart=1;
+xEnd=sacSize(2);
+    tmp=sacSize(1)/2 - (sacSize(1)/2)*(abScale(2)/abScale(1));
+    yStart=1+tmp;
+    yEnd=sacSize(1)-tmp;
+
+%3) Do the resample the sac to regularise the grid
+regSac=interp2(regSac, linspace(xStart,xEnd, sacSize(2)), linspace(yStart, yEnd, sacSize(1))');
+
+%4) Rotate back to original orientation
+regSac=imrotate(regSac, orient, 'bilinear');
+
+%5) Finally keep onlyl the central porition of the sac so that it matches
+%the original size
+sizeDif=round((size(regSac)-size(sac))/2);
+regSac=regSac(1+sizeDif(1):end-sizeDif(1), 1+sizeDif(2):end-sizeDif(2));
+
 end
 
 
 
 
-% % ------------------------------------------------------------------------------------------------
-% % --- CB MEASURE OF GRID REGULARITY --------------------------------------------------------------
-% % ------------------------------------------------------------------------------------------------
-% %Basically get the distance to the three peaks of the SAC - find difference between the X peak (one
-% %closest to the X axis) and the Y peak (one closest to Y axis)
-% %Have changes this now to be dist to X peak divided by dist to Y peak. Gives a value that is
-% %comparable across cells with different wavelengths
-% [th, r]=cart2pol(xyCoordMaxBinCentral(closestPeaks), xyCoordMaxBinCentral((closestPeaks)+length(xyCoordMaxBinCentral)));
-% [sortedTh,sortInd]=sort(th);
-% sortedR=r(sortInd);
-% peakClosestToX=find(abs(sortedTh)==min(abs(sortedTh)),1);
-% peakClosestToY=find(abs(sortedTh-(pi/2))==min(abs(sortedTh-(pi/2))),1);
-% distToSACXPeak=sortedR(peakClosestToX);
-% distToSACYPeak=sortedR(peakClosestToY);
-% % distToSACXYPeak=[distToSACYPeak, distToSACXPeak];
-% distToSACXYPeak=distToSACXPeak/distToSACYPeak;
-% 
-% %
-% cbGridness=(sortedR(peakClosestToX)-sortedR(peakClosestToY))/waveLength;
 
 
-% -------------------------------------------------------------------------
-% --- CHECK HEXAGONALITY OF PEAKS -----------------------------------------
-% -------------------------------------------------------------------------
-% TW: not in use. Routine not good enough at finding true peaks - rejects
-% too many grid cells.
-% Reject grid if peaks not hexagonal enough. Not used by default. Caller
-% must enter 'hexFilt' input arg.
-% if ~isempty(prms.hexFilt)
-%     degDiff = diff( sort( (th/(2*pi))*360 ) );
-%     if any( degDiff<(60-prms.hexFilt) | degDiff>(60+prms.hexFilt) )
-%     	waveLength = nan;   gridness = nan;   orientation = nan;
-%         fieldSize = nan;   closestPeaksCoord = nan;   maxDistFromCentre = nan;
-%         return
-%     end
-% end

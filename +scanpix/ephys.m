@@ -1181,7 +1181,7 @@ classdef ephys < handle
                     
                 case 'sac'
                     
-                    if isempty(obj.maps(1).rate{1})
+                    if any(cellfun('isempty', obj.maps(1).rate(trialInd)))
                         warning('scaNpix::ephys::addMaps: You need to generate rate maps before demanding spatial autocorrelograms.')
                         return
                     end
