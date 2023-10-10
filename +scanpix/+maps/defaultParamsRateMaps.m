@@ -86,19 +86,15 @@ prms.speed.showWaitBar           = showWaitBar;
 prms.sac.dum                     = [];  % dummy field
 
 %% grid props
-prms.gridProps.peakMode          = 'point';     % Are peaks local max points ('point'), or contig areas over corrThr ('area')?
-prms.gridProps.corrThr           = 0;          % For peakMode='point', points must be >corrThr. For peakMode='area', look for contig regions over corrThr.
-prms.gridProps.fieldExtentMethod = 'watershed'; % How do we find the extent of the peaks. 'halfHeight' or 'watershed'.
-prms.gridProps.corrThrMode       = 'abs';    % Does corrThr refer to absolute r-value (default) or r relative to central point ('rel', for time-win ACs).
-prms.gridProps.areaThr           = 20;           % Min size of contig areas when peakMode='area'. 100(MoserThr) * 1.5^2(MoserBin) / 1.92^2(WillsBin) = 61
-prms.gridProps.closePeakFilter   = [0 1 1 1 0; ones(3,5); 0 1 1 1 0];    % When peakMode='point', this filter defines area within which two peaks are counted as one.
-prms.gridProps.radius            = 'est';         % How are peaks used to estimate gridness ring. 
-prms.gridProps.cenPkThr          = 0.5;           % Threshold used to define extent of central peak (removed from gridness corrs). Relative to central point.
-prms.gridProps.centreMaskSizeThr = 0.5;    % If (central peak area)/(outer peak circle area) > centreMaskSizeThr, reject as grid cell. Using this option ..
-                             %  .. checks that the AC has a well-defined central peak, otherwise it's not a grid. Set to [] to inactivate.
-prms.gridProps.crossCorrMode     = 0;        % Assumes CG is a cross-cell CG. Looks for closest peak to centre, treats this point as the centre of the CG and proceeds
-                             % to calculate gridness. Set 'centreMaskSizeThr' to [], as this code hasn't been fixed for cross-corrs.
-prms.gridProps.verbose           = 0;              % Print to screen prms struct
-prms.gridProps.showCorrRing      = 0;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
+prms.gridProps.peakmode          = 'zscore';     % 
+prms.gridProps.centthr           = 0.5;          % 
+prms.gridProps.zscorethr         = 1;            % 
+prms.gridProps.peakthr           = 0.25;    % 
+prms.gridProps.getprops          = true;  
+prms.gridProps.getellgridness    = false;  
 
+prms.gridProps.plot              = false;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
+prms.gridProps.ax                = {}; 
+
+end
 

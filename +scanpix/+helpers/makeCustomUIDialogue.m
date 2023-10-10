@@ -92,7 +92,7 @@ output = prompts(:);
 for i = 2*length(prompts):-2:2
     output{cnt,2} = fH.Children(i).String;
     % now we want to 'guess' numeric input and convert it
-    if all(ismember(output{cnt,2}, '0123456789+-.eEdD')) 
+    if ~isempty(output{cnt,2}) && all(ismember(output{cnt,2}, '0123456789+-.eEdD')) 
         output{cnt,2} = str2num(output{cnt,2}); %#okagrow
     end
     cnt = cnt + 1;
