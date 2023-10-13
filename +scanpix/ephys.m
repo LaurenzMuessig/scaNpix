@@ -544,7 +544,7 @@ classdef ephys < handle
             %       obj.load(loadMode, dataset1, dataset2,...,datasetN)
             %
             % Inputs:
-            %    loadMode - cell array; {'all'} or any combination of {'pos','spikes','eeg'}
+            %    loadMode - cell array; {'all'} or any combination of {'pos','spikes',lfp'}
             %    varargin - list of set file names (ommit extensions)
             %
             % Outputs:

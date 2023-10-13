@@ -120,12 +120,12 @@ switch lower(method)
             modInd(cellind) = 1;
             for i = 1:length(sGraphs)
                 if ~isempty( sGraphs{i})
-                    modInd( ismember(G.Nodes.Name, sGraphs{i}.Nodes.Name) ) = i+1;
+                    modInd( ismember( G.Nodes.Name, sGraphs{i}.Nodes.Name) ) = i+1;
                 end
             end
         else
             % no modules found
-            modInd = zeros(length(dataObj.cell_ID),1);
+            modInd          = zeros(length(dataObj.cell_ID),1);
             modInd(cellind) = 1;
         end
         % 
@@ -211,8 +211,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function plotModuleStats(dataObj,trialInd,modInd,gridProps,IUratio,graphData)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+% plot the results of the module sorting to check that it worked okay 
 
 cols = 'krgbymc';
 %

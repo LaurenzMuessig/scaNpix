@@ -29,7 +29,7 @@ addParameter(p,'nsteps',defaultNSteps,@isscalar);
 addParameter(p,'cmapEdge',defaultCMapEdge);
 parse(p,varargin{:});
 
-if isempty(p.Results.ax)
+if p.Results.ax == "none"
     hAx = axes;
 else
     hAx = p.Results.ax;
