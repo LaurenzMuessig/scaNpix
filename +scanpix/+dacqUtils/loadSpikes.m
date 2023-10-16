@@ -72,7 +72,7 @@ for i = 1:length(nTetrodes)
         throw(ME);
     end
     
-    if ~exist(cutFileName,'file')
+    if exist(cutFileName,'file') ~= 2
         warning(['scaNpix: Can''t find ''' obj.trialNames{trialIterator} obj.params('cutTag1') '_' num2str(nTetrodes(i)) obj.params('cutTag2') '.cut''. No data loaded for Tet #' num2str(nTetrodes(i)) '.']);
         continue;
     end

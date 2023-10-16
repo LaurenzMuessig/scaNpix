@@ -40,7 +40,7 @@ switch lower(p.Results.type)
         % end
         % hold off
     case 'cellpos'
-        linMapsNormed = cell2mat(scanpix.maps.normLinMaps(linMap));
+        linMapsNormed = scanpix.maps.normLinMaps(linMap);
         imagesc(hAx,linMapsNormed);
         eval(['colormap(hAx,' p.Results.colmap ')']);
         set(hAx,'xTick',[0.5 size(linMapsNormed,2)+0.5],'xticklabel',[],'ytick',[0.5 size(linMapsNormed,1)-0.5],'yticklabel',[0,size(linMapsNormed,1)],'ylim',[0.5 size(linMapsNormed,1)+0.5],'xlim',[0.5 size(linMapsNormed,2)+0.5]);

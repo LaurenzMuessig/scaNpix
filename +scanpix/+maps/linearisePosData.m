@@ -59,7 +59,7 @@ trackLength = trackProps.ppm * (trackProps.length/100); % in pix
 
 %%
 
-if strcmpi(trackProps.type,'sqtrack')
+if contains(lower(trackProps.type),'sq')
     % 1) Linearise the positions %
     % 1a. First need a good estimate of env edges, for radial-isation routine to work well. Use the same as for box scaling,
     %     i.e. the first camera pixel in each dimension with >=1 sec of summed dwell.
@@ -79,7 +79,7 @@ if strcmpi(trackProps.type,'sqtrack')
     % 2 Sort out the CW and CCW runs properly ('radialLineariseSquare_v2' only does it on a sample-by-sample basis) %
     % First, rotate the dirs 90deg CCW, so as to switch from phys/eng convention to DACQ convention - makes the following code easier to think about.
     direction                   = direction + 90;
-    direction(direction>360)    = direction(direction>360) - 360;
+    direction(direction>360)   = direction(direction>360) - 360;
     % Split the data by arm occupany, then for each arm check if we are facing CW or CCW %
     % armsDims(n,:) gives the upper and lower limits into arm n, arms start at the TL corner and run clockwise (usual xy->pol conversion is anti-clock, but DACQ coords have inverted y-axis).
     dirDefs                     = [0, 90, 180, -90];  % These define the amount to be added to the actual dirs, before classifying CW and CCW. One for each arm.
@@ -162,7 +162,7 @@ if strcmpi(trackProps.type,'sqtrack')
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-elseif ~isempty(regexp(lower(trackProps.type),'lintrack','once'))
+elseif contains(lower(trackProps.type),'lin')
     
     if isempty(prms.runDimension)
         [ ~, prms.runDimension ] =  max(range(xy)); % estimate run dimension
@@ -231,7 +231,7 @@ function [linPos, armDims] = radialLineariseSquare_v2(XY,envEdges,nPixPerArm)
 % Linearise positions from square track data by matching pos samples to 
 % bins of an idealised rectangle/square of same size. 
 %
-% Usage: [linPos,linDir] = radialLineariseSquare(posXY,rectSize)
+% Usage: [linPos,linDir] = radialLineariseSquare_v2(XY,envEdges,nPixPerArm)
 %
 % Inputs:   posXY (nPosSamples,2) - XY pos coordinates
 %           envEdges (2,2)        - edges of environment in x and y (in pixels)

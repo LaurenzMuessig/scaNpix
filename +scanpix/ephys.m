@@ -909,11 +909,11 @@ classdef ephys < handle
             else
                 trialNameStrOut = trialNameStrIn(select);
                 
-                if nargout == 1
+%                 if nargout == 1
                     ind            = ismember(obj.trialNames,trialNameStrOut);
                     obj.trialNames = obj.trialNames(ind);
                     obj.dataPath   = obj.dataPath(ind);
-                end
+%                 end
             end
             
         end
