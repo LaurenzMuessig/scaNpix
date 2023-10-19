@@ -107,6 +107,10 @@ else
         ppm(:) = round( mean( knownDist ./ (sqrt(sum(obj.trialMetaData(trialIterator).envSize.^2)) ./ 100) ) );
         % full set
         obj.trialMetaData(trialIterator).envBorderCoords = scanpix.helpers.findBoxCorners(obj.trialMetaData(trialIterator).envBorderCoords(:,1),ppm(1)*(obj.trialMetaData(trialIterator).envSize(1)/100), obj.trialMetaData(trialIterator).envBorderCoords(:,2),ppm(1)*(obj.trialMetaData(trialIterator).envSize(2)/100));
+        % now align env coords with the camera window
+        for i = 1:2
+            led(:,:,i) = scanpix.helpers.rotatePoints(led(:,:,i),[obj.trialMetaData(trialIterator).envBorderCoords(1,1),obj.trialMetaData(trialIterator).envBorderCoords(1,4);obj.trialMetaData(trialIterator).envBorderCoords(2,1),obj.trialMetaData(trialIterator).envBorderCoords(2,4)]);
+        end
         %                     envSzPix  = [abs(obj.trialMetaData(trialIterator).envBorderCoords(1,1)-obj.trialMetaData(trialIterator).envBorderCoords(1,2)), abs(obj.trialMetaData(trialIterator).envBorderCoords(1,3)-obj.trialMetaData(trialIterator).envBorderCoords(2,3))];
     else
         [xCenter, yCenter, radius, ~] = scanpix.fxchange.circlefit(obj.trialMetaData(trialIterator).envBorderCoords(1,:), obj.trialMetaData(trialIterator).envBorderCoords(2,:));
@@ -129,33 +133,21 @@ if ~isempty(obj.params('ScalePos2PPM'))
     end
 end
 
-% remove tracking errors (i.e. too fast)
+% remove tracking errors that fall outside box
 for i = 1:2
-    % speed
-    pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1); % % distances in m
-    tempSpeed        = pathDists ./ diff(sampleT); % m/s
-    tempSpeed(end+1) = tempSpeed(end);
-    speedInd = tempSpeed > obj.params('posMaxSpeed');
     % env borders
+    borderTolerancePix = ppm(1)/100*2.5; % we'll assume 1 standard rate map bin tolerance
     if ~circleFlag
-        envSzInd = led(:,1,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,1,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(1,:)) | led(:,2,i) < 0.95 * min(obj.trialMetaData(trialIterator).envBorderCoords(2,:)) | led(:,2,i) > 1.05 * max(obj.trialMetaData(trialIterator).envBorderCoords(2,:));
+        envSzInd = led(:,1,i) < min(obj.trialMetaData(trialIterator).envBorderCoords(1,:))-borderTolerancePix | led(:,1,i) > max(obj.trialMetaData(trialIterator).envBorderCoords(1,:))+borderTolerancePix | led(:,2,i) < min(obj.trialMetaData(trialIterator).envBorderCoords(2,:))-borderTolerancePix | led(:,2,i) > max(obj.trialMetaData(trialIterator).envBorderCoords(2,:))+borderTolerancePix;
     else
-        envSzInd = (led(:,1,i) - xCenter).^2 + (led(:,2,i) - yCenter).^2 > radius^2; % points outside of environment
+        envSzInd = (led(:,1,i) - xCenter).^2 + (led(:,2,i) - yCenter).^2 > (radius+borderTolerancePix)^2; % points outside of environment
     end
-    % filter out
-    led(speedInd | envSzInd,:,i) = NaN;
+    % filter out 
+    led(envSzInd,:,i) = NaN;
 end
 
-% interpolate missing positions
-for i = 1:2
-    missing_pos = find(isnan(led(:,1,i)));
-    ok_pos      = find(~isnan(led(:,1,i)));
-    for j = 1:2
-        led(missing_pos, j, i)                            = interp1(ok_pos, led(ok_pos, j, i), missing_pos, 'linear');
-        led(missing_pos(missing_pos > max(ok_pos)), j, i) = led( max(ok_pos), j, i);
-        led(missing_pos(missing_pos < min(ok_pos)), j, i) = led( min(ok_pos), j, i);
-    end
-end
+% fix positions (inline subfunction)
+led = fixPositions(led, mean(diff(sampleT)), ppm(1), obj.params('posMaxSpeed'), obj.params('maxPosInterpolate'));
 
 % smooth
 kernel         = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( obj.params('posSmooth') * obj.params('posFs') ); % as per Ephys standard - 400ms boxcar filter
@@ -169,11 +161,11 @@ obj.posData(1).direction{trialIterator} = dirData(:);
 % Get position from smoothed individual lights %%
 wghtLightFront = 1-obj.params('posHead');
 wghtLightBack  = obj.params('posHead');
-xy = (smLightFront .* wghtLightFront + smLightBack .* wghtLightBack);  %
+xy = smLightFront .* wghtLightFront + smLightBack .* wghtLightBack;  %
 
 % pos data
 obj.posData(1).XYraw{trialIterator}        = xy;
-obj.posData(1).XY{trialIterator}           = [double( floor(xy(:,1)) + 1 ), double( floor(xy(:,2)) + 1 )];
+obj.posData(1).XY{trialIterator}           = [floor(xy(:,1)) + 1, floor(xy(:,2)) + 1];
 obj.posData(1).sampleT{trialIterator}      = sampleT; % this is redundant as we don't want to use the sample times from the PG camera
 
 obj.trialMetaData(trialIterator).ppm       = ppm(1);
@@ -184,7 +176,6 @@ boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(tria
 scanpix.maps.scalePosition(obj, trialIterator,'envszpix', boxExt,'circflag',circleFlag); % need to enable this for circular env as well!
 
 % running speed
-%             pathDists                                  = sqrt( (obj.posData(1).XY{trialIterator}(1:end-1,1) - obj.posData(1).XY{trialIterator}(2:end,1)).^2 + (obj.posData(1).XY{trialIterator}(1:end-1,2) - obj.posData(1).XY{trialIterator}(2:end,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
 pathDists                                  = sqrt( diff(xy(:,1)).^2 + diff(xy(:,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
 obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
 obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
@@ -193,3 +184,68 @@ fprintf('  DONE!\n');
 
 end
 
+
+function ledPos = fixPositions(ledPos,sampleT,ppm,maxSpeed,maxPosInterpolateCM)
+
+% first we remove positions that are flanked by NaNs - these are mostly dodgy and are spurious values that don't correspond to tracking the LEDs (we have to accept that we'll remove a few legit positions as well)
+for i = 1:2
+    currLED = ledPos(:,:,i);
+    remPosInd = 1;
+    while ~isempty(remPosInd) %any(speedInd)
+
+        trackedPosInd = ~isnan(currLED(:,1));
+        remPosInd = find(conv(trackedPosInd,ones(5,1),'same') <= 2 & trackedPosInd);
+        currLED(remPosInd,:) = NaN;
+    end  
+    % now look for tracking errors by speed - we'll ignore all the NaNs here as these prevent to identify some dodgy samples (again we might lose a few legit samples here when the light wasn't tracked for too
+    % long continuously)
+    validPos                        = currLED(~isnan(currLED(:,1)),:);
+    pathDists                       = sqrt( diff(validPos(:,1),[],1).^2 + diff(validPos(:,2),[],1).^2 ) ./ ppm(1); % % distances in m
+    tempSpeed                       = pathDists ./ sampleT; %diff(sampleT(~isnan(ledPos(:,1,i)))); % m/s
+    tempSpeed(end+1)                = tempSpeed(end);
+    speedInd                        = tempSpeed > maxSpeed;
+    validPos(speedInd,:)            = NaN;
+    currLED(~isnan(currLED(:,1)),:) = validPos;
+    ledPos(:,:,i)                   = currLED;
+end
+
+% interpolate between good samples  
+for i = 1:2
+    % find all missing positions/led
+    missing_pos   = find(isnan(ledPos(:,1,i)));
+    % find those missing chunks where light was lost for too long (i.e. rat moved too far in between)
+    idx           = find(diff(missing_pos)>1);
+    idx           = idx(1:end-1); % can ignore last entry
+    missPosChunks = [[max([1,missing_pos(1)-1]); missing_pos(idx(1:end-1)+1)-1],missing_pos(idx)+1]; % make sure first index~=0
+    indTooLong    = sqrt(diff([ledPos(missPosChunks(:,1),1,i),ledPos(missPosChunks(:,2),1,i)],[],2).^2+diff([ledPos(missPosChunks(:,1),2,i),ledPos(missPosChunks(:,2),2,i)],[],2).^2) ./ ppm .* 100 > maxPosInterpolateCM;
+    missPosChunks = missPosChunks(indTooLong,:); % only keep these
+    % remove all bad chunks
+    for j = 1:size(missPosChunks,1)
+        missing_pos = missing_pos(~ismember(missing_pos,missPosChunks(j,1)+1:missPosChunks(j,2)-1));
+    end
+    % interpolate as per usual
+    ok_pos      = find(~isnan(ledPos(:,1,i)));
+    for j = 1:2
+        ledPos(missing_pos, j, i)                            = interp1(ok_pos, ledPos(ok_pos, j, i), missing_pos, 'linear');
+        ledPos(missing_pos(missing_pos > max(ok_pos)), j, i) = ledPos( max(ok_pos), j, i);
+        ledPos(missing_pos(missing_pos < min(ok_pos)), j, i) = ledPos( min(ok_pos), j, i);
+    end
+end
+% now last sanity check - check for samples where distance between LEDs is too large - set these position for the LED that was tracked worse overall to the ones from the better tracked light 
+[~, maxInd] = max([sum(~isnan(ledPos(:,1,1))),sum(~isnan(ledPos(:,1,2)))]);
+LEDdistInd = sqrt( (ledPos(:,1,1) - ledPos(:,1,2)).^2 + (ledPos(:,2,1) - ledPos(:,2,2)).^2 ) ./ ppm(1) .* 100 > 15; % 
+ledPos(LEDdistInd,:,maxInd~=[1 2]) = ledPos(LEDdistInd,:,maxInd); 
+
+end
+
+%         tmp = ledPos(~isnan(ledPos(:,1,i)),:,i);
+% %     pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1); % % distances in m
+% %     tempSpeed        = pathDists ./ diff(sampleT); % m/s
+% %     tempSpeed(end+1) = tempSpeed(end);
+% %     speedInd = tempSpeed > obj.params('posMaxSpeed');
+%         pathDists        = sqrt( diff(tmp(:,1),[],1).^2 + diff(tmp(:,2),[],1).^2 ) ./ ppm(1); % % distances in m
+%         tempSpeed        = pathDists ./ mean(diff(sampleT)); %diff(sampleT(~isnan(ledPos(:,1,i)))); % m/s
+%         tempSpeed(end+1) = tempSpeed(end);
+%         speedInd = tempSpeed > maxSpeed;
+%         tmp(speedInd,:) = NaN;
+%         ledPos(~isnan(ledPos(:,1,i)),:,i) = tmp;

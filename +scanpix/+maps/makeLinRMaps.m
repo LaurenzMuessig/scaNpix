@@ -51,6 +51,7 @@ prms.runDimension         = [];                   % This is the dimension to run
 prms.dirTolerance         = 70;  % Tolerance for heading direction, relative to arm direction, for calculating run direction (degrees)
 
 % linear map params
+prms.showWaitBar          = false;
 prms.binSizeLinMaps       = 2.5; % bin size (cm^2)
 prms.smoothFlagLinMaps    = 1;  % y/n
 prms.smoothKernelSD       = 2;  % SD, in bins
@@ -135,6 +136,8 @@ if prms.smoothFlagLinMaps
     end 
 end
 
+if prms.showWaitBar; hWait = waitbar(0); end
+
 % Spike (and therefore rate) maps %
 % pre-allocate
 lin_rMaps   = cell(3,1);
@@ -193,6 +196,8 @@ for s = 1:length(spikeTimes)
     for i = 1:3
         lin_rMaps{i}(s,:) = spkMaps(i,:) ./ lin_pMaps(i,:); %rate
     end
+    
+    if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Rate Maps... %i/%i done.',i,length(spkTimes))); end
 end
 
 if prms.remTrackEnds > 0
@@ -204,19 +209,7 @@ if prms.remTrackEnds > 0
     lin_pMaps(:, set2nanInd) = NaN;
 end
 
-
-%%
-% % normalise maps and sort by position of max (if desired)
-% lin_rMaps_normed = cell(3,2);
-% if prms.normSort
-%     for i = 1:3
-%         maxMaps               = nanmax(lin_rMaps{i}, [], 2);
-%         [~, maxInd]           = nanmax( bsxfun(@eq, lin_rMaps{i}, maxMaps),[], 2 );
-%         [~, sortInd]          = sort( maxInd );
-%         lin_rMaps_normed{i,1} = lin_rMaps{i}(sortInd,:) ./ maxMaps(sortInd); % ordered maps
-%         lin_rMaps_normed{i,2} = sortInd;  % also keep an index so we can reconstruct later which row belongs to which cell
-%     end
-% end
+if prms.showWaitBar; close(hWait); end
 
 end
 
