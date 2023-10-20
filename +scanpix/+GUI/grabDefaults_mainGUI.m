@@ -47,6 +47,7 @@ switch lower(defType)
         defStruct.rate.showWaitBar    = true;
         defStruct.dir.showWaitBar     = true;
         defStruct.objVect.showWaitBar = true;
+        defStruct.lin.showWaitBar     = true;
 end
 %
 field = fieldnames(defStruct);

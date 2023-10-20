@@ -55,6 +55,6 @@ tmpCorners(:,[SEind,NWind]) = 0;
 [~,NEind]                   = max(tmpCorners(1,:));
 [~,SWind]                   = max(tmpCorners(2,:));
 %
-cornerPoints = [allCorners(:,NWind),allCorners(:,NEind),allCorners(:,SEind),allCorners(:,SWind)];
+cornerPoints                = [allCorners(:,NWind),allCorners(:,NEind),allCorners(:,SEind),allCorners(:,SWind)];
             
 end
