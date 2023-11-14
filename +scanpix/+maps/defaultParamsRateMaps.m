@@ -29,6 +29,7 @@ prms.rate.smoothKernel           = 5;    % size smoothing kernel (in bins)
 prms.rate.alpha                  = 200;  % alpha parameter - don't change
 prms.rate.envSize                = [];
 prms.rate.trimNaNs               = false;
+prms.rate.posOnly                = false;
 prms.rate.showWaitBar            = showWaitBar;
 
 %% dir maps

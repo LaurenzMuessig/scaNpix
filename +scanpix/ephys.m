@@ -46,6 +46,7 @@ classdef ephys < handle
         posData               struct  = struct('XYraw',[],'XY',[],'direction',[],'speed',[],'linXY',[],'sampleT',[]);
         spikeData             struct  = struct('spk_Times',[],'spk_waveforms',[],'sampleT',[]); 
         lfpData               struct  = struct('lfp',[]);
+        bhaveData             struct  = struct('data',[]);
     end
     
     properties % maps %
@@ -54,7 +55,7 @@ classdef ephys < handle
 %     
     properties(Hidden)
         fileType              char    = '';
-        type                  char {mustBeMember(type,{'npix','dacq','nexus','init'})} = 'init';
+        type                  char {mustBeMember(type,{'npix','dacq','nexus','bhave','init'})} = 'init';
         %         uniqueCellIndex(:,1)  logical
         fields2spare          cell    = {'params','dataSetName','cell_ID','cell_Label'}; % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
         mapParams             struct  = scanpix.maps.defaultParamsRateMaps;
@@ -89,7 +90,7 @@ classdef ephys < handle
             
             if nargin == 0
                 % select data type for object
-                str = {'dacq','npix','nexus'};
+                str = {'dacq','npix','nexus','bhave'};
                 [select, loadCheck] = listdlg('PromptString','Select what data tickles your fancy:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
                 if ~loadCheck
                     warning('scaNpix::ephys:: Object creation aborted. And I thought you loved ephys class objects...');
@@ -107,6 +108,8 @@ classdef ephys < handle
                     obj.fileType = '.set';
                 case 'npix'
                     obj.fileType = '.ap.bin';
+                case {'bhave'}
+                    obj.fileType = '.csv';
             end
             %
             if nargin <= 1
@@ -650,7 +653,7 @@ classdef ephys < handle
             
             % pre-allocate some data (e.g. part that isn't loaded), such
             % that all properties have same size
-            obj.preallocEmpty(true,{'posData','spikeData','lfpData'});
+            obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
         end
     end
     
@@ -675,6 +678,8 @@ classdef ephys < handle
                 case 'npix'
                     scanpix.npixUtils.loadMeta(obj,trialIterator);
                 case 'nexus'
+                case 'bhave'
+                    scanpix.bhaveUtils.loadMetaData(obj,trialIterator);
             end
         end
         
@@ -698,6 +703,9 @@ classdef ephys < handle
                 case 'npix'
                     scanpix.npixUtils.loadPosNPix(obj,trialIterator);
                 case 'nexus'
+                case 'bhave'
+                    obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
+                    scanpix.bhaveUtils.loadPosBhave(obj,trialIterator);
             end
         end
         
@@ -721,6 +729,8 @@ classdef ephys < handle
 %                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag, false);
                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag);
                 case 'nexus'
+                case 'bhave'
+                    % nothing to do here %
             end
             
         end
@@ -744,6 +754,8 @@ classdef ephys < handle
                 case 'npix'
                     %%%%
                 case 'nexus'
+                case 'bhave'
+                    % nothing to do here %
             end
             
         end
@@ -958,18 +970,7 @@ classdef ephys < handle
             end
         end
     end
-    
-    methods(Static)
-        
-%         function dependentInd = checkPropDepend
-%             metaClass = ?scanpix.ephys;
-%             dependentInd = [metaClass.PropertyList.Dependent];
-%             dependentInd = dependentInd(~[metaClass.PropertyList.Hidden]); 
-%         end
-    end
-    
-
-    
+    %
     methods
         
         %%
@@ -1014,16 +1015,26 @@ classdef ephys < handle
                 return;
             end
             
-            if nargin < 2
-                str = {'rate','dir','lin','sac','objVect','speed'};
-                [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
-                if ~loadCheck
-                    warning('scaNpix::ephys::addMaps: No data selected. No maps will be created. Boring...');
-                    return;
-                else
-                    mapType = str{select};
+            if ~strcmp(obj.type,'bhave')
+                
+                if nargin < 2 && ~strcmp(obj.type,'bhave')
+                    str = {'pos','rate','dir','lin','sac','objVect','speed'};
+                    [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
+                    if ~loadCheck
+                        warning('scaNpix::ephys::addMaps: No data selected. No maps will be created. Boring...');
+                        return;
+                    else
+                        mapType = str{select};
+                    end
                 end
+                
+                if all(ismember(mapType,{'pos','rate'}))
+                    mapType = mapType(~strcmp(mapType,'pos'));
+                end
+            else
+                mapType = 'pos';
             end
+            
             
             if nargin < 3 || isempty(trialInd)
                 trialInd = 1:length(obj.trialNames); % default: do all trials in object
@@ -1032,7 +1043,11 @@ classdef ephys < handle
             if nargin < 4 || isempty(varargin{1})
                 if isempty( obj.params('myRateMapParams') )
                     % use default params
-                    prms = obj.mapParams.(mapType);
+                    if strcmp(mapType,'pos')
+                        prms = obj.mapParams.rate;
+                    else
+                        prms = obj.mapParams.(mapType);
+                    end
                 else
                     % use user defined params
                     classFolder = what('scanpix');
@@ -1102,7 +1117,7 @@ classdef ephys < handle
             
             % make some maps
             switch lower(mapType)
-                case 'rate'
+                case {'pos','rate'}
                     prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
                     
                     for i = trialInd
@@ -1110,6 +1125,11 @@ classdef ephys < handle
                             prms.envSize = obj.trialMetaData(i).envSize / 100 * obj.trialMetaData(i).ppm; % in pixels
                         elseif strcmp(obj.fileType,'.set')
                             prms.envSize = [obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin];
+                        end
+                        
+                        if strcmpi(mapType,'pos')
+                            prms.smooth = 'boxcar';
+                            prms.posOnly = true;
                         end
                         
                         [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
@@ -1216,6 +1236,11 @@ classdef ephys < handle
         %%
         function spatProps = getSpatialProps(obj, score)
             
+            if strcmp(obj.type,'bhave')
+                warning('scaNpix::ephys::addMaps: This ain''t gonna work for behavioural data. I guess you had to try...');
+                return;
+            end
+            
             switch lower(score)
                 case {'spatialinfo','si'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
@@ -1300,6 +1325,11 @@ classdef ephys < handle
             if strcmp(obj.type,'dacq')
                 warning('scaNpix::ephys::loadWaves: Waveforms for DACQ type objects are auto loaded. No need to ask for that again here compadre...');
                 return
+            end
+            %
+            if strcmp(obj.type,'bhave')
+                warning('scaNpix::ephys::addMaps: This ain''t gonna work for behavioural data. I guess you had to try...');
+                return;
             end
             
             % deal with loading params

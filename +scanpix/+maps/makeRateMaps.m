@@ -46,6 +46,7 @@ prms.speedFilterLimits    = [2.5 400];
 prms.showWaitBar          = false;
 prms.envSize              = [];
 prms.trimNaNs             = false;
+prms.posOnly              = false;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % - This is the template code for name-value list OR struct passing of parameters -- %
@@ -108,6 +109,8 @@ if strcmp(prms.smooth,'boxcar')
 else
     sm_pMaps              = cell(length(spkTimes), 1); % pre-allocate for adaptive smoothing
 end
+
+if prms.posOnly; return; end
 
 if prms.showWaitBar; hWait = waitbar(0); end
 

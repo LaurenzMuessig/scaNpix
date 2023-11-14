@@ -28,7 +28,7 @@ function [rMapBinned, cMapBinned] = binAnyRMap(rMap,varargin)
 %%
 defaultColMap    = 'jet';
 defaultNSteps    = 11;
-defaultRGB4nans  = [1 1 1];
+defaultRGB4nans  = [1 1 1]; % unvisited bins = white
 defaultCMapEdge  = [];
 
 p = inputParser;
@@ -47,16 +47,16 @@ end
 % make colormap
 switch lower(p.Results.colmap)
     case 'hcg' 
-        temp = scanpix.maps.highContGrayColMap;
-        ind  = round(linspace(1,length(temp),p.Results.nsteps));
-        cMap = temp(ind,:);   
+        temp   = scanpix.maps.highContGrayColMap;
+        ind    = round(linspace(1,length(temp),p.Results.nsteps));
+        cMap   = temp(ind,:);   
         nSteps = p.Results.nsteps;
     case 'poulter'
-        cMap = scanpix.maps.cm_Poulter;
+        cMap   = scanpix.maps.cm_Poulter;
         nSteps = size(cMap,1);
     otherwise
         try
-            cMap = feval( str2func(p.Results.colmap), p.Results.nsteps );
+            cMap   = feval( str2func(p.Results.colmap), p.Results.nsteps );
             nSteps = p.Results.nsteps;
         catch
             error(['''' p.Results.colmap ''' not yet supported as colormap. Why don''t you add it yourself?']);
@@ -65,9 +65,11 @@ end
 
 % bin rMap
 if isempty(p.Results.cmapEdge)
-    rMapBinned = discretize(rMap,linspace(0,nanmax(rMap(:)),nSteps+1));
+    rMapBinned                  = discretize(rMap,linspace(0,nanmax(rMap(:)),nSteps+1));
 else
-    rMapBinned = discretize(rMap,linspace(p.Results.cmapEdge(1),p.Results.cmapEdge(2),nSteps+1));
+    [rMapBinned,edges]          = discretize(rMap,linspace(p.Results.cmapEdge(1),p.Results.cmapEdge(2),nSteps+1));
+    rMapBinned(rMap<edges(1))   = 1;
+    rMapBinned(rMap>edges(end)) = nanmax(rMapBinned(:));
 end
 %
 rMapBinned(isnan(rMap)) = 0;
