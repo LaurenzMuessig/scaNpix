@@ -70,17 +70,19 @@ parse(p,varargin{:});
 %
 % minOr = p.Results.minor * pi/180;
 getGridProps = p.Results.getprops;
-axArr = p.Results.ax;
+axArr        = p.Results.ax;
 
 % Preallocate output Props %
 gridness                = [NaN NaN];
 Props.wavelength        = NaN;
-Props.wavelengthFull    = nan(6,1);
+Props.wavelengthFull    = nan(3,1);
 Props.gridness          = NaN;
 Props.orientation       = NaN;
-Props.orientationFull   = nan(6,1);
+Props.orientationFull   = nan(3,1);
+Props.ax_ind            = nan(3,1);
 Props.closestPeaksCoord = nan(6,2);
 Props.offset            = NaN;
+Props.offsetFull        = nan(3,1);
 Props.phaseOffset       = NaN;
 Props.centralPeakMask   = nan(size(autoCorr));
 Props.fieldSize         = NaN;
@@ -189,47 +191,29 @@ if getGridProps || p.Results.getellgridness
         annMask = distMap < max(distFromCentre) * 1.15 & distMap > radii(1);
     end
     
-%     xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
-%     distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;   
-    % orientation
-    orientation          = atan2(xyCoordMaxBinCentral(:,1),xyCoordMaxBinCentral(:,2));
+    % orientation - define 3 axes Moser style
+    [orientation, tmp] = deal(atan2(xyCoordMaxBinCentral(:,2),xyCoordMaxBinCentral(:,1)));
+    [~,ax1_ind]  = min(abs(orientation)); 
+    tmp(ax1_ind) = NaN;
     
-    % don't allow peaks which are too close - only keep closer one to centre.
-%     [r,c] = find(triu( abs(circ_dist2(orientation)) < minOr, 1 ));
-%     delInd = [];
-%     for i = 1:length(r)
-%         if distFromCentre(r(i)) < distFromCentre(c(i))
-%             delInd = [delInd;c(i)];
-%         else
-%             delInd = [delInd;r(i)];
-%         end
-%     end
-%     delInd = unique(delInd);
-%     % remove peaks
-%     orientation(delInd)     = [];
-%     xyCoordMaxBin(delInd,:) = [];
-%     distFromCentre(delInd)  = [];
-%     [~, orderOfClose]       = sort(distFromCentre);
-%     orderOfClose            = orderOfClose(1:min([6,length(orientation)])); % in case there >6 peaks keep 6 closest ones
-%     % order by distance
-%     orientation   = mod(orientation(orderOfClose),2*pi);
-%     wavelength    = distFromCentre(orderOfClose); % wavelength
-%     xyCoordMaxBin = xyCoordMaxBin(orderOfClose,:);
+    [~, ax2_ind] = min(circ_dist(abs(tmp),abs(orientation(ax1_ind))));
+    tmp(ax2_ind) = NaN;
+    [~, ax3_ind] = min(circ_dist(abs(tmp),abs(orientation(ax1_ind))));
+    
+    orientation = orientation([ax1_ind ax2_ind ax3_ind]);
 
-    % order by distance
-    orientation   = mod(orientation,2*pi);
-    wavelength    = distFromCentre; % wavelength
-
-    %
-    [orientation, sortInd]  = sort(orientation);
-    Props.orientation       = circ_mean(mod(orientation,30*pi/180)); % is that right?
+    Props.orientation       = circ_mean(orientation);
+    Props.ax_ind            = [ax1_ind; ax2_ind; ax3_ind];
     Props.orientationFull   = orientation;
-    Props.wavelength        = nanmean(wavelength);
-    Props.wavelengthFull    = wavelength(sortInd);
+    
+    % wavelength
+    Props.wavelength        = nanmean(distFromCentre([ax1_ind ax2_ind ax3_ind]); % wavelength
+    Props.wavelengthFull    = distFromCentre([ax1_ind ax2_ind ax3_ind]); 
+    % offset
+    Props.offsetFull = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)
+    Props.offset     = min(Props.offsetFull ); % 
     %
-    Props.closestPeaksCoord = round(xyCoordMaxBin(sortInd,:));
-    %
-    Props.offset = min(pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4)); % from Stensola at al.
+    Props.closestPeaksCoord = round(xyCoordMaxBin);
 %     Props.centralPeakMask = annulus;
     % field size
     aboveThrMask               = bwlabel(autoCorr>0.4,8);
@@ -239,7 +223,7 @@ if getGridProps || p.Results.getellgridness
 
     if p.Results.plot
         % make a nice figure with auto corr props - adapted from Dan Manson's code
-        plotGridProps(autoCorr,annMask,Props.closestPeaksCoord,size(autoCorr),Props.wavelength,Props.orientationFull(1:3), centralPoint, gridness, axArr{1});
+        plotGridProps(autoCorr,annMask,Props.closestPeaksCoord([ax1_ind ax2_ind ax3_ind],:),size(autoCorr),Props.wavelength,orientation,Props.offsetFull, gridness, axArr{1});
     end
 end
 
@@ -253,13 +237,13 @@ if p.Results.getellgridness
         autoCorrReg = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
         [tmp, PropsEllipse] = scanpix.analysis.gridprops(autoCorrReg,'peakmode',p.Results.peakmode,'centthr',p.Results.centthr,'zscorethr',p.Results.zscorethr,'getprops',getGridProps,'getellgridness',false,'plot',p.Results.plot,'ax',axArr(3));
         gridness(1,2) = tmp(1,1);
-        if gridness(2) > gridness(1)
+%         if gridness(2) > gridness(1)
             PropsEllipse.ellOrient = orient;
             PropsEllipse.ellAbScale = abScale;
-        else
-            PropsEllipse.ellOrient = 0; 
-            PropsEllipse.ellAbScale = [mean(abScale) mean(abScale)];
-        end
+%         else
+%             PropsEllipse.ellOrient = 0; 
+%             PropsEllipse.ellAbScale = [mean(abScale) mean(abScale)];
+%         end
     end   
 end
 
@@ -351,7 +335,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function plotGridProps(sac,gridnessMask,closestPeaksCoord,sizeAC,scale,orientation,centralPoint, gridness,ax)
+function plotGridProps(sac,gridnessMask,closestPeaksCoord,sizeAC,scale,orientation,offset, gridness,ax)
 
 %a. get the outer ring of autoCorr in gray, but in an rgb matrix
 im = sac;
@@ -371,7 +355,6 @@ im2(msk) = im3(msk);
 %c. display the image we've made
 image(ax,im2);
 axis(ax,'image')
-xlabel(ax,'bins'); ylabel(ax,'bins');
 hold(ax,'on');
 
 %d. plot the field boundaries in a black on white double line
@@ -382,6 +365,7 @@ hold(ax,'on');
 % end
 
 %e. plot blue horizontal line to show where angle is measured from
+centralPoint = ceil(sizeAC/2);
 for k=1:3
     plot(ax,[centralPoint(1) closestPeaksCoord(k,1)],[centralPoint(2) closestPeaksCoord(k,2)],'k','Linewidth',2);
 end
@@ -391,23 +375,25 @@ plot(ax,[0.5 sizeAC(2)],centralPoint([1 1],[2 2]),'--w','Linewidth',2);
 plot(ax,[centralPoint(1,1) centralPoint(1,1)],[0.5 sizeAC(2)],'--w','Linewidth',2);
 
 %g. plot a red curve to show the orientation
-[offset, idx] = min(abs(circ_dist(orientation',[0,pi/2, pi])),[],2);
 % depending on which wall grid is anchored to, we need to bake in a shift for y
-% axis
-if idx == 1
-    shift = -pi/2;
-elseif idx == 3
-    shift = pi/2 - offset;
-else
-    if all(closestPeaksCoord(idx,:) > sizeAC/2)
-        shift = -offset;
+[minOffset,ind] = min(offset);
+%
+if orientation(ind) < 0
+    if orientation(ind) < -30*pi/180
+        shift = pi/2 - minOffset;
     else
         shift = 0;
     end
+else
+    if orientation(ind) > 30*pi/180
+        shift = 3/2*pi;
+    else
+        shift = 2*pi-minOffset;
+    end
 end
-
+%
 mag = scale*.60;
-th = shift:0.05:offset+shift;
+th = shift:0.05:minOffset+shift;
 [x,y] = pol2cart(th,mag);
 %
 plot(ax,x + centralPoint(2),  centralPoint(1)-y,'-r','Linewidth',3);
@@ -430,11 +416,12 @@ hold(ax,'off');
 axis(ax,'off');
 lastBins = (fliplr(size(im2)));
 text(ax,lastBins(2)+1, 0.5,num2str(round(gridness(1,1),3)));
-text(ax,lastBins(2)+1, lastBins(2),sprintf('%s\n%s','scale:',num2str(round(scale,2))));
-if rem(idx,2) ~= 0 
-    text(ax,lastBins(2)/2, lastBins(2)+2,sprintf('%s\n%s','offset:',num2str(round(offset*180/pi,2))));
+text(ax,lastBins(2)+1, lastBins(2)*0.8,sprintf('%s\n%s','scale:',num2str(round(scale,2))));
+text(ax,lastBins(2)+1, lastBins(2),sprintf('%s\n%s','orientation:',num2str(round(circ_mean(orientation)*180/pi,2))));
+if orientation(1) > 0
+    text(ax,lastBins(2)/2, lastBins(2)+2,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
 else
-   text(ax,lastBins(2)+1, lastBins(2)/2,sprintf('%s\n%s','offset:',num2str(round(offset*180/pi,2))));
+   text(ax,lastBins(2)+1, lastBins(2)/2,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
 end
 
 end
@@ -914,6 +901,28 @@ regSac=regSac(1+sizeDif(1):end-sizeDif(1), 1+sizeDif(2):end-sizeDif(2));
 end
 
 
+    
+    % don't allow peaks which are too close - only keep closer one to centre.
+%     [r,c] = find(triu( abs(circ_dist2(orientation)) < minOr, 1 ));
+%     delInd = [];
+%     for i = 1:length(r)
+%         if distFromCentre(r(i)) < distFromCentre(c(i))
+%             delInd = [delInd;c(i)];
+%         else
+%             delInd = [delInd;r(i)];
+%         end
+%     end
+%     delInd = unique(delInd);
+%     % remove peaks
+%     orientation(delInd)     = [];
+%     xyCoordMaxBin(delInd,:) = [];
+%     distFromCentre(delInd)  = [];
+%     [~, orderOfClose]       = sort(distFromCentre);
+%     orderOfClose            = orderOfClose(1:min([6,length(orientation)])); % in case there >6 peaks keep 6 closest ones
+%     % order by distance
+%     orientation   = mod(orientation(orderOfClose),2*pi);
+%     wavelength    = distFromCentre(orderOfClose); % wavelength
+%     xyCoordMaxBin = xyCoordMaxBin(orderOfClose,:);
 
 
 
