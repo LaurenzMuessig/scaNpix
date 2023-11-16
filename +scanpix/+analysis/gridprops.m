@@ -182,7 +182,7 @@ if getGridProps || p.Results.getellgridness
         [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, adjustAnnMask, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.zscorethr); 
     end
     
-    if failFlag; warning('Not enough peaks detected'); return; end
+    if failFlag; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); return; end
     
     % sometimes annulus can end up too big, so here we are making sure to
     % crop it to max extent of 6 central peaks - this is only for the
@@ -207,7 +207,7 @@ if getGridProps || p.Results.getellgridness
     Props.orientationFull   = orientation;
     
     % wavelength
-    Props.wavelength        = nanmean(distFromCentre([ax1_ind ax2_ind ax3_ind]); % wavelength
+    Props.wavelength        = nanmean(distFromCentre([ax1_ind ax2_ind ax3_ind])); % wavelength
     Props.wavelengthFull    = distFromCentre([ax1_ind ax2_ind ax3_ind]); 
     % offset
     Props.offsetFull = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)
@@ -357,7 +357,7 @@ image(ax,im2);
 axis(ax,'image')
 hold(ax,'on');
 
-%d. plot the field boundaries in a black on white double line
+% d. plot the field boundaries in a black on white double line
 % fields = bwboundaries(fieldsMask);
 % for k = 1:numel(fields)
 %     plot(fields{k}(:,2), fields{k}(:,1), 'w', 'Linewidth', 3)
@@ -370,11 +370,11 @@ for k=1:3
     plot(ax,[centralPoint(1) closestPeaksCoord(k,1)],[centralPoint(2) closestPeaksCoord(k,2)],'k','Linewidth',2);
 end
 
-%f. plot white horizontal line as cartesian reference frame
+% f. plot white horizontal line as cartesian reference frame
 plot(ax,[0.5 sizeAC(2)],centralPoint([1 1],[2 2]),'--w','Linewidth',2);
 plot(ax,[centralPoint(1,1) centralPoint(1,1)],[0.5 sizeAC(2)],'--w','Linewidth',2);
 
-%g. plot a red curve to show the orientation
+% g. plot a red curve to show the grid offset
 % depending on which wall grid is anchored to, we need to bake in a shift for y
 [minOffset,ind] = min(offset);
 %
@@ -514,7 +514,7 @@ function [ xyScale, eccent, orient, abScale ] = gridEllipse_fit( sac, closestPea
 
 %Check how many peaks are found - must be ==6 to proceed
 if length(closestPeaksCoord)<6
-    [ xyScale, eccent, orient, abScale ] =deal(nan);
+    [ xyScale, eccent, orient, abScale ] = deal(nan);
     warning('Too few peaks to define elipse - returning nan');
     return
 end
@@ -538,7 +538,7 @@ end
 
 %Check if an ellipse was fit - if not elipseData will be empty
 if isempty(elipseData) || isempty(elipseData.a) %No ellipse found; LM EDIT!!! 
-    warning('Failed to fit ellipse - returning nan');
+    warning('scaNpix::analysis::gridprops:Failed to fit ellipse - returning nan');
     [ xyScale, eccent, orient, abScale ] = deal(nan);
     return
 end
