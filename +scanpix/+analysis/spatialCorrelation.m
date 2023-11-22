@@ -19,8 +19,9 @@ function r = spatialCorrelation(mapsA,mapsB)
 %    r = scanpix.analysis.spatialCorrelation(maps)
 %
 %  Inputs: 
-%    mapsA - cell array of rate maps - either {maps,1} or {mapsA,mapsB} 
-%           (make sure all maps are of same size)
+%    mapsA - cell array of rate maps - either length(mapsA) = 1 or length(mapsA) = length(mapsB). If supplied as sole argin we correlate all maps with each other 
+%
+%    mapsB - cell array of rate maps - either length(mapsB) = 1 or length(mapsB) = length(mapsA) 
 %
 %  Output: 
 %    r    - 1:nCells x 1:nCells array of correlations or 1:nCells array of
@@ -41,7 +42,7 @@ end
 if nargin == 2
    
     sizeA = length(mapsA);
-    sizeB = length(mapsA);
+    sizeB = length(mapsB);
     if ~any(sizeA==1 | sizeB==1) && sizeA ~= sizeB
         error('Dimensions of map arrays are wrong. You can either have a 1x1 map array vs. nx1 map array or an nx1 map array vs. nx1 map array! Now go back and try harder.')
     end
@@ -65,8 +66,8 @@ end
 if nargin == 2
     % Here we run A v B pairwise correlations
     unVisInd  = isnan(mapsA{1}) | isnan(mapsB{1});
-    unVisIndA = repmat(unVisInd, 1,1, length(mapsA)); % get into correct format;
-    unVisIndB = repmat(unVisInd, 1,1, length(mapsB)); % get into correct format;
+    unVisIndA = repmat(unVisInd, 1,1, sizeA); % get into correct format;
+    unVisIndB = repmat(unVisInd, 1,1, sizeB); % get into correct format;
 
     rMapArrayA            = cat(3,mapsA{:});
     rMapArrayA(unVisIndA) = NaN;

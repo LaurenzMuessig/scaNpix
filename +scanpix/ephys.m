@@ -1028,9 +1028,11 @@ classdef ephys < handle
                     end
                 end
                 
-                if all(ismember(mapType,{'pos','rate'}))
-                    mapType = mapType(~strcmp(mapType,'pos'));
-                end
+%                 if ~iscell(mapType); mapType = {mapType}; end
+%                 
+%                 if all(ismember(mapType,{'pos','rate'}))
+%                     mapType = mapType(~strcmp(mapType,'pos'));
+%                 end
             else
                 mapType = 'pos';
             end
