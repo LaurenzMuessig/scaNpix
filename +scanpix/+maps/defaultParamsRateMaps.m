@@ -84,7 +84,11 @@ prms.speed.confInt               = 95;    % confidence interval
 prms.speed.showWaitBar           = showWaitBar;
 
 %% spatial autocorellograms
-prms.sac.dum                     = [];  % dummy field
+prms.sac.method                  = 'moser'; 
+prms.sac.removeMinOverlap        = true;
+prms.sac.smooth                  = false;
+prms.sac.hSize                   = 5;
+prms.sac.sigma                   = 1.5;
 
 %% grid props
 prms.gridProps.peakmode          = 'zscore';     % 

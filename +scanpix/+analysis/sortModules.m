@@ -4,23 +4,25 @@ function [modInd, gridPropsStrct] = sortModules(dataObj,method,varargin)
 
 
 %%
-addpath(genpath('D:\Dropbox\matlab\file_exchange\umapAndEppFileExchange\umap\'));
-addpath(genpath('D:\Dropbox\matlab\file_exchange\umapAndEppFileExchange\util\'));
-addpath(genpath('D:\Dropbox\matlab\file_exchange\umapAndEppFileExchange\epp\'));
+addpath(genpath('D:\Dropbox\matlab\file_exchange\umapFileExchange\umap\'));
+addpath(genpath('D:\Dropbox\matlab\file_exchange\umapFileExchange\util\'));
+addpath(genpath('D:\Dropbox\matlab\file_exchange\umapFileExchange\epp\'));
 
 %% PRMS
 % pairwise
 trialInd         = 1;
-overlapThresh    = 0.7;
-gridnessThresh   = -1;
+overlapThresh    = [0.6 0.75];
+gridnessThresh   = 0.5;
 useLabelGoodOnly = true;
 minNspikes       = 300; 
 minNCellsModule  = 3;
 plotModulesStats = true;
 hAx              = "none";
 % UMAP
-binSzCoarseMap   = 2.5;
+binSzCoarseMap   = 5;
 radiusExclude    = [15 100];
+min_dist         = 0.05;
+nNeighbours      = 5;
 %
 p = inputParser;
 addParameter(p,'trialn',trialInd,@isscalar);
@@ -31,69 +33,50 @@ addParameter(p,'overlap',overlapThresh,@isscalar);
 addParameter(p,'mingridness',gridnessThresh,@isscalar);
 addParameter(p,'binsz',binSzCoarseMap,@isscalar);
 addParameter(p,'radius',radiusExclude);
+addParameter(p,'mindist',min_dist,@isscalar);
+addParameter(p,'nn',nNeighbours,@isscalar);
 addParameter(p,'plot',plotModulesStats,@islogical);
 addParameter(p,'ax',hAx,(@(x) ishghandle(x, 'axes') || isstring(x)));
 
 parse(p,varargin{:});
 
-
 % mapPrms = scanpix.maps.defaultParamsRateMaps;
 % rMapPrms = mapPrms.rate;
+
+if isempty(dataObj.maps.sACs{p.Results.trialn})
+    scanpix.maps.addMaps(dataObj,'sac',p.Results.trialn,scanpix.maps.defaultParamsRateMaps);
+end
+
+% filter for min n spikes
+nSpikes = cellfun(@(x) length(x),dataObj.spikeData.spk_Times{p.Results.trialn});
+
+[tmpGridness,props,propsEllipse] = cellfun(@(x) scanpix.analysis.gridprops(x,'getellgridness',true),dataObj.maps.sACs{p.Results.trialn},'uni',0);
+tmp = cell2mat(tmpGridness);
+gridness = max(tmp,[],2);
+gridPropsStrct = cell2mat(cellfun(@(x) [x.gridness' x.wavelength' x.orientationFull(1,1)' x.offset'],props,'uni',0));
+ellipseFits    = cell2mat(cellfun(@(x) [x.ellOrient x.ellAbScale],propsEllipse,'uni',0));
+%
+cellind = nSpikes > p.Results.minspikes & gridness > p.Results.mingridness;
+if p.Results.usegood
+    cellind = cellind & deblank(dataObj.cell_Label) == 'good';
+end
+% sanity check
+if sum(cellind) < p.Results.minmod
+    warning('scaNpix::analysis::sortModules: Less than %i grid cells found inside dataset',p.Results.minmod);
+    modInd = zeros(length(cellind),1);
+    modInd(cellind) = 1;
+    return
+end
+
+IUratio = scanpix.analysis.computeIURatio(dataObj,p.Results.trialn,ellipseFits,cellind);
+
 switch lower(method) 
     
     case 'pw'
         %
-        if isempty(dataObj.maps.sACs{p.Results.trialn})
-            scanpix.maps.addMaps(dataObj,'sac',p.Results.trialn);
-        end
-
-        % filter for min n spikes
-        nSpikes = cellfun(@(x) length(x),dataObj.spikeData.spk_Times{p.Results.trialn});
-        
-        [tmpGridness,props,propsEllipse] = cellfun(@(x) scanpix.analysis.gridprops(x,'getellgridness',true),dataObj.maps.sACs{p.Results.trialn},'uni',0);
-        tmp = cell2mat(tmpGridness);
-        gridness = tmp(:,1);
-        gridPropsStrct = cell2mat(cellfun(@(x) [x.gridness' x.wavelength' x.orientation' x.offset'],props,'uni',0));
-        ellipseFits    = cell2mat(cellfun(@(x) [x.ellOrient x.ellAbScale],propsEllipse,'uni',0));
-        %
-        cellind = nSpikes > p.Results.minspikes & gridness > p.Results.mingridness; 
-        if p.Results.usegood
-            cellind = cellind & deblank(dataObj.cell_Label) == 'good';
-        end
-        % sanity check
-        if sum(cellind) < p.Results.minmod
-            warning('Less than 4 grid cells found inside dataset');
-            modInd = zeros(length(cellind),1);
-            modInd(cellind) = 1;
-            return
-        end
-                
-        % some init vals for the ellipses
-        [cols, rows] = meshgrid(1:length(dataObj.maps.sACs{p.Results.trialn}), 1:length(dataObj.maps.sACs{p.Results.trialn}));
-        center = ceil(length(dataObj.maps.sACs{p.Results.trialn})/2);
-        
-        % Intersection/Union ratio - according to Tocker et al. (2015)
-        IUratio = nan(length(dataObj.maps.sACs{p.Results.trialn}),length(dataObj.maps.sACs{p.Results.trialn}));
-        for i = 1:length(dataObj.maps.sACs{p.Results.trialn})
-            if ~cellind(i) || any(isnan(ellipseFits(i,2:3))); continue; end
-            % Create a logical mask of an ellipse with radii 'abScale(1)', 'abScale(2)' and tilt 'orient'
-            radiusX = ellipseFits(i,2)/2;
-            radiusY = ellipseFits(i,3)/2;
-            ellipsePixA = (sin(ellipseFits(i,1)).*(cols - center) + cos(ellipseFits(i,1)).*(rows - center)).^2 ./ radiusX^2 + (cos(ellipseFits(i,1)).*(cols - center) - sin(ellipseFits(i,1)).*(rows - center)) .^2 ./ radiusY^2 <= 1;
-            for j = i+1:length(dataObj.maps.sACs{1})
-                if ~cellind(j) || any(isnan(ellipseFits(j,2:3))); continue; end
-                
-                radiusX = ellipseFits(j,2)/2;
-                radiusY = ellipseFits(j,3)/2;
-                ellipsePixB = (sin(ellipseFits(j,1)).*(cols - center) + cos(ellipseFits(j,1)).*(rows - center)).^2 ./ radiusX^2 + (cos(ellipseFits(j,1)).*(cols - center) - sin(ellipseFits(j,1)).*(rows - center)) .^2 ./ radiusY^2 <= 1; 
-                
-                IUratio(i,j) = sum(ellipsePixA(:) & ellipsePixB(:)) / sum(ellipsePixA(:) | ellipsePixB(:)); % Intersection / Union 
-            end 
-        end
-        
         % construct graph with the ellipse ratios as edge weights
         adjMat = IUratio; 
-        adjMat(isnan(adjMat) | IUratio < p.Results.overlap) = 0;
+        adjMat(isnan(adjMat) | IUratio < p.Results.overlap(2)) = 0;
         G = graph(adjMat,'upper');
         G.Nodes.Name = cellstr(num2str(dataObj.cell_ID(:,1)));
         sG = subgraph(G, degree(G) > 1); % remove all unconnected cells
@@ -107,7 +90,9 @@ switch lower(method)
                     continue;
                 end
                 % subfuction
-                sGraphs{i} = splitGraph(subgraph(sG,components{i}));
+                tempG      = subgraph(sG,components{i});
+                ind        = ismember(G.Nodes.Name,tempG.Nodes.Name);
+                sGraphs{i} = splitGraph(tempG,IUratio(ind,ind),p.Results.overlap(1));
             end
             % format into cell array
             tmpG = sGraphs;
@@ -127,83 +112,102 @@ switch lower(method)
             % no modules found
             modInd          = zeros(length(dataObj.cell_ID),1);
             modInd(cellind) = 1;
+            warning('scaNpix::analysis::sortModules: No modules found in dataset');
+            return 
         end
         % 
     
     case 'umap'
           %% Only works with large amount of data and needs some more parameter tuning
-%         % pre process
-%         % make coarse rate map
-%         rMapPrms.binSizeSpat = prms.binSzCoarseMap;
-%         rMapPrms.smooth = 'boxcar';
-%         rMapPrms.smoothKernel = 1;
-%         %
-% %         ind = cell2mat(cellfun(@length,dataObj.spikeData.spk_Times{4},'uni',0)) > 150;
-%         mapsCoarse = scanpix.maps.makeRateMaps(dataObj.spikeData.spk_Times{4}(286), dataObj.posData.XY{4}, dataObj.spikeData.sampleT{4}, dataObj.trialMetaData(4).ppm, dataObj.posData.speed{4}, rMapPrms );
-%         % get sAC
-%         sACs = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x, x,'removeMinOverlap',false), mapsCoarse,'uni',0);
-%         % remove central peak
-%         [x,y] = meshgrid(0.5:size(sACs{1},1)-0.5,0.5:size(sACs{1},2)-0.5);
-%         distMap = sqrt( (x - size(x,1)/2).^2 + (y - size(x,2)/2).^2 ) * prms.binSzCoarseMap;
-%         indRemove = repmat(distMap < prms.radiusExclude(1) | distMap > prms.radiusExclude(2),1,1,length(sACs));
-%         sACs = cat(3,sACs{:});
-%         sACs(indRemove|isnan(sACs)) = 0; % is this right? setting to NaN doesn't work for UMAP
-%         % reshape (rows = spatial bins, columns = cells)
-%         sACs = reshape(sACs,[],size(sACs,3),1);
-%         % sACs(all(sACs==0,2),:) = [];
-%         % z-score
-%         % sACs = (sACs - nanmean(sACs,1)) ./ nanstd(sACs,1);
-%         
-%         %% umap
-%         % this needs the Matlab implementation of UMAP from the file exchange (https://uk.mathworks.com/matlabcentral/fileexchange/71902-uniform-manifold-approximation-and-projection-umap)
-%         [reduction, umap, clusterIdentifiers, extras] = run_umap(sACs','min_dist',0.05,'n_neighbors',5,'metric','cityblock','cluster_detail','very low');
+        % pre process
+        % make coarse rate map
+        rMapPrms.binSizeSpat = p.Results.binsz;
+        rMapPrms.smooth = 'boxcar';
+        rMapPrms.smoothKernel = 1;
+        rMapPrms.showWaitBar = true;
+        %
+%         ind = cell2mat(cellfun(@length,dataObj.spikeData.spk_Times{4},'uni',0)) > 150;
+        mapsCoarse = scanpix.maps.makeRateMaps(dataObj.spikeData.spk_Times{1}, dataObj.posData.XY{1}, dataObj.spikeData.sampleT{1}, dataObj.trialMetaData(1).ppm, dataObj.posData.speed{1}, rMapPrms );
+        % get sAC
+        sACs = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x, x,'removeMinOverlap',false), mapsCoarse,'uni',0);
+        % remove central peak
+        [x,y] = meshgrid(0.5:size(sACs{1},1)-0.5,0.5:size(sACs{1},2)-0.5);
+        distMap = sqrt( (x - size(x,1)/2).^2 + (y - size(x,2)/2).^2 ) * p.Results.binsz;
+        indRemove = repmat(distMap < p.Results.radius(1) | distMap > p.Results.radius(2),1,1,length(sACs));
+        sACs = cat(3,sACs{:});
+        sACs(indRemove) = 0; % is this right? setting to NaN doesn't work for UMAP
+        % reshape (rows = spatial bins, columns = cells)
+        sACs = reshape(sACs,[],size(sACs,3),1);
+        % sACs(all(sACs==0,2),:) = [];
+        % z-score
+        sACs = (sACs - nanmean(sACs,1)) ./ nanstd(sACs,1);
+        sACs(isnan(sACs)) = 0; 
+        
+        %% umap
+        % this needs the Matlab implementation of UMAP from the file exchange (https://uk.mathworks.com/matlabcentral/fileexchange/71902-uniform-manifold-approximation-and-projection-umap)
+        [reduction, umap, clusterIdentifiers, extras] = run_umap(sACs','min_dist',p.Results.mindist,'n_neighbors',p.Results.nn,'metric','cityblock','cluster_detail','very low','verbose','text');
 %         % y = tsne(sACs');
-%         
+        if any(unique(clusterIdentifiers)==0)
+            meanOverlap = nan(length(unique(clusterIdentifiers))-1,1);
+            cluIDs = unique(clusterIdentifiers);
+            cluIDs(cluIDs==0) = [];
+        else
+            meanOverlap = nan(length(unique(clusterIdentifiers)),1);
+            cluIDs = unique(clusterIdentifiers);
+        end
+        for i = cluIDs
+            meanOverlap(i) = nanmean(nanmean(IUratio(clusterIdentifiers'==i & cellind,clusterIdentifiers'==i & cellind)));
+        end
+        
+        [~, sortInd] = sort(meanOverlap);
+        
+        modInd = zeros(length(dataObj.cell_ID),1);
+        c = 1;
+        for i = sortInd'
+            modInd( clusterIdentifiers'== i & cellind ) = c;
+            c = c+1;
+        end
+        modInd(clusterIdentifiers==0) = 0;
+        %
+        sGraphs = [];
 %         %% cluster
 %         idx = dbscan(reduction,0.8,30);
 %         
 %         %% ID the grid cell cluster
-           
 end
 
 if p.Results.plot
     plotModuleStats(dataObj,p.Results.trialn,modInd,gridPropsStrct,IUratio,sGraphs);
 end
+t = 1;
 
 end
 
 % -------------------------------------------------------------------------------------------------
 % --- INLINE FUNCTIONS ----------------------------------------------------------------------------
 % -------------------------------------------------------------------------------------------------
-function [sGraphs] = splitGraph(G)
+function [sGraphs] = splitGraph(G,IURatio,thr)
 % We split the graph using the Fiedler vector
 
+minNodes = 3;
 
-minNodes = 5;
-
-L = laplacian(G);     % Laplacian matrix of Graph
-[V,D] = eig(full(L)); % eigendecomposition of Laplacian
-w = V(:,2);           % Fiedler vect
-
-% this indicates that we shouldn't split graph further, a bit arbitrary to
-% have a min n of nodes for a splt to occur but the Fiedler method doesn't
-% produce great results on a small graph.
-% D(2,2)
-if D(2,2) > 1 || height(G.Nodes) <= minNodes %
+if height(G.Nodes) <= minNodes %
     sGraphs = {G};
     return
 end
 
-if find(diff(diag(D)) > 0.05*height(G.Nodes),1,'first') == 2 % somewhat experimental
-    if ~any(w<0)
-        sGraphs = {subgraph(G,w == 0),subgraph(G,w > 0)};
-    elseif ~any(w>0)
-        sGraphs = {subgraph(G,w == 0),subgraph(G,w < 0)};
-    else
-        sGraphs = {subgraph(G,w >= 0),subgraph(G,w < 0)};
-    end
+L     = laplacian(G); % Laplacian matrix of Graph
+[V,~] = eig(full(L)); % eigendecomposition of Laplacian
+w     = V(:,2);       % Fiedler vect
+
+% decide if we need to split the graph further (recursively)
+if sum(IURatio(:) < thr) / sum(~isnan(IURatio(:))) > 0.1
+    mod1_ind = ismember(G.Nodes.Name,G.Nodes.Name(w >= 0));
+    mod2_ind = ismember(G.Nodes.Name,G.Nodes.Name(w < 0));
+    sGraphs = {splitGraph(subgraph(G,w >= 0),IURatio(mod1_ind,mod1_ind),thr),splitGraph(subgraph(G,w < 0),IURatio(mod2_ind,mod2_ind),thr)};
 else
-    sGraphs = {splitGraph(subgraph(G,w >= 0)),splitGraph( subgraph(G,w < 0))}; % BOTH subGraphs need recursive split?
+%     sGraphs = {subgraph(G,degree(G) > ceil(prctile(degree(G),1)))};
+    sGraphs = {G};
 end
 
 end
@@ -214,46 +218,67 @@ function plotModuleStats(dataObj,trialInd,modInd,gridProps,IUratio,graphData)
 % plot the results of the module sorting to check that it worked okay 
 
 cols = 'krgbymc';
-%
-axArr = scanpix.plot.multPlot([5 max([3,length(unique(modInd))-1])],'plotsize',[150 150],'plotsep',[75 40]);
-hold(axArr{1,1},'on');
+
 %
 withinMod = []; acrossMod = [];
-for i = 1:length(unique(modInd))-1
+modInData = unique(modInd);
+modInData = modInData(modInData~=0)';
+%
+axArr = scanpix.plot.multPlot([5 length(modInData)],'plotsize',[150 150],'plotsep',[75 40]);
+hold(axArr{1,1},'on');
+%
+pltInd = 1;
+for i = modInData
     
     scanpix.plot.mapsMultPlot({dataObj.maps.rate{1}(modInd==i),dataObj.maps.rate{2}(modInd==i)},{'rate'},'cellIDStr',cellstr(num2str(dataObj.cell_ID(modInd==i,1))));
  
     if i > 1
         
-        scatter(axArr{1,1},gridProps(modInd==i,3).*180/pi,gridProps(modInd==i,2),'Filled',[cols(i) 'o']);
-        
-        plot(axArr{1,i},graphData{i-1});
+        tmpOrient = gridProps(modInd==i,3).*180/pi;
+        tmpOrient( gridProps(modInd==i,3).*180/pi<0) = tmpOrient( gridProps(modInd==i,3).*180/pi<0) + 30;
+        tmpOrient( gridProps(modInd==i,3).*180/pi>0) = tmpOrient( gridProps(modInd==i,3).*180/pi>0) - 30;
+        scatter(axArr{1,1},tmpOrient,gridProps(modInd==i,2)*2.5,'Filled',[cols(i) 'o']);
+%          polarscatter(pAx,mod(6*gridProps(modInd==i,3),60*pi/180),gridProps(modInd==i,2)*2.5,'Filled',[cols(i) 'o']); hold(pAx,'on');
+%         scatter(axArr{1,1},abs(gridProps(modInd==i,2)*2.5.*sin(mod(6*gridProps(modInd==i,3).*180/pi,60))),gridProps(modInd==i,2)*2.5.*cos(mod(6*gridProps(modInd==i,3).*180/pi,60)),'Filled',[cols(i) 'o']);
+       
+        if ~isempty(graphData)
+            plot(axArr{1,pltInd},graphData{pltInd-1});
+        end
         
         tmp = IUratio(modInd==i,modInd==i);
         withinMod = [withinMod;tmp(~isnan(tmp))];
         %
-        tmp = IUratio(modInd==i, modInd~=i & modInd~=0);
+        tmp = IUratio(modInd==i, modInd~=i & modInd>1);
         acrossMod = [acrossMod;tmp(~isnan(tmp))];
         %
-        histogram(axArr{2,i},gridProps(modInd==i,2),linspace(5,30,13));
-        xlabel(axArr{2,i},'grid scale');
-        histogram(axArr{3,i},gridProps(modInd==i,3),linspace(0,30*pi/180,16));
-        xlabel(axArr{3,i},'grid orientation');
-        histogram(axArr{4,i},gridProps(modInd==i,4), linspace(0,30*pi/180,16));
-        xlabel(axArr{4,i},'offset');
+        histogram(axArr{2,pltInd},gridProps(modInd==i,2),linspace(5,30,13));
+        xlabel(axArr{2,pltInd},'grid scale');
+        histogram(axArr{3,pltInd},gridProps(modInd==i,3),linspace(-30*pi/180,30*pi/180,32));
+        xlabel(axArr{3,pltInd},'grid orientation');
+        histogram(axArr{4,pltInd},gridProps(modInd==i,4), linspace(0,30*pi/180,16));
+        xlabel(axArr{4,pltInd},'offset');
         %
-        imagesc(axArr{5,i},nanmean(cat(3,dataObj.maps.sACs{trialInd}{modInd == i}),3));
-        colormap(axArr{5,i},jet);
-        axis(axArr{5,i},'square');
+        imagesc(axArr{5,pltInd},nanmean(cat(3,dataObj.maps.sACs{trialInd}{modInd == i}),3));
+        colormap(axArr{5,pltInd},jet);
+        axis(axArr{5,pltInd},'square');
     else
+        tmpOrient = gridProps(modInd==i,3).*180/pi;
+        tmpOrient( gridProps(modInd==i,3).*180/pi<0) = tmpOrient( gridProps(modInd==i,3).*180/pi<0) + 30;
+        tmpOrient( gridProps(modInd==i,3).*180/pi>0) = tmpOrient( gridProps(modInd==i,3).*180/pi>0) - 30;
+        scatter(axArr{1,1},tmpOrient,gridProps(modInd==i,2)*2.5,'Filled','ko');
+%         scatter(axArr{1,1},gridProps(modInd==i,2)*2.5.*sin(mod(6*gridProps(modInd==i,3).*180/pi,60)),gridProps(modInd==i,2)*2.5.*cos(mod(6*gridProps(modInd==i,3).*180/pi,60)),'Filled','ko');
+%         polarscatter(pAx,mod(6*gridProps(modInd==i,3),60*pi/180),gridProps(modInd==i,2)*2.5,'Filled','ko'); hold(pAx,'on');
+
         imagesc(axArr{5,1},nanmean(cat(3,dataObj.maps.sACs{trialInd}{modInd == 0}),3)); 
         colormap(axArr{5,1},jet);
         axis(axArr{5,1},'square');
     end
-   
+    pltInd = pltInd + 1;
 end
-set(axArr{1,1},'xlim',[-30 30],'ylim',[5 30]);
+plot(axArr{1,1},[-30 -30; 30 30]',[0 62.5; 0 62.5]','k--');
+set(axArr{1,1},'xlim',[-40 40],'ylim',[12.5 62.5],'xtick',[-30:10:30],'xticklabel',{'0','10','20','30/-30','-20','-10','0'},'XTickLabelRotation',45);
 hold(axArr{1,1},'off');
+ylabel(axArr{1,1},'grid scale (cm)'); xlabel(axArr{1,1},'grid orientation (deg)');
 %
 hold(axArr{1,2},'off');
 % distribution of across v within module IUratios
@@ -264,3 +289,33 @@ hold(axArr{2,1},'off');
 xlabel(axArr{2,1},'I/U ratio');
 
 end
+
+
+% if ~any(w<0)
+%     sGraphs = {subgraph(G,w == 0),subgraph(G,w > 0)};
+% elseif ~any(w>0)
+%     sGraphs = {subgraph(G,w == 0),subgraph(G,w < 0)};
+% else
+%     sGraphs = {subgraph(G,all(w >= 0,2)),subgraph(G,all(w < 0,2))};
+% % end
+% ind = ismember(G.Nodes.Name,G.Nodes.Name(all(w >= 0,2)));
+% splitGraph(sGraphs{1},IURatio(ind,ind));
+
+
+% if D(2,2) > 1 || height(G.Nodes) <= minNodes %
+% % if height(G.Nodes) <= minNodes %
+%     sGraphs = {G};
+%     return
+% end
+% 
+% if find(diff(diag(D)) > 0.05*height(G.Nodes),1,'first') == 2 % somewhat experimental
+%     if ~any(w<0)
+%         sGraphs = {subgraph(G,w == 0),subgraph(G,w > 0)};
+%     elseif ~any(w>0)
+%         sGraphs = {subgraph(G,w == 0),subgraph(G,w < 0)};
+%     else
+%         sGraphs = {subgraph(G,w >= 0),subgraph(G,w < 0)};
+%     end
+% else
+%     sGraphs = {splitGraph(subgraph(G,w >= 0)),splitGraph( subgraph(G,w < 0))}; % BOTH subGraphs need recursive split?
+% end

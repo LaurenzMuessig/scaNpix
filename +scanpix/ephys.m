@@ -1210,7 +1210,7 @@ classdef ephys < handle
                     
                     for i = trialInd
                         % we don't want to smooth the AC but use smoothed rate map as input
-                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x),obj.maps.rate{i},'uni',0);
+                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x,prms),obj.maps.rate{i},'uni',0);
                     end
                     
                 case 'objvect'

@@ -20,12 +20,14 @@ function plotRateMap(map,varargin)
 defaultColMap   = 'jet';
 defaultNSteps   = 11;
 defaulthAx      = "none";
+interpolate     = false;
 defaultCMapEdge = [];
 
 p = inputParser;
-addOptional(p,'ax',defaulthAx, ( @(x) ishghandle(x, 'axes') || isstring(x)));
-addParameter(p,'colmap',defaultColMap,@ischar);
-addParameter(p,'nsteps',defaultNSteps,@isscalar);
+addOptional(p,'ax',       defaulthAx,     ( @(x) ishghandle(x, 'axes') || isstring(x)));
+addParameter(p,'colmap',  defaultColMap,  @ischar);
+addParameter(p,'nsteps',  defaultNSteps,  @isscalar);
+addParameter(p,'interp',  interpolate,    @islogical);
 addParameter(p,'cmapEdge',defaultCMapEdge);
 parse(p,varargin{:});
 
@@ -49,9 +51,13 @@ if isempty(p.Results.cmapEdge)
 else
     [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, 'colmap',p.Results.colmap, 'nsteps', p.Results.nsteps, 'cmapEdge', p.Results.cmapEdge); % bin rate map
 end
+%
+if p.Results.interp
+    rMapBinned = scanpix.maps.interpMap(rMapBinned); 
+end
+
 % plot heat map
 imagesc(hAx,'CData',rMapBinned,[0 size(cMapBinned,1)]);
-
 colormap(hAx, cMapBinned);
 axis(hAx,'off');
 
