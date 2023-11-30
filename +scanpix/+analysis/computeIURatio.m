@@ -13,8 +13,8 @@ function IUratio = computeIURatio(ephysObj,trialInd,ellipseFits,cellFilter)
 % Inputs:
 %    ephysObj    - scanpix.ephys object
 %    trialInd    - numeric index for trial which you want to use
-%    ellipseFits - array of ellipse fits (one for each cell); should be a nCell by 3 array (orientation, length major axis, length minor axis)  
-%    cellFilter  - logical index for cells you want to use (optional)
+%    ellipseFits - array of ellipse fits (one for each cell); should be a nCell by 3 array [orientation, length major axis, length minor axis] (optional)  
+%    cellFilter  - logical index for cells you want to use/skip (optional)
 %
 %
 % Outputs: 
