@@ -104,8 +104,11 @@ if ~isempty(obj.params('ScalePos2PPM'))
     ppm(1) = obj.params('ScalePos2PPM');
     obj.trialMetaData(trialIterator).envBorderCoords = obj.trialMetaData(trialIterator).envBorderCoords .* scaleFact;
     if circleFlag
-        [xCenter, yCenter, radius] = deal(xCenter*scaleFact,yCenter*scaleFact,radius*scaleFact);
+        [xCenter, yCenter, radius] = deal(xCenter*scaleFact, yCenter*scaleFact, radius*scaleFact);
     end
+    obj.trialMetaData(trialIterator).PosIsScaled = true;
+else
+    obj.trialMetaData(trialIterator).PosIsScaled = false;
 end
 
 % remove tracking errors that fall outside box

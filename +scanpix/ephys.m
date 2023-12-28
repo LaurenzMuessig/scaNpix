@@ -60,7 +60,7 @@ classdef ephys < handle
         fields2spare          cell    = {'params','dataSetName','cell_ID','cell_Label'}; % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
         mapParams             struct  = scanpix.maps.defaultParamsRateMaps;
         loadFlag              logical = false;                                         % flag so we know something has been loaded into object
-        badChans
+        loadRawDrift          logical = false;
     end
     
     %% METHODS
@@ -920,12 +920,10 @@ classdef ephys < handle
                 return;
             else
                 trialNameStrOut = trialNameStrIn(select);
-                
-%                 if nargout == 1
-                    ind            = ismember(obj.trialNames,trialNameStrOut);
-                    obj.trialNames = obj.trialNames(ind);
-                    obj.dataPath   = obj.dataPath(ind);
-%                 end
+                %
+                ind            = ismember(obj.trialNames,trialNameStrOut);
+                obj.trialNames = obj.trialNames(ind);
+                obj.dataPath   = obj.dataPath(ind);
             end
             
         end
@@ -1343,9 +1341,9 @@ classdef ephys < handle
 %                 prompts = {'mode',    'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'save' };
 %                 varargs = {'mode',    'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'save' };
 %                 defVals = {'single',  obj.trialMetaData(1).nChanTot, 250,                  5,                  40,                  0.375,             0,           0,     };
-                prompts = {'mode',    'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply filter', 'save' };
-                varargs = {'mode',    'nwave',              'getnch',           'nsamp',             'prepeak',         'filter',       'save' };
-                defVals = {'single',  250,                  5,                  40,                  0.375,             0,              0,     };
+                prompts = {'mode',    'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply filter', 'save', 'clu IDs'};
+                varargs = {'mode',    'nwave',              'getnch',           'nsamp',             'prepeak',         'filter',       'save',  'clu'   };
+                defVals = {'single',  250,                  5,                  40,                  0.375,             false,          false,       []      };
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
                     warning('scaNpix::ephys::loadWaves: Waveform loading aborted. That lacks class mate...');

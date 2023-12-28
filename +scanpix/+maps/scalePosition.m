@@ -63,6 +63,7 @@ end
 
 % scale path
 XYScaled = nan((size(obj.posData.XY{trialIndex})));  % don't use raw pos??
+lowerEdge = nan(1,2);
 for j = 1:2
     
     tempPos = obj.posData.XY{trialIndex}(:,j);
@@ -70,32 +71,34 @@ for j = 1:2
     if isempty(obj.trialMetaData(trialIndex).envBorderCoords) || circleFlag
         pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % using the max(pos) should make it unviversal between npix and dacq.
         
-        lowerEdge = find(pathHist >= minOccForEdge, 1, 'first');
+        lowerEdge(j) = find(pathHist >= minOccForEdge, 1, 'first');
         upperEdge = find(pathHist >= minOccForEdge, 1, 'last');
     else
-        lowerEdge = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:));
+        lowerEdge(j) = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:));
         upperEdge = max(obj.trialMetaData(trialIndex).envBorderCoords(j,:)); %
     end
     
     tempPos( tempPos > upperEdge )  = NaN;
-    tempPos( tempPos <= lowerEdge ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
-    tempPos = tempPos - lowerEdge;
-    tempPos = tempPos .* (  envSzPix(j) / (upperEdge-lowerEdge) );
+    tempPos( tempPos <= lowerEdge(j) ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
+    tempPos = tempPos - lowerEdge(j);
+    tempPos = tempPos .* ( envSzPix(j) / (upperEdge-lowerEdge(j)) );
     
     tempPos(tempPos > envSzPix(j)) = envSzPix(j);
     
     XYScaled(:,j) = tempPos;
     
-    if isfield(obj.trialMetaData(trialIndex),'objectPos') && ~isempty(obj.trialMetaData(trialIndex).objectPos)
-        obj.trialMetaData(trialIndex).objectPos(j) = obj.trialMetaData(trialIndex).objectPos(j) - lowerEdge;
-    end
+    % if isfield(obj.trialMetaData(trialIndex),'objectPos') && ~isempty(obj.trialMetaData(trialIndex).objectPos)
+    %     obj.trialMetaData(trialIndex).objectPos(j) = obj.trialMetaData(trialIndex).objectPos(j) - lowerEdge;
+    % end
 end
         
 % For consistency, make sure that all x=nan and all y= nan match up %
 XYScaled(any(isnan(XYScaled),2),:) = NaN;
 % output
 obj.posData.XY{trialIndex} = XYScaled;
-
+%
+obj.trialMetaData(trialIndex).PosIsFitToEnv{1,1} = true;
+obj.trialMetaData(trialIndex).PosIsFitToEnv{1,2} = lowerEdge;
 
 end
 

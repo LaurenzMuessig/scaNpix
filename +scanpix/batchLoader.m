@@ -23,12 +23,21 @@ function objData = batchLoader(cribSheetPath, method, dataType, varargin )
 %%
 objParams       = [];
 mapParams       = [];
+loadPos          = true;
+loadSpikes       = true;
+loadLFP          = false;
 
 p = inputParser;
 addParameter(p,'objParams', objParams, @(x) isa(x,'containers.Map') || ischar(x) || isempty(x));
 addParameter(p,'mapParams', mapParams, @(x) isstruct(x) || ischar(x) || isempty(x));
+addParameter(p,'pos',loadPos, @islogical);
+addParameter(p,'spikes',loadSpikes, @islogical);
+addParameter(p,'lfp',loadLFP, @islogical);
 
 parse(p,varargin{:});
+% reformat params
+prms = p.Parameters;
+prms(2,:) = struct2cell(p.Results);
 
 %%
 expInfo = scanpix.helpers.readExpInfo( cribSheetPath, method );
@@ -36,8 +45,9 @@ expInfo = scanpix.helpers.readExpInfo( cribSheetPath, method );
 objData = cell(length(expInfo), 1);
 c = 1;
 for i = 1:length(expInfo.animal)
+
     try
-        objData{c} = scanpix.objLoader(dataType, expInfo.fullPath{i}, 'objParams', p.Results.objParams, 'mapParams', p.Results.mapParams);
+        objData{c} = scanpix.objLoader(dataType, expInfo.fullPath{i}, prms{:});
     catch
         warning('Couldn''t load dataset from rat %s starting with trial %s',expInfo.animal{i}, expInfo.fullPath{i}{1});
     end

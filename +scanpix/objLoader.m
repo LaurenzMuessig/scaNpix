@@ -77,9 +77,12 @@ if ischar(dataPath)
     dataPath = {dataPath};
 end
 % parse directories and trialnames
-[filepath,name,~] = cellfun(@fileparts,dataPath,'uni',0);
+[filepath,name,ext] = cellfun(@fileparts,dataPath,'uni',0);
 obj.dataPath     = filepath;
 obj.dataPathSort = filepath;
+if strcmp(ext,'.dat')
+    obj.loadRawDrift = true;
+end
 
 if strcmpi(objType,'npix')
     trialNames = cellfun(@(x) x{1}, cellfun(@(x) regexp(x,'[.]ap','split'),name,'uni',0),'uni',0);

@@ -33,18 +33,19 @@ end
 
 % in 1 single trial there are a bunch of sync pulses missing in middle of
 % trial - not sure what happened there. hopefully it's a one off 
-missedSyncs = find(diff(syncTTLs) > 1.5*1/obj.params('posFs'));
-if ~isempty(missedSyncs)
-    nMissedPulses = floor((syncTTLs(missedSyncs+1) - syncTTLs(missedSyncs)) * obj.params('posFs'));
-    missedPulses  = missedSyncs+1:missedSyncs+nMissedPulses;
-    interp_pulseT          = interp1([1:missedSyncs,missedSyncs+nMissedPulses+1:length(syncTTLs)+nMissedPulses], syncTTLs', missedPulses);
-    temp                   = zeros(length(syncTTLs)+nMissedPulses,1);
-    temp(missedPulses,1)   = interp_pulseT;
-    temp(temp(:,1) == 0,1) = syncTTLs;
-    syncTTLs               = temp;
-    warning('scaNpix::ephys::loadSpikes:Missing sync pulses in neuropixel datastream. Interpolated missing samples, but better go and check that');
+if ~obj.loadRawDrift
+    missedSyncs = find(diff(syncTTLs) > 1.5*1/obj.params('posFs'));
+    if ~isempty(missedSyncs)
+        nMissedPulses = floor((syncTTLs(missedSyncs+1) - syncTTLs(missedSyncs)) * obj.params('posFs'));
+        missedPulses  = missedSyncs+1:missedSyncs+nMissedPulses;
+        interp_pulseT          = interp1([1:missedSyncs,missedSyncs+nMissedPulses+1:length(syncTTLs)+nMissedPulses], syncTTLs', missedPulses);
+        temp                   = zeros(length(syncTTLs)+nMissedPulses,1);
+        temp(missedPulses,1)   = interp_pulseT;
+        temp(temp(:,1) == 0,1) = syncTTLs;
+        syncTTLs               = temp;
+        warning('scaNpix::ephys::loadSpikes:Missing sync pulses in neuropixel datastream. Interpolated missing samples, but better go and check that');
+    end
 end
-
 
 %             % decide what to load - phy or kilosort
 %             if obj.params('loadFromPhy') && ~reloadFlag

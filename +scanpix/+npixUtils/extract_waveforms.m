@@ -12,9 +12,7 @@ function extract_waveforms(ephysObj,trialInd,varargin)
 %           trialInd    - index for trial we want to get waveform data for  
 %           varargin    - name-value: comma separated list of name-value pairs     
 %
-% Outputs:  npixObj     - class obj, now containing waveform data
-%           waveforms   - array of waveforms for each cluster (format:)
-%           channels    - array of channel IDs for each cluster
+% Outputs:  
 %
 % LM 2021
 %
@@ -30,12 +28,10 @@ end
 
 %
 driftFlag = false;
-nChan     = 385; %ephysObj.trialMetaData(1).nChanTot;
 
 %% deal with raw data input
 if strcmp(p.Results.mode,'cat')
-    % load from drift corr file should be the default really whjen using
-    % KS2.5 or 3
+    % load from drift corr file should be the default really when using KS2.5 or 3
     if isempty(p.Results.path2cat)
         % prompt user to select file
         [fNameCat,pathCat] = uigetfile(fullfile(cd,'*.dat;*.ap.bin'),'Please Select the Drift Corrected File');
@@ -58,9 +54,12 @@ if strcmp(p.Results.mode,'cat')
     if strcmp(ext,'.dat')
         driftFlag = true;
         nChan     = ephysObj.trialMetaData(1).nChanSort;
+    else
+        nChan     = ephysObj.trialMetaData(1).nChanTot;
     end
 elseif strcmp(p.Results.mode,'single')
     % if you load from ap.bin raw - you should really HP filter and CAR this data before extracting waveforms
+    nChan     = ephysObj.trialMetaData(1).nChanTot;
     path2raw = fullfile(ephysObj.dataPath(trialInd),strcat(ephysObj.trialNames(trialInd),ephysObj.fileType));
 else
     error([p.Results.mode ' is not a valid option. Try ''cat'' or ''single'' instead.']);
@@ -125,7 +124,7 @@ for i = trialInd % loop over trials
         if driftFlag
             try
 %                 tmp  = load(fullfile(fileparts(path2raw{i}),'whiteMat.mat')); % for KS3 we can't use the .npy anymore as it's just a diagonal matrix with the int16 scaling
-                tmp  = load(fullfile(fileparts(ephysObj.dataPathSort{i}),'whiteMat.mat'));
+                tmp  = load(fullfile(ephysObj.dataPathSort{i},'whiteMat.mat'));
                 winv = tmp.Wrot^-1;
             catch
                 error('Can''t find whitening matrix! Either find that file or load from raw .ap.bin. Does that sound like a plan?');
@@ -230,9 +229,7 @@ for i = trialInd % loop over trials
                 startIdx = max([currSTimesBin(k)-0.25*p.Results.fs,1]);
                 endIdx   = min([currSTimesBin(k)+0.25*p.Results.fs,nSamp]);
                 currData = double(mmf.Data.x(:,startIdx:endIdx)'); %* winv;
-%                 currData = mmf.Data.x(:,startIdx:endIdx)'; %* winv;
                 currData = HPfilter(currData, currChannels, p.Results.fs);
-%                 currData = currData';
                 currData = currData(0.25*p.Results.fs-nSampPrePeak+1:0.25*p.Results.fs+p.Results.nsamp-nSampPrePeak+1,:); 
             else
                 startIdx = max([currSTimesBin(k)-nSampPrePeak,1]);
@@ -240,6 +237,7 @@ for i = trialInd % loop over trials
                 currData = double(mmf.Data.x(:,startIdx:endIdx)') * winv;
 %                 currData = currData(:,currChannels); 
             end
+            currData = currData(:,currChannels);
             %
 %             currData = currData .* p.Results.bitres ./ p.Results.gain .* 1e6; %
 
@@ -248,9 +246,9 @@ for i = trialInd % loop over trials
 %                 otherSpikes = peelOffSpikes(times, templatesUnWhite, ephysObj.cell_ID(j,1), currChannels, STVect, cluVect, amps, relTvec);
 %                 currData = double(int16(currData(:,currChannels)) - int16(otherSpikes'));
 %             else
-                currData = currData(:,currChannels);
+                % currData = currData(:,currChannels);
 %             end
-            currWave(c,:,:) = currData .* p.Results.bitres ./ p.Results.gain .* 1e6; %
+            currWave(c,:,1:size(currData,2)) = currData .* p.Results.bitres ./ p.Results.gain .* 1e6; %% uV conversion
 %             currWave(c,:,:) = currData(:,currChannels);
 %             currData = currData(:,currChannels); 
             %
@@ -273,7 +271,19 @@ for i = trialInd % loop over trials
     %
     if p.Results.save
         waveforms = [tmpWaveforms tmpChannels];
-        save(fullfile(ephysObj.dataPath{i},'waveforms.mat'),'waveforms');
+        save(fullfile(ephysObj.dataPath{i},'waveforms.mat'),'waveforms','-v7.3');
+        %
+        path2ChanMap = dir(fullfile(fileparts(ephysObj.dataPath{i}),'*kilosortChanMap.mat'));
+        try
+            chanMap  = load(fullfile(path2ChanMap.folder,path2ChanMap.name));
+            chansOrg = scanpix.npixUtils.mapChans(chanMap.connected,chanMap.chanMap);
+            save(fullfile(ephysObj.dataPath{i},'waveForms_channelsRaw.mat'),'chansOrg','-v7.3');
+        catch
+            warning('Can''t find channel map that was used for kilosorting the data. Can''t generate ''waveForms_channelsRaw.mat''.');
+        end
+        %
+        cellIDs = ephysObj.cell_ID;
+        save(fullfile(ephysObj.dataPath{i},'waveForms_cluIDs.mat'),'cellIDs','-v7.3');
     end
     
 end
@@ -295,7 +305,7 @@ defaultFs            = 30000;     % sampleing rate
 defaultGain          = 500;       % gain
 defaultBitResolution = 1.2/2^10;  % in V/bit
 defaultChanSpaceVert = 20;        % vertical channel spacing in um
-defaultApplyFilter   = false;     % do common average referencing
+defaultApplyFilter   = false;     % do common average referencing and HP filtering
 peelTemplates        = false;
 % defaultUnWhitedata   = false;     % unwhiten data - important if using KS2.5 or higher as drift corrected file is whitened  
 mode                 = 'single';

@@ -183,9 +183,9 @@ if getGridProps || p.Results.getellgridness
     annMask = distMap < radii(min([length(allGridnessVals),maxInd+2])) * 1.05 & distMap > radii(1); % extent outer radius a bit to capture all peaks well
     % find peaks
     if strcmp(p.Results.peakmode,'log')
-        [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, adjustAnnMask, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.peakthr,centrPeakMask,centrPeakDiam); 
+        [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.peakthr,centrPeakMask,centrPeakDiam); 
     else
-        [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, adjustAnnMask, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.zscorethr); 
+        [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.zscorethr); 
     end
     
     if failFlag; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); return; end
@@ -253,7 +253,7 @@ end
 % -------------------------------------------------------------------------------------------------
 % --- INLINE FUNCTIONS ----------------------------------------------------------------------------
 % -------------------------------------------------------------------------------------------------
-function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, adjustAnnMask, failFlag] = findGridPeaks(autoCorr,annMask,mode,thr,varargin)
+function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, failFlag] = findGridPeaks(autoCorr,annMask,mode,thr,varargin)
 %%
 centPeakMask = [];  
 peakDiameter = [];
@@ -265,7 +265,7 @@ addOptional(p,'dia',peakDiameter,(@(x) isscalar(x) || isempty(x)));
 parse(p,varargin{:});
 
 failFlag      = false;
-adjustAnnMask = false;
+% adjustAnnMask = false;
 
 %%
  % --------------------------------------------------------------------------------------------------
