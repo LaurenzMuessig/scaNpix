@@ -4,7 +4,7 @@ function xyRot = rotatePoints(xy,refPoints)
 % angle of misalignment
 theta = atan2(diff(refPoints(2,:)),diff(refPoints(1,:))); 
 % rotate
-R = [cos(theta) -sin(theta); sin(theta) cos(theta)];
+R = [cos(theta) -sin(theta); sin(theta) cos(theta)]; % rotation matrix
 xyRot = xy * R;
 
 end

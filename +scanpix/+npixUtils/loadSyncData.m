@@ -1,4 +1,4 @@
-function syncTTLs = loadSyncData(nFramesBonsai,BonsaiCorruptFlag,varargin)
+function [syncTTLs, missedSyncs] = loadSyncData(obj, trialIterator, varargin)
 % loadSyncData - load sync data to synchronise tracking data from Bonsai
 % and neuropixel ephys data. We are assuming that the current directory
 % contains the raw data and possibly output from CatGT
@@ -24,121 +24,80 @@ function syncTTLs = loadSyncData(nFramesBonsai,BonsaiCorruptFlag,varargin)
 
 
 %% Params
-prms.lfpFs         = 2500; % sampling rate for LFP, 2.5kHz is default
-prms.nChannels     = 385;
-prms.syncChannel   = 385;
-prms.syncSigBit    = 10; % SMA input in IMEC board is bit #6 in SpikeGLX (counting down from 16)
-
-% ---------------------------------------------------------------------------------- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-
-if nargin < 2
-    BonsaiCorruptFlag = false;
-end
+mode         = 'catgt';
+lfpFs        = 2500;
+syncChannel  = 385;
+syncSigBit   = 10;
+%
+p = inputParser;
+addParameter(p,'mode',     mode,        @ischar);
+addParameter(p,'fs',       lfpFs,       @isscalar);
+addParameter(p,'syncchan', syncChannel, @isscalar);
+addParameter(p,'syncbit',  syncSigBit,  @isscalar);
+%
+parse(p,varargin{:});
 
 %% process sync channel data
-% first try looking for .txt file output from CatGT...
-syncTTLFile = dir('*TTL.txt');
+switch p.Results.mode
+    case 'catgt'
+        % first try looking for .txt file output from CatGT...
+        syncTTLFile = dir(fullfile(obj.dataPath{trialIterator},'*TTL.txt'));
 
-if isempty(syncTTLFile)
-    
-    [fName,fPath] = uigetfile(fullfile(cd,'*.txt'),'Select txt file with sync TTL times for current data set');
-    cd(fPath);
-else
-    fName = syncTTLFile.name;
+        if isempty(syncTTLFile)
+            [fName,fPath] = uigetfile(fullfile(obj.dataPath{trialIterator},'*.txt'),'Select txt file with sync TTL times for current data set');
+            cd(fPath);
+        else
+            fName = syncTTLFile.name;
+            cd(syncTTLFile.folder);
+        end
+
+        fid = fopen(fName);
+        syncTTLs = cell2mat(textscan(fid,'%f'));
+        % syncTTLs = syncTTLs{1};
+        fclose(fid);
+    case 'lfp'
+        cd(obj.dataPath{trialIterator});
+        syncTTLs = loadSyncFromLFP(nChannels,p.Results.syncchan,p.Results.syncbit,p.Results.fs);
+    otherwise
+        error('scaNpix::ephys::loadSyncData:%s is not a valid method to load the sync data.', p.Results.mode)
 end
 
-fid = fopen(fName);
-syncTTLs = textscan(fid,'%f');
-syncTTLs = syncTTLs{1};
-fclose(fid);
-
-% if ~isempty(syncTTLFile)
-%     % best case - note that CatGT only registers complete TTLs, so
-%     % regularly drops last one
-%     fid = fopen(syncTTLFile.name);
-%     syncTTLs = textscan(fid,'%f');
-%     syncTTLs = syncTTLs{1};
-%     fclose(fid);    
-% else
-%     % if we didn't run CatGT (legacy data..)..
-%     % .. first try and load data
-%     syncTTLs = loadSyncFromLFP(prms);    
-% end
-
-
-    
-
-
-
-% in case we just wanted the sync data, we'll stop here and don't worry
-% about Bonsai
-if nargin == 0 || isempty(nFramesBonsai)
-    return;
-end
-
-% this needs a bit more experimentation if we accounted for all eventualities
-% in an acceptable manner, esp. for corrupt data
-if ~BonsaiCorruptFlag && nFramesBonsai ~= length(syncTTLs)
-    if nFramesBonsai - length(syncTTLs) == -1
-        % this case isn't 100% clear as frame could be missing anywhere - don't think this ever happens anymore since using CatGT to extract sync pulse times
-        disp('Warning. Missmatch between n of pos samples and n of TTLs. -1 frame in pos data, so we assume the last frame in neuropix stream is incomplete and will be removed from the data.');
-        syncTTLs = syncTTLs(1:end-1);
-    elseif nFramesBonsai - length(syncTTLs) == +1
-        % this case should be clear and essentially no frame is missing!
-        disp('Warning. Missmatch between n of pos samples and n of TTLs. +1 frame in pos data, so the last TTL was deemed incomplete. We will remove last pos frame.');
-    elseif nFramesBonsai - length(syncTTLs) > 1
-        % this case should happen when animal unplugs during recording
-        fprintf('Warning. There are %i more frames in tracking stream compared to neuropix data - assuming that the animal unplugged in recording. If not, you are in trouble\n', nFramesBonsai-length(syncTTLs));
-    else
-        fprintf('Warning. Missmatch between n of pos samples and n of TTLs in neuropix data - %i vs. %i. Better go and check out why.\n', nFramesBonsai, length(syncTTLs));
+% rarely there are some missing sync pulses in the npix stream
+missedSyncs = [];
+if ~obj.isConcat
+    missedSyncs = find(diff(syncTTLs) > 1.5*1/obj.params('posFs'));
+    if ~isempty(missedSyncs)
+        missedPulses = [];
+        missedSyncs(:,2) = floor((syncTTLs(missedSyncs+1) - syncTTLs(missedSyncs)) * obj.params('posFs'));
+        missedSyncs(:,3) = syncTTLs(missedSyncs(:,1)) - syncTTLs(1);
+        cs_NMissed = cumsum([0;missedSyncs(:,2)]);
+        x = 1:length(syncTTLs);
+        for i = 1:size(missedSyncs,1)
+            missedPulses    = [missedPulses,(missedSyncs(i,1)+1:missedSyncs(i,1)+missedSyncs(i,2)) + cs_NMissed(i)];
+            x(missedSyncs(i)+1:end) = x(missedSyncs(i,1)+1:end) + missedSyncs(i,2); % bump sample points for interpolation
+        end
+        interp_pulseT          = interp1(x, syncTTLs', missedPulses);
+        temp                   = zeros(length(syncTTLs)+length(missedPulses),1);
+        temp(missedPulses,1)   = interp_pulseT;
+        temp(temp(:,1) == 0,1) = syncTTLs;
+        syncTTLs               = temp;
+        warning('scaNpix::ephys::loadSyncData: %i missing sync pulses across %i chunks in neuropixel datastream. Interpolated missing samples, but better go and check that',length(missedPulses),i);
     end
-elseif BonsaiCorruptFlag
-    % Note: It took me a while to figure out that FlyCap is sensitive to how
-    % it's closed when switching between cameras or changing settings. This
-    % results in the camera not sending it's metadata over (i.e. frame
-    % count and time stamp). When we haven't got the framecount we can't
-    % reconstruct which frames are missing. So by assuming we have an even
-    % sampling interval we will introduce some jitter, so at some point the
-    % 2 streams will be more and more out of sync (also depending on when 
-    % the frames were skipped, the later the better). So for these cases we
-    % should check the data, i.e. e.g. do we see an obvious drop in the 
-    % spatial properties. 
-    if nFramesBonsai == length(syncTTLs)
-        % best case scenario - no frames are missing
-        disp('Corrupt Point Grey MetaData Logging: No frame N mismatch with neuropix stream! All good. Phew...') 
-    elseif nFramesBonsai - length(syncTTLs) == -1
-        disp('Corrupt Point Grey MetaData Logging: -1 frame in position data. Assuming last frame is missing for Bonsai data...');
-        syncTTLs = syncTTLs(1:end-1);
-    elseif nFramesBonsai - length(syncTTLs) == +1
-        disp('Corrupt Point Grey MetaData Logging: +1 frame in position data. Assuming last frame is missing in neuropix data...')
-    else
-        fprintf('Corrupt Point Grey MetaData Logging: Frame N mismatch is %i (Bonsai) vs. %i (Neuropix). We''ll assume even sampling between frames, but you should check carefully if n of mismatch is too big!\n', nFramesBonsai, length(syncTTLs));
-    end
-    
 end
 
 end
 
 % wrapper to load sync data from lfp
-function syncTTLs = loadSyncFromLFP(prms)
+function syncTTLs = loadSyncFromLFP(nChannels,syncChannel,syncSigBit,lfpFs)
 
 try
     tmp = load('syncTTLs.mat');
     f = fieldnames(tmp);
     syncTTLs = tmp.(f{1}){2}; % only us
 catch
-    syncChData = scanpix.npixUtils.extractSyncChannel(cd, prms.nChannels, prms.syncChannel); % from cortex lab repository - loads sync channel from LFP file
-    eventTimes = scanpix.npixUtils.spikeGLXdigitalParse(syncChData, prms.lfpFs ); % from cortex lab repository - demultiplexes the 16 bit sync channel - SLOW!
-    syncTTLs  = eventTimes{prms.syncSigBit}; % {1} = all; {2} = ON; {3} = OFF ; times are in s
+    syncChData = scanpix.npixUtils.extractSyncChannel(cd, nChannels, syncChannel); % from cortex lab repository - loads sync channel from LFP file
+    eventTimes = scanpix.npixUtils.spikeGLXdigitalParse(syncChData, lfpFs ); % from cortex lab repository - demultiplexes the 16 bit sync channel - SLOW!
+    syncTTLs   = eventTimes{syncSigBit}; % {1} = all; {2} = ON; {3} = OFF ; times are in s
     save('syncTTLs.mat','syncTTLs'); % save to disk as a huge time sink
     syncTTLs = syncTTLs{2};
 end

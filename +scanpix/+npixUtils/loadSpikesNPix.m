@@ -25,39 +25,14 @@ fprintf('Loading Neural Data for %s .......... ', obj.trialNames{trialIterator})
 cd(obj.dataPath{trialIterator});
 if reloadFlag
     syncTTLs = obj.trialMetaData(trialIterator).offSet;
-elseif ~isfield(obj.trialMetaData,'BonsaiCorruptFlag')
-    syncTTLs = scanpix.npixUtils.loadSyncData();
 else
-    syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
+    syncTTLs = obj.spikeData(1).sampleT{trialIterator};
+% elseif ~isfield(obj.trialMetaData,'BonsaiCorruptFlag')
+%     syncTTLs = scanpix.npixUtils.loadSyncData();
+% else
+%     syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
 end
 
-% in 1 single trial there are a bunch of sync pulses missing in middle of
-% trial - not sure what happened there. hopefully it's a one off 
-if ~obj.loadRawDrift
-    missedSyncs = find(diff(syncTTLs) > 1.5*1/obj.params('posFs'));
-    if ~isempty(missedSyncs)
-        nMissedPulses = floor((syncTTLs(missedSyncs+1) - syncTTLs(missedSyncs)) * obj.params('posFs'));
-        missedPulses  = missedSyncs+1:missedSyncs+nMissedPulses;
-        interp_pulseT          = interp1([1:missedSyncs,missedSyncs+nMissedPulses+1:length(syncTTLs)+nMissedPulses], syncTTLs', missedPulses);
-        temp                   = zeros(length(syncTTLs)+nMissedPulses,1);
-        temp(missedPulses,1)   = interp_pulseT;
-        temp(temp(:,1) == 0,1) = syncTTLs;
-        syncTTLs               = temp;
-        warning('scaNpix::ephys::loadSpikes:Missing sync pulses in neuropixel datastream. Interpolated missing samples, but better go and check that');
-    end
-end
-
-%             % decide what to load - phy or kilosort
-%             if obj.params('loadFromPhy') && ~reloadFlag
-%                 if exist(fullfile(obj.dataPath{trialIterator},'cluster_info.tsv'),'file') == 2
-%                     loadFromPhy = true;
-%                 else
-%                     warning('scaNpix::npix::loadSpikes:Can''t find ''cluster_info'' from phy output. Will try using kilosort data instead!');
-%                     loadFromPhy = false;
-%                 end
-%             else
-%                 loadFromPhy = false;
-%             end
 %% load sorting resuts
 % deal with directories in case of reload or KS output is in different directory to raw data
 if reloadFlag || exist(fullfile(obj.dataPath{trialIterator},'spike_times.npy'),'file') ~= 2
@@ -70,15 +45,8 @@ if reloadFlag || exist(fullfile(obj.dataPath{trialIterator},'spike_times.npy'),'
     path2data_B = path2data_A;
     obj.dataPathSort{trialIterator} = path2data_A;
 else
-%     if isempty(obj.dataPathSort) || isempty(obj.dataPathSort{trialIterator})
-%         [path2data_A,path2data_B] = deal(obj.dataPath{trialIterator});
-%         obj.dataPathSort{trialIterator} = path2data_A; 
-%     else
-       [path2data_A,path2data_B] = deal(obj.dataPathSort{trialIterator});
-%     end
+    [path2data_A,path2data_B] = deal(obj.dataPathSort{trialIterator});
 end
-%
-
 
 % decide what to load - phy or kilosort
 if obj.params('loadFromPhy')
@@ -105,13 +73,12 @@ end
 % load spike times
 spikeTimes         = readNPY(fullfile(path2data_A,'spike_times.npy'));
 spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
-obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+% obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
 % load cluster IDs
 clustIDs           = readNPY(fullfile(path2data_A,'spike_clusters.npy')) + 1; % 0 based index
 % load amplitude
 % amps               = readNPY(fullfile(path2data_A,'amplitudes.npy')) + 1; % 0 based index
 % spkTemps           = readNPY(fullfile(path2data_A,'spike_templates.npy')) + 1; % 0 based index
-
 
 if loadFromPhy
     % phy curated output - only load clusters labelled good
@@ -191,6 +158,10 @@ spikeTimesFin        = spikeTimesFin(indSort);
 % spkTemps             = spkTemps(indSort);
 %
 % if loadAmps; return; end
+
+if ~isempty(obj.posData.sampleT{trialIterator})
+    scanpix.npixUtils.dataLoadingReport(length(obj.posData.sampleT{trialIterator}),length(syncTTLs),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
+end
 
 %% output
 obj.spikeData(1).spk_Times{trialIterator} = spikeTimesFin;

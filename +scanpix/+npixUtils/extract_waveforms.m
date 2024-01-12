@@ -36,7 +36,7 @@ if strcmp(p.Results.mode,'cat')
         % prompt user to select file
         [fNameCat,pathCat] = uigetfile(fullfile(cd,'*.dat;*.ap.bin'),'Please Select the Drift Corrected File');
         if isnumeric(pathCat)
-            warning('If you want to use the drift corrected data to extract waveforms, I need some info where that might be found on your disk. Too late now, but maybe you''ll do better later.');
+            warning('scaNpix::ephys::extract_waveforms:If you want to use the drift corrected data to extract waveforms, I need some info where that might be found on your disk. Too late now, but maybe you''ll do better later.');
             return
         end
         path2raw = {[pathCat fNameCat]};
@@ -62,7 +62,7 @@ elseif strcmp(p.Results.mode,'single')
     nChan     = ephysObj.trialMetaData(1).nChanTot;
     path2raw = fullfile(ephysObj.dataPath(trialInd),strcat(ephysObj.trialNames(trialInd),ephysObj.fileType));
 else
-    error([p.Results.mode ' is not a valid option. Try ''cat'' or ''single'' instead.']);
+    error(['scaNpix::ephys::extract_waveforms:' p.Results.mode ' is not a valid option. Try ''cat'' or ''single'' instead.']);
 end
 
 %% deal with clusters to extract
@@ -92,7 +92,7 @@ for i = trialInd % loop over trials
     if strcmp(p.Results.mode,'single') || (i == 1 && strcmp(p.Results.mode,'cat'))
         binFileStruct  = dir( path2raw{i} );
         if isempty(binFileStruct)
-            error('Can''t find raw data mate...!')
+            error('scaNpix::ephys::extract_waveforms:Can''t find raw data mate...!')
         end
         dataTypeNBytes = numel(typecast(cast(0, p.Results.prec), 'uint8')); % determine number of bytes per sample
         nSamp          = binFileStruct.bytes/(nChan*dataTypeNBytes);  % Number of samples per channel - quicker than reading from meta file
@@ -127,7 +127,7 @@ for i = trialInd % loop over trials
                 tmp  = load(fullfile(ephysObj.dataPathSort{i},'whiteMat.mat'));
                 winv = tmp.Wrot^-1;
             catch
-                error('Can''t find whitening matrix! Either find that file or load from raw .ap.bin. Does that sound like a plan?');
+                error('scaNpix::ephys::extract_waveforms:Can''t find whitening matrix! Either find that file or load from raw .ap.bin. Does that sound like a plan?');
 %                 winv = readNPY(fullfile(fileparts(path2raw{i}),'whitening_mat_inv.npy'));
 %                 winv = 1;
             end
@@ -279,7 +279,7 @@ for i = trialInd % loop over trials
             chansOrg = scanpix.npixUtils.mapChans(chanMap.connected,chanMap.chanMap);
             save(fullfile(ephysObj.dataPath{i},'waveForms_channelsRaw.mat'),'chansOrg','-v7.3');
         catch
-            warning('Can''t find channel map that was used for kilosorting the data. Can''t generate ''waveForms_channelsRaw.mat''.');
+            warning('scaNpix::ephys::extract_waveforms:Can''t find channel map that was used for kilosorting the data. Can''t generate ''waveForms_channelsRaw.mat''.');
         end
         %
         cellIDs = ephysObj.cell_ID;

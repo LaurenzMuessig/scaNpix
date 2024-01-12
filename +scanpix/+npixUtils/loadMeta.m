@@ -34,20 +34,12 @@ if ~isfield(metaXMLFile,'objectPos')
 end
 %
 if ~isfield(metaXMLFile,'posFs')
-    obj.trialMetaData(trialIterator).posFs = 50; % HARCODED ATM! Should maybe be added to xml file?
+    obj.trialMetaData(trialIterator).posFs = obj.params('posFs'); % unnescessary really
 end
 
 obj.trialMetaData(trialIterator).ppm         = [];
 obj.trialMetaData(trialIterator).ppm_org     = [];
 obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
-% spikeGLX meta data %
-%             metaDataFile = dir(fullfile(obj.dataPath{trialIterator},'*.ap.meta'));
-%             fidMeta  = fopen(fullfile(metaDataFile.folder,metaDataFile.name),'r');
-%             C        = textscan(fidMeta, '%[^=] = %[^\r\n]');
-%             fclose(fidMeta);
-%             obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
-%             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
-%%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
 
 % load channel map
 chanMapInfo = dir(fullfile(obj.dataPath{trialIterator},'*kiloSortChanMap*'));
@@ -68,5 +60,18 @@ if isempty(obj.dataSetName)
     obj.dataSetName = ['r' num2str(metaXMLFile.animal) '_' num2str(metaXMLFile.date)];
 end
 
+% load sync data
+[obj.spikeData(1).sampleT{trialIterator}, obj.trialMetaData(trialIterator).missedSyncPulses] = scanpix.npixUtils.loadSyncData(obj, trialIterator);
+obj.trialMetaData(trialIterator).offSet = obj.spikeData(1).sampleT{trialIterator}(1); 
+
 end
+
+% spikeGLX meta data %
+%             metaDataFile = dir(fullfile(obj.dataPath{trialIterator},'*.ap.meta'));
+%             fidMeta  = fopen(fullfile(metaDataFile.folder,metaDataFile.name),'r');
+%             C        = textscan(fidMeta, '%[^=] = %[^\r\n]');
+%             fclose(fidMeta);
+%             obj.trialMetaData(trialIterator).nChanTot = sscanf(C{2}{strcmp(C{1},'nSavedChans')},'%d');
+%             obj.trialMetaData(trialIterator).nChanAP  = sscanf(C{2}{strcmp(C{1},'snsApLfSy')},'%d%*%*');
+%%%% Do we want to add more info from metafile?? %%%%%%%%%%%%%%%%%
 

@@ -52,18 +52,42 @@ sampleT          = scanpix.npixUtils.convertPointGreyCamTimeStamps(timeStamps); 
 
 % in case logging point grey data was corrupt
 if all(sampleT == 0)
-    sampleT          = (0:1/obj.trialMetaData(trialIterator).posFs:length(led)/obj.trialMetaData(trialIterator).posFs)';
-    sampleT          = sampleT(1:length(led)); % pretend we have perfect sampling
-    frameCount       = 1:length(led); % pretend we are not missing any frames
+    % sampleT          = (0:1/obj.trialMetaData(trialIterator).posFs:length(led)/obj.trialMetaData(trialIterator).posFs)';
+    % sampleT          = sampleT(1:length(led)); % pretend we have perfect sampling
+    sampleT    = sampleT + 1; % add 1 so interpolation won't fail - this data is essentally meaningless
+    frameCount = [1;(length(led):-1:2)'+10e2]; % make a mock frame count that is corrupt from sample 1 onwards so we can use the fix in 'fixFrameCount' (in-line func.)
     obj.trialMetaData(trialIterator).BonsaiCorruptFlag = true;
-    warning('Point Grey data corrupt!');
+    warning('scaNpix::ephys::loadPosNPix:Point Grey data corrupt!');
 else
     frameCount       = csvData{1} - csvData{1}(1) + 1;
     obj.trialMetaData(trialIterator).BonsaiCorruptFlag = false;
 end
 
-% deal with missing frames (if any) - this currently doesn't take into
-% account if 1st frame(s) would be missing, but I am not sure this would
+% deal with missing syncs - we just treat them as missing frames - this is a bit of a headache as sometimes there are incomplete sync pulses at the point they drop off (so they miss in npix stream but not in pos stream). We need to deal
+% with those
+% if ~isempty(obj.trialMetaData(trialIterator).missedSyncPulses)
+%     % first figure out if we have some extra frames in the pos stream
+%     addPosFrames = nan(1,size(obj.trialMetaData(trialIterator).missedSyncPulses,1));
+%     totalNAddPosFrames = 0;
+%     for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
+%         if sampleT(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)+1) - sampleT(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)) >= 1.1*1/obj.trialMetaData(trialIterator).posFs
+%             addPosFrames(i) = 0;
+%         else
+%             addPosFrames(i) = find(diff(sampleT(find(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)+totalNAddPosFrames):end))>1.5*1/obj.trialMetaData(trialIterator).posFs,1,'first') - 1;
+%         end
+%         totalNAddPosFrames = totalNAddPosFrames + addPosFrames(i);
+%     end
+%     % then update framecount accordingly
+%     cs_NMissed = [0;cumsum(obj.trialMetaData(trialIterator).missedSyncPulses(:,2)-addPosFrames')];
+%     missedSyncPosInd = obj.trialMetaData(trialIterator).missedSyncPulses(:,1) + cumsum(addPosFrames)' + cs_NMissed(1:end-1);
+%     for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
+%         frameCount(frameCount>missedSyncPosInd(i)) = frameCount(frameCount>missedSyncPosInd(i)) + obj.trialMetaData(trialIterator).missedSyncPulses(i,2) - addPosFrames(i);  
+%     end
+% end
+
+frameCount = fixFrameCounts(obj,trialIterator,frameCount,sampleT);
+
+% deal with missing frames (if any) - this currently doesn't take into account if 1st frame(s) would be missing, but I am not sure this would
 % actually ever happen (as 1st frame should always be triggered fine)
 % first check if there are any...
 missFrames       = find(~ismember(1:frameCount(end),frameCount));
@@ -81,16 +105,7 @@ if ~isempty(missFrames)
     temp2                    = zeros(length(led),1);
     temp2(missFrames,1)      = interp_sampleT;
     temp2(temp2(:,1) == 0,1) = sampleT;
-    sampleT                  = temp2;
-    
-    
-%     nMissedPulses = floor((syncTTLs(missedSyncs+1) - syncTTLs(missedSyncs)) * obj.params('posFs'));
-%     missedPulses  = missedSyncs+1:missedSyncs+nMissedPulses;
-%     interp_pulseT          = interp1([1:missedSyncs,missedSyncs+nMissedPulses+1:length(syncTTLs)+nMissedPulses], syncTTLs', missedPulses);
-%     temp                   = zeros(length(syncTTLs)+nMissedPulses,1);
-%     temp(missedPulses,1)   = interp_pulseT;
-%     temp(temp(:,1) == 0,1) = syncTTLs;
-%     syncTTLs               = temp;
+    sampleT                  = temp2;    
 end
 
 ppm = nan(2,1);
@@ -241,6 +256,54 @@ ledPos(LEDdistInd,:,maxInd~=[1 2]) = ledPos(LEDdistInd,:,maxInd);
 
 end
 
+function frameCount = fixFrameCounts(obj,trialIterator,frameCount,sampleT)
+
+% very rarely the frame counter (as well as the camera sample times) are corrupt from some time point onwards in a trial. That means from there onwards we cannot know anymore where potential missing frames occured - 
+% if the n is low and your analysis doesn't require very high temporal accuracy just linearly interpolating these is prob. fine 
+if any(diff(double(frameCount)) < 0)
+
+    lastgoodInd = find(diff(double(frameCount)) > 1000,1,'first'); % it seems the corrupt samples have ussually outlandish numbers (several orders of magnitude larger than normal frame count) 
+    nMissFrames = sum(~ismember(1:frameCount(lastgoodInd),frameCount(1:lastgoodInd)));
+
+    frameCount = [frameCount(1:lastgoodInd);(frameCount(lastgoodInd)+1:length(frameCount)+nMissFrames)'];
+
+    if length(frameCount) < length(obj.spikeData.sampleT{trialIterator})
+        % nMissFrames = sum(~ismember(1:frameCount(lastgoodInd),frameCount(1:lastgoodInd)));
+        nFrameMissmatch = length(obj.spikeData.sampleT{trialIterator}) - (length(frameCount) + nMissFrames); 
+        extraFrameInd = round(linspace(double(frameCount(lastgoodInd+1)),length(frameCount)-1,nFrameMissmatch));
+
+        for i = 1:length(extraFrameInd)
+            frameCount(extraFrameInd(i):end) = frameCount(extraFrameInd(i):end) + 1; 
+        end
+    else
+        nFrameMissmatch = 0;
+    end
+    warning('scaNpix::ephys::loadPosNPix:FrameCount is corrupt from sample %i onwards. There are %i frames missing in remaining pos data. These were linearly interpolated - you should be aware of this!',frameCount(lastgoodInd),nFrameMissmatch)
+end
+
+
+% deal with missing syncs - we just treat them as missing frames - this is a bit of a headache as sometimes there are incomplete sync pulses at the point they drop off (so they miss in npix stream but not in pos stream). We need to deal
+% with those
+if ~isempty(obj.trialMetaData(trialIterator).missedSyncPulses)
+    % first figure out if we have some extra frames in the pos stream
+    [addPosFrames,posFrameInd] = deal(nan(1,size(obj.trialMetaData(trialIterator).missedSyncPulses,1)));
+    totalNAddPosFrames = 0;
+
+    for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
+        % find the relevant pos frame where the syncs are missing - 'min' should be fine here as next sampleT will correspond to time when syncs came back, so there should be a temporal gap
+        posFrameInd(i) = find(abs(sampleT - obj.trialMetaData(trialIterator).missedSyncPulses(i,3)) < 1/obj.trialMetaData(trialIterator).posFs,1,'last');
+        %
+        addPosFrames(i) = frameCount(posFrameInd(i)) - obj.trialMetaData(trialIterator).missedSyncPulses(i,1) - totalNAddPosFrames;
+        totalNAddPosFrames = totalNAddPosFrames + addPosFrames(i);
+    end
+    % then update framecount accordingly
+    for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
+        frameCount(posFrameInd(i)+1:end) = frameCount(posFrameInd(i)+1:end) + obj.trialMetaData(trialIterator).missedSyncPulses(i,2) - addPosFrames(i);  
+    end
+end
+
+end
+
 %         tmp = ledPos(~isnan(ledPos(:,1,i)),:,i);
 % %     pathDists        = sqrt( diff(led(:,1,i),[],1).^2 + diff(led(:,2,i),[],1).^2 ) ./ ppm(1); % % distances in m
 % %     tempSpeed        = pathDists ./ diff(sampleT); % m/s
@@ -252,3 +315,15 @@ end
 %         speedInd = tempSpeed > maxSpeed;
 %         tmp(speedInd,:) = NaN;
 %         ledPos(~isnan(ledPos(:,1,i)),:,i) = tmp;
+
+    % cs_NMissed = [0;cumsum(obj.trialMetaData(trialIterator).missedSyncPulses(:,2)-addPosFrames')];
+    % missedSyncPosInd = obj.trialMetaData(trialIterator).missedSyncPulses(:,1) + cumsum(addPosFrames)' + cs_NMissed(1:end-1);
+    % for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
+    %     frameCount(frameCount>missedSyncPosInd(i)) = frameCount(frameCount>missedSyncPosInd(i)) + obj.trialMetaData(trialIterator).missedSyncPulses(i,2) - addPosFrames(i);  
+    % end
+
+            % if sampleT(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)+1) - sampleT(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)) >= 1.1*1/obj.trialMetaData(trialIterator).posFs
+        %     addPosFrames(i) = 0;
+        % else
+        %     addPosFrames(i) = find(diff(sampleT(find(frameCount<=obj.trialMetaData(trialIterator).missedSyncPulses(i,1)+totalNAddPosFrames):end))>1.5*1/obj.trialMetaData(trialIterator).posFs,1,'first') - 1;
+        % end
