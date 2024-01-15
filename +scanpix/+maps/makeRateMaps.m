@@ -153,7 +153,7 @@ for i = 1:length(spkTimes)
         case 'adaptive'
             [rMaps{i}, sm_spkMaps{i}, sm_pMaps{i}] = scanpix.maps.adaptiveSmooth(posMapRaw,spkMapRaw,prms.alpha); % SCAN function  
         otherwise
-            error([prms.smooth ' is not a valid option for smoothing rate maps']);
+            error(['scaNpix::makeRateMaps:' prms.smooth ' is not a valid option for smoothing rate maps']);
     end 
     
     if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Rate Maps... %i/%i done.',i,length(spkTimes))); end

@@ -59,7 +59,7 @@ switch p.Results.mode
         cd(obj.dataPath{trialIterator});
         syncTTLs = loadSyncFromLFP(nChannels,p.Results.syncchan,p.Results.syncbit,p.Results.fs);
     otherwise
-        error('scaNpix::ephys::loadSyncData:%s is not a valid method to load the sync data.', p.Results.mode)
+        error('scaNpix::loadSyncData:%s is not a valid method to load the sync data.', p.Results.mode)
 end
 
 % rarely there are some missing sync pulses in the npix stream
@@ -81,7 +81,9 @@ if ~obj.isConcat
         temp(missedPulses,1)   = interp_pulseT;
         temp(temp(:,1) == 0,1) = syncTTLs;
         syncTTLs               = temp;
-        warning('scaNpix::ephys::loadSyncData: %i missing sync pulses across %i chunks in neuropixel datastream. Interpolated missing samples, but better go and check that',length(missedPulses),i);
+        warning('scaNpix::loadSyncData: %i missing sync pulses across %i chunks in neuropixel datastream. Interpolated missing samples, but better go and check that',length(missedPulses),i);
+        %
+        obj.trialMetaData(trialIterator).log.missingSyncsAPStream = length(missedPulses);
     end
 end
 

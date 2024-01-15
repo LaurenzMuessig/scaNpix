@@ -14,6 +14,14 @@ function loadMeta(obj, trialIterator)
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%
+obj.trialMetaData(trialIterator).log.missingSyncsAPStream        = 0;
+obj.trialMetaData(trialIterator).log.missingFramesPosStream      = 0;
+obj.trialMetaData(trialIterator).log.PosLoadingStats             = ones(2,2);
+obj.trialMetaData(trialIterator).log.frameCountCorruptFromSample = NaN;
+obj.trialMetaData(trialIterator).log.nInterpSamplesCorruptFrames = NaN;
+obj.trialMetaData(trialIterator).log.SyncMismatchPosAP           = 0;
+
 % first load xml file
 metaXMLFileInfo = dir(fullfile(obj.dataPath{trialIterator},'*.xml'));
 metaXMLFile     = scanpix.fxchange.xml_read(fullfile(obj.dataPath{trialIterator},metaXMLFileInfo.name)); %
@@ -63,6 +71,9 @@ end
 % load sync data
 [obj.spikeData(1).sampleT{trialIterator}, obj.trialMetaData(trialIterator).missedSyncPulses] = scanpix.npixUtils.loadSyncData(obj, trialIterator);
 obj.trialMetaData(trialIterator).offSet = obj.spikeData(1).sampleT{trialIterator}(1); 
+
+%
+
 
 end
 

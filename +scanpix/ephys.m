@@ -80,7 +80,7 @@ classdef ephys < handle
             %                  'ui'      - opens UI dialogue
             %                  'file'    - load params from file
             %    setDirFlag  - true (default)/false - skip UI set file
-            %                selection dialogue if false
+            %                  selection dialogue if false
             %
             % Outputs:
             %    obj      - ephys object
@@ -114,7 +114,7 @@ classdef ephys < handle
             %
             if nargin <= 1
                 obj.getParams('default');
-                warning('scanNpix: No params selected. Using defaults.');
+                warning('scanNpix::ephys:No params selected. Using defaults.');
             else
                 obj.getParams(prmsMode); 
             end
@@ -261,7 +261,7 @@ classdef ephys < handle
                 % convert numeric input to numbers
                 for i = 1:length(values)
                     if any(ismember(values{i}, '0123456789+-.eEdD'))
-                        values{i} = str2num(values{i}); %#okAgrow
+                        values{i} = str2num(values{i}); % #OKAGROW
                     end
                 end
             end
@@ -386,7 +386,7 @@ classdef ephys < handle
                 str = {'trials','cells'};
                 [select, loadCheck] = listdlg('PromptString','Select what data you hate:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
                 if ~loadCheck
-                    warning('scaNpix::ephys::deleteData: Agreed. Best to keep your data where it is.');
+                    warning('scaNpix::ephys::deleteData:Agreed. Best to keep your data where it is.');
                     return;
                 else
                     type = str{select};
@@ -399,7 +399,7 @@ classdef ephys < handle
                     if nargin < 3
                         [select, loadCheck] = listdlg('PromptString','Select what data to delete:','ListString',obj.trialNames,'ListSize',[160 100]);
                         if ~loadCheck
-                            warning('scaNpix::ephys::deleteData: Deleting data aborted. More data is better anyway.');
+                            warning('scaNpix::ephys::deleteData:Deleting data aborted. More data is better anyway.');
                             return;
                         end
                         trialStr = obj.trialNames(select);
@@ -449,7 +449,7 @@ classdef ephys < handle
                         obj.loadFlag  = false;
                         obj.changeParams('default'); % reset defaults
                         obj.mapParams = scanpix.maps.defaultParamsRateMaps(class(obj)); % reset defaults
-                        warning('scaNpix::ephys::deleteData: Back to square one...');
+                        warning('scaNpix::ephys::deleteData:Back to square one...');
                     end
                     
                 case 'cells'
@@ -508,7 +508,7 @@ classdef ephys < handle
             if nargin < 2
                 uiInput = inputdlg({obj.trialNames{:}},'Please indicate new index for each trial');
                 if isempty(uiInput)
-                    warning('scaNpix::ephys::reorderData: Reordering of trials aborted. Just ask yourself why you started it then...');
+                    warning('scaNpix::ephys::reorderData:Reordering of trials aborted. Just ask yourself why you started it then...');
                     return;
                 end
                 orderIndex = str2num(cell2mat(uiInput))';
@@ -726,7 +726,6 @@ classdef ephys < handle
                 case 'dacq'
                     cellIDs = scanpix.dacqUtils.loadSpikes(obj,trialIterator);
                 case 'npix'
-%                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag, false);
                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag);
                 case 'nexus'
                 case 'bhave'
@@ -808,7 +807,7 @@ classdef ephys < handle
                     classFolder = what('scanpix');
                     [fNames, dataDir] = uigetfile(fullfile(classFolder.path,'files','*.mat'),'Select params containers Map to load.');
                     if isnumeric(fNames)
-                        warning('scaNpix::ephys::getParams: Loading of params container aborted!');
+                        warning('scaNpix::ephys::getParams:Loading of params container aborted!');
 %                         prmsMap = containers.Map;
                         return;
                     end
@@ -858,7 +857,7 @@ classdef ephys < handle
             
             dirList = scanpix.fxchange.uigetfile_n_dir(defaultDir,'Select Top Level Folder(s) With Session Data');
             if isempty(dirList)
-                warning('scaNpix::ephys::fetchFileNamesAndPath: Loading Aborted. Und tschuess!');
+                warning('scaNpix::ephys::fetchFileNamesAndPath:Loading Aborted. Und tschuess!');
                 [trialNames, dataDir] = deal(NaN);
                 return
             end
@@ -870,7 +869,7 @@ classdef ephys < handle
             end
             
             if isempty(trialStruct)
-                warning('scaNpix::ephys::fetchFileNamesAndPath: No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
+                warning('scaNpix::ephys::fetchFileNamesAndPath:No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
                 return
             end
             
@@ -1009,7 +1008,7 @@ classdef ephys < handle
             
             % quite a lot of input parsing/checking to do here %%%%%%%%
             if ~obj.loadFlag
-                warning('scaNpix::ephys::addMaps: You need to load some data first before you can make any maps... Fairly obvious if you ask me.');
+                warning('scaNpix::ephys::addMaps:You need to load some data first before you can make any maps... Fairly obvious if you ask me.');
                 return;
             end
             
@@ -1019,7 +1018,7 @@ classdef ephys < handle
                     str = {'pos','rate','dir','lin','sac','objVect','speed'};
                     [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
                     if ~loadCheck
-                        warning('scaNpix::ephys::addMaps: No data selected. No maps will be created. Boring...');
+                        warning('scaNpix::ephys::addMaps:No data selected. No maps will be created. Boring...');
                         return;
                     else
                         mapType = str{select};
@@ -1059,7 +1058,7 @@ classdef ephys < handle
                     end
                     f            = fieldnames(temp);
                     prms         = temp.(f{1}).(mapType);
-                    warning(['scaNpix::ephys::addMaps: Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
+                    warning(['scaNpix::ephys::addMaps:Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
                 end
             end
             
@@ -1073,7 +1072,7 @@ classdef ephys < handle
                     [fName, dataDir] = uigetfile(fullfile(classFolder.path,'files', '*.mat'), 'Select map params to load.');
                     % fail gracefully
                     if isnumeric(fName)
-                        warning('scaNpix:ephys:addMaps: Loading Map Params aborted. Will use defaults instead!');
+                        warning('scaNpix:ephys:addMaps:Loading Map Params aborted. Will use defaults instead!');
                         prms         = obj.mapParams.(mapType);
                     else
                         temp         = load( fullfile(dataDir, fName) );
@@ -1089,7 +1088,7 @@ classdef ephys < handle
                     output           = scanpix.helpers.makeCustomUIDialogue(prompts, defaultVals);
                     % exit gracefully
                     if isempty(output)
-                        warning('scaNpix::ephys::addMaps: Aborted changing parameters for rate map generation - will use those currently set in object.');
+                        warning('scaNpix::ephys::addMaps:Aborted changing parameters for rate map generation - will use those currently set in object.');
                         prms         = obj.mapParams.(mapType);
                     else
                         % format as structure
@@ -1168,7 +1167,7 @@ classdef ephys < handle
                         else
                             uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
                             if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps: No track properties, no linear rate maps...');
+                                warning('scaNpix::ephys::addMaps:No track properties, no linear rate maps...');
                                 return;
                             else
                                 trackProps.type = uiInput{1};
@@ -1185,7 +1184,7 @@ classdef ephys < handle
                         elseif ~skipNextUI
                             uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
                             if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps: No track length, no linear rate maps...');
+                                warning('scaNpix::ephys::addMaps:No track length, no linear rate maps...');
                                 return;
                             else
                                 trackProps.length = str2double(uiInput{1});
@@ -1202,7 +1201,7 @@ classdef ephys < handle
                 case 'sac'
                     
                     if any(cellfun('isempty', obj.maps(1).rate(trialInd)))
-                        warning('scaNpix::ephys::addMaps: You need to generate rate maps before demanding spatial autocorrelograms.')
+                        warning('scaNpix::ephys::addMaps:You need to generate rate maps before demanding spatial autocorrelograms.')
                         return
                     end
                     
@@ -1216,7 +1215,7 @@ classdef ephys < handle
                         if isfield(obj.trialMetaData(i),'objectPos') && ~isempty(obj.trialMetaData(i).objectPos)
                             obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
                         else
-                            warning('scaNpix::ephys::addMaps: If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
+                            warning('scaNpix::ephys::addMaps:If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
                         end
                     end
                     
@@ -1237,14 +1236,14 @@ classdef ephys < handle
         function spatProps = getSpatialProps(obj, score)
             
             if strcmp(obj.type,'bhave')
-                warning('scaNpix::ephys::addMaps: This ain''t gonna work for behavioural data. I guess you had to try...');
+                warning('scaNpix::ephys::addMaps:This ain''t gonna work for behavioural data. I guess you had to try...');
                 return;
             end
             
             switch lower(score)
                 case {'spatialinfo','si'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
-                        warning('scaNpix::ephys::getSpatialProps::spatialInfo: You need to make rate maps before demanding their spatial info.');
+                        warning('scaNpix::ephys::getSpatialProps::spatialInfo:You need to make rate maps before demanding their spatial info.');
                         spatProps = [];
                         return
                     end
@@ -1347,7 +1346,7 @@ classdef ephys < handle
                 defVals = {'single', 250,                  5,                  69,                  0.4,                false,          false,  []      };
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
-                    warning('scaNpix::ephys::loadWaves: Waveform loading aborted. That lacks class mate...');
+                    warning('scaNpix::ephys::loadWaves:Waveform loading aborted. That lacks class mate...');
                     return;
                 end
 

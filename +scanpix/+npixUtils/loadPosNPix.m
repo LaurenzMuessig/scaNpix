@@ -22,7 +22,7 @@ fprintf('Loading pos data for %s .......... ', obj.trialNames{trialIterator});
 % open pos data the format is [frame count, greenXY, redXY winSzX, winSzY, timeStamp possibly other Data ]
 fName = dir(fullfile(obj.dataPath{trialIterator},'trackingData', '*.csv'));
 if isempty(fName)
-    disp(['Can''t find csv file in ' obj.dataPath{trialIterator} '. Come on mate.']);
+    warning(['scaNpix::loadPosNPix:Can''t find csv file in ' obj.dataPath{trialIterator} '. Come on mate.']);
     return;
 end
 
@@ -57,7 +57,7 @@ if all(sampleT == 0)
     sampleT    = sampleT + 1; % add 1 so interpolation won't fail - this data is essentally meaningless
     frameCount = [1;(length(led):-1:2)'+10e2]; % make a mock frame count that is corrupt from sample 1 onwards so we can use the fix in 'fixFrameCount' (in-line func.)
     obj.trialMetaData(trialIterator).BonsaiCorruptFlag = true;
-    warning('scaNpix::ephys::loadPosNPix:Point Grey data corrupt!');
+    warning('scaNpix::loadPosNPix:Point Grey data corrupt!');
 else
     frameCount       = csvData{1} - csvData{1}(1) + 1;
     obj.trialMetaData(trialIterator).BonsaiCorruptFlag = false;
@@ -105,7 +105,9 @@ if ~isempty(missFrames)
     temp2                    = zeros(length(led),1);
     temp2(missFrames,1)      = interp_sampleT;
     temp2(temp2(:,1) == 0,1) = sampleT;
-    sampleT                  = temp2;    
+    sampleT                  = temp2;   
+    %
+    obj.trialMetaData(trialIterator).log.missingFramesPosStream = nMissFrames;
 end
 
 ppm = nan(2,1);
@@ -165,7 +167,7 @@ for i = 1:2
 end
 
 % fix positions (inline subfunction)
-led = fixPositions(led, mean(diff(sampleT)), ppm(1), obj.params('posMaxSpeed'), obj.params('maxPosInterpolate'));
+led = fixPositions(led, mean(diff(sampleT)), ppm(1), obj, trialIterator );
 
 % smooth
 kernel         = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( obj.params('posSmooth') * obj.params('posFs') ); % as per Ephys standard - 400ms boxcar filter
@@ -203,16 +205,17 @@ fprintf('  DONE!\n');
 end
 
 
-function ledPos = fixPositions(ledPos,sampleT,ppm,maxSpeed,maxPosInterpolateCM)
+function ledPos = fixPositions(ledPos,sampleT,ppm,obj,trialIterator)
+
+obj.trialMetaData(trialIterator).log.PosLoadingStats(1,:) = sum(~isnan(squeeze(ledPos(:,1,:))),1) / size(ledPos,1);
 
 % first we remove positions that are flanked by NaNs - these are mostly dodgy and are spurious values that don't correspond to tracking the LEDs (we have to accept that we'll remove a few legit positions as well)
 for i = 1:2
     currLED = ledPos(:,:,i);
     remPosInd = 1;
     while ~isempty(remPosInd) %any(speedInd)
-
-        trackedPosInd = ~isnan(currLED(:,1));
-        remPosInd = find(conv(trackedPosInd,ones(5,1),'same') <= 2 & trackedPosInd);
+        trackedPosInd        = ~isnan(currLED(:,1));
+        remPosInd            = find(conv(trackedPosInd,ones(5,1),'same') <= 2 & trackedPosInd);
         currLED(remPosInd,:) = NaN;
     end  
     % now look for tracking errors by speed - we'll ignore all the NaNs here as these prevent to identify some dodgy samples (again we might lose a few legit samples here when the light wasn't tracked for too
@@ -221,7 +224,7 @@ for i = 1:2
     pathDists                       = sqrt( diff(validPos(:,1),[],1).^2 + diff(validPos(:,2),[],1).^2 ) ./ ppm(1); % % distances in m
     tempSpeed                       = pathDists ./ sampleT; %diff(sampleT(~isnan(ledPos(:,1,i)))); % m/s
     tempSpeed(end+1)                = tempSpeed(end);
-    speedInd                        = tempSpeed > maxSpeed;
+    speedInd                        = tempSpeed > obj.params('posMaxSpeed');
     validPos(speedInd,:)            = NaN;
     currLED(~isnan(currLED(:,1)),:) = validPos;
     ledPos(:,:,i)                   = currLED;
@@ -235,7 +238,7 @@ for i = 1:2
     idx           = find(diff(missing_pos)>1);
     idx           = idx(1:end-1); % can ignore last entry
     missPosChunks = [[max([1,missing_pos(1)-1]); missing_pos(idx(1:end-1)+1)-1],missing_pos(idx)+1]; % make sure first index~=0
-    indTooLong    = sqrt(diff([ledPos(missPosChunks(:,1),1,i),ledPos(missPosChunks(:,2),1,i)],[],2).^2+diff([ledPos(missPosChunks(:,1),2,i),ledPos(missPosChunks(:,2),2,i)],[],2).^2) ./ ppm .* 100 > maxPosInterpolateCM;
+    indTooLong    = sqrt(diff([ledPos(missPosChunks(:,1),1,i),ledPos(missPosChunks(:,2),1,i)],[],2).^2+diff([ledPos(missPosChunks(:,1),2,i),ledPos(missPosChunks(:,2),2,i)],[],2).^2) ./ ppm .* 100 > obj.params('maxPosInterpolate');
     missPosChunks = missPosChunks(indTooLong,:); % only keep these
     % remove all bad chunks
     for j = 1:size(missPosChunks,1)
@@ -248,6 +251,7 @@ for i = 1:2
         ledPos(missing_pos(missing_pos > max(ok_pos)), j, i) = ledPos( max(ok_pos), j, i);
         ledPos(missing_pos(missing_pos < min(ok_pos)), j, i) = ledPos( min(ok_pos), j, i);
     end
+    obj.trialMetaData(trialIterator).log.PosLoadingStats(2,i) = (length(missing_pos)+length(ok_pos)) / size(ledPos,1);
 end
 % now last sanity check - check for samples where distance between LEDs is too large - set these position for the LED that was tracked worse overall to the ones from the better tracked light 
 [~, maxInd] = max([sum(~isnan(ledPos(:,1,1))),sum(~isnan(ledPos(:,1,2)))]);
@@ -278,7 +282,10 @@ if any(diff(double(frameCount)) < 0)
     else
         nFrameMissmatch = 0;
     end
-    warning('scaNpix::ephys::loadPosNPix:FrameCount is corrupt from sample %i onwards. There are %i frames missing in remaining pos data. These were linearly interpolated - you should be aware of this!',frameCount(lastgoodInd),nFrameMissmatch)
+    warning('scaNpix::loadPosNPix:FrameCount is corrupt from sample %i onwards. There are %i frames missing in remaining pos data. These were linearly interpolated - you should be aware of this!',frameCount(lastgoodInd),nFrameMissmatch);
+    %
+    obj.trialMetaData(trialIterator).log.frameCountCorruptFromSample = frameCount(lastgoodInd);
+    obj.trialMetaData(trialIterator).log.nInterpSamplesCorruptFrames = nFrameMissmatch;
 end
 
 
