@@ -78,10 +78,10 @@ if ischar(dataPath)
 end
 % parse directories and trialnames
 [filepath,name,ext] = cellfun(@fileparts,dataPath,'uni',0);
-obj.dataPath     = filepath;
-obj.dataPathSort = filepath;
+obj.dataPath        = filepath;
+obj.dataPathSort    = filepath;
 if strcmp(ext,'.dat')
-    obj.loadRawDrift = true;
+    obj.isConcat = true;
 end
 
 if strcmpi(objType,'npix')

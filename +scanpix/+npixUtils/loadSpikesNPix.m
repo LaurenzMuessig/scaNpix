@@ -159,7 +159,7 @@ spikeTimesFin        = spikeTimesFin(indSort);
 %
 % if loadAmps; return; end
 
-if ~isempty(obj.posData.sampleT{trialIterator})
+if ~isempty(obj.posData.sampleT)
     scanpix.npixUtils.dataLoadingReport(length(obj.posData.sampleT{trialIterator}),length(syncTTLs),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
     obj.trialMetaData(trialIterator).log.SyncMismatchPosAP = length(obj.posData.sampleT{trialIterator})-length(syncTTLs);
 end

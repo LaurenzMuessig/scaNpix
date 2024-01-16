@@ -556,6 +556,7 @@ classdef ephys < handle
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             reloadFlag = false;
+            noSyncFlag = false;
             check0spikeCells = false;
             
             if strcmp(obj.type,'init')
@@ -585,7 +586,12 @@ classdef ephys < handle
             
             if any(strcmp(loadMode,'reload'))
                 reloadFlag = true;
-                loadMode = loadMode(~strcmp(loadMode,'reload'));
+                loadMode   = loadMode(~strcmp(loadMode,'reload'));
+            end
+
+            if any(strcmpi(loadMode,'nosync'))
+                noSyncFlag = true;
+                loadMode   = loadMode(~strcmpi(loadMode,'nosync'));
             end
             
             if nargin < 3
@@ -599,7 +605,7 @@ classdef ephys < handle
             for i = 1:length(loadStr)
                 
                 % load some meta data
-                if ~reloadFlag; obj.loadMetaData(trialInd(i)); end
+                if ~reloadFlag; obj.loadMetaData(trialInd(i),noSyncFlag); end
                                
                 for j = 1:length(loadMode)
                     
@@ -659,7 +665,7 @@ classdef ephys < handle
     
     methods(Hidden)
         %%
-        function loadMetaData(obj, trialIterator)
+        function loadMetaData(obj, trialIterator,noSyncFlag)
             % loadMeta - load meta data
             % Method for ephys class objects (hidden)
             %
@@ -676,7 +682,7 @@ classdef ephys < handle
                 case 'dacq'
                     scanpix.dacqUtils.loadSet(obj,trialIterator);
                 case 'npix'
-                    scanpix.npixUtils.loadMeta(obj,trialIterator);
+                    scanpix.npixUtils.loadMeta(obj,trialIterator,noSyncFlag);
                 case 'nexus'
                 case 'bhave'
                     scanpix.bhaveUtils.loadMetaData(obj,trialIterator);

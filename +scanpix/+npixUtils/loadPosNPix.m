@@ -204,6 +204,7 @@ fprintf('  DONE!\n');
 
 end
 
+%%%%%%%%%%%%%%%%%%%%%% INLINE FUNCTIONS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function ledPos = fixPositions(ledPos,sampleT,ppm,obj,trialIterator)
 
@@ -257,6 +258,8 @@ end
 [~, maxInd] = max([sum(~isnan(ledPos(:,1,1))),sum(~isnan(ledPos(:,1,2)))]);
 LEDdistInd = sqrt( (ledPos(:,1,1) - ledPos(:,1,2)).^2 + (ledPos(:,2,1) - ledPos(:,2,2)).^2 ) ./ ppm(1) .* 100 > 15; % 
 ledPos(LEDdistInd,:,maxInd~=[1 2]) = ledPos(LEDdistInd,:,maxInd); 
+%
+obj.trialMetaData(trialIterator).log.PosLoadingStats(3,1:2) = sum(LEDdistInd) / size(ledPos,1);
 
 end
 

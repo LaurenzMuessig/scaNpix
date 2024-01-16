@@ -1,4 +1,4 @@
-function loadMeta(obj, trialIterator)
+function loadMeta(obj, trialIterator, noSyncFlag)
 % loadMeta - load meta data for neuropixel data
 %
 % Syntax:  loadMeta(obj,trialIterator)
@@ -17,7 +17,7 @@ function loadMeta(obj, trialIterator)
 %
 obj.trialMetaData(trialIterator).log.missingSyncsAPStream        = 0;
 obj.trialMetaData(trialIterator).log.missingFramesPosStream      = 0;
-obj.trialMetaData(trialIterator).log.PosLoadingStats             = ones(2,2);
+obj.trialMetaData(trialIterator).log.PosLoadingStats             = ones(3,2);
 obj.trialMetaData(trialIterator).log.frameCountCorruptFromSample = NaN;
 obj.trialMetaData(trialIterator).log.nInterpSamplesCorruptFrames = NaN;
 obj.trialMetaData(trialIterator).log.SyncMismatchPosAP           = 0;
@@ -59,7 +59,7 @@ end
 chanMapStruct = load(chanMapName);
 f = fieldnames(chanMapStruct);
 for i = 1:length(f)
-    obj.chanMap(trialIterator).(f{i})  = chanMapStruct.(f{i});
+    obj.chanMap(trialIterator).(f{i})      = chanMapStruct.(f{i});
 end
 obj.trialMetaData(trialIterator).nChanSort = sum(chanMapStruct.connected);
 obj.trialMetaData(trialIterator).nChanTot  = 385;
@@ -69,12 +69,13 @@ if isempty(obj.dataSetName)
 end
 
 % load sync data
-[obj.spikeData(1).sampleT{trialIterator}, obj.trialMetaData(trialIterator).missedSyncPulses] = scanpix.npixUtils.loadSyncData(obj, trialIterator);
-obj.trialMetaData(trialIterator).offSet = obj.spikeData(1).sampleT{trialIterator}(1); 
-
+if ~noSyncFlag
+    [obj.spikeData(1).sampleT{trialIterator}, obj.trialMetaData(trialIterator).missedSyncPulses] = scanpix.npixUtils.loadSyncData(obj, trialIterator);
+    obj.trialMetaData(trialIterator).offSet                                                      = obj.spikeData(1).sampleT{trialIterator}(1); 
+else
+    warning('scaNpix::ephys::loadMeta:Sync data not loaded. I hope you know what you''re doing...');
+end
 %
-
-
 end
 
 % spikeGLX meta data %
