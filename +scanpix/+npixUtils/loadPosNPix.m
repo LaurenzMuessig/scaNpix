@@ -52,9 +52,7 @@ sampleT          = scanpix.npixUtils.convertPointGreyCamTimeStamps(timeStamps); 
 
 % in case logging point grey data was corrupt
 if all(sampleT == 0)
-    % sampleT          = (0:1/obj.trialMetaData(trialIterator).posFs:length(led)/obj.trialMetaData(trialIterator).posFs)';
-    % sampleT          = sampleT(1:length(led)); % pretend we have perfect sampling
-    sampleT    = sampleT + 1; % add 1 so interpolation won't fail - this data is essentally meaningless
+    sampleT    = (0:length(led)-1)' * 1/obj.trialMetaData(trialIterator).posFs; % pretend we have perfect sampling
     frameCount = [1;(length(led):-1:2)'+10e2]; % make a mock frame count that is corrupt from sample 1 onwards so we can use the fix in 'fixFrameCount' (in-line func.)
     obj.trialMetaData(trialIterator).BonsaiCorruptFlag = true;
     warning('scaNpix::loadPosNPix:Point Grey data corrupt!');
@@ -85,7 +83,7 @@ end
 %     end
 % end
 
-frameCount = fixFrameCounts(obj,trialIterator,frameCount,sampleT);
+[frameCount, sampleT] = fixFrameCounts(obj,trialIterator,frameCount,sampleT);
 
 % deal with missing frames (if any) - this currently doesn't take into account if 1st frame(s) would be missing, but I am not sure this would
 % actually ever happen (as 1st frame should always be triggered fine)
@@ -263,7 +261,7 @@ obj.trialMetaData(trialIterator).log.PosLoadingStats(3,1:2) = sum(LEDdistInd) / 
 
 end
 
-function frameCount = fixFrameCounts(obj,trialIterator,frameCount,sampleT)
+function [frameCount, sampleT] = fixFrameCounts(obj,trialIterator,frameCount,sampleT)
 
 % very rarely the frame counter (as well as the camera sample times) are corrupt from some time point onwards in a trial. That means from there onwards we cannot know anymore where potential missing frames occured - 
 % if the n is low and your analysis doesn't require very high temporal accuracy just linearly interpolating these is prob. fine 
@@ -281,6 +279,7 @@ if any(diff(double(frameCount)) < 0)
 
         for i = 1:length(extraFrameInd)
             frameCount(extraFrameInd(i):end) = frameCount(extraFrameInd(i):end) + 1; 
+            sampleT(extraFrameInd(i):end)    = sampleT(extraFrameInd(i):end) + 1/obj.trialMetaData(trialIterator).posFs; 
         end
     else
         nFrameMissmatch = 0;

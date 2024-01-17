@@ -1,24 +1,24 @@
 function [syncTTLs, missedSyncs] = loadSyncData(obj, trialIterator, varargin)
 % loadSyncData - load sync data to synchronise tracking data from Bonsai
 % and neuropixel ephys data. We are assuming that the current directory
-% contains the raw data and possibly output from CatGT
+% contains the raw data and possibly output from CatGT (which is the
+% preferred outcome) - in case of no sync data from CatGT we'll load the
+% sync data from the LFP file which takes a while and you'll also lose some
+% temporal accuracy due to lower Fs compared to AP stream
+%
 % package: scanpix.npixUtils
 %
 % Usage:
-%       syncTTLs = scanpix.npixUtils.loadSyncData;
-%       syncTTLs = scanpix.npixUtils.loadSyncData([],BonsaiCorruptFlag);
-%       syncTTLs = scanpix.npixUtils.loadSyncData(nFramesBonsai,BonsaiCorruptFlag);
-%       syncTTLs = scanpix.npixUtils.loadSyncData(__,prmsStruct);
-%       syncTTLs = scanpix.npixUtils.loadSyncData(__, Name-Value comma separated list);
+%       syncTTLs = scanpix.npixUtils.loadSyncData(obj,trialIterator);
+%       syncTTLs = scanpix.npixUtils.loadSyncData(obj,trialIterator, Name-Value comma separated list);
 %
 %
-% Inputs:   nFramesBonsai     - n samples from Bonsai stream
-%           BonsaiCorruptFlag - logical flag if Bonsai data is corrupt 
-%           varargin          - prmsStruct: structure with parameter fields to be changed from defaults
-%                             - name-value: comma separated list of name-value pairs     
+% Inputs:   obj           - n samples from Bonsai stream
+%           trialIterator - logical flag if Bonsai data is corrupt 
+%           varargin      - name-value: comma separated list of name-value pairs     
 %
-% Outputs:  syncTTLs          - time in s for sync TTLs in neuropixel
-%                               stream
+% Outputs:  syncTTLs      - time in s for sync TTLs in neuropixel stream
+%           missedSyncs   - info about missing syncs in npix stream; [index of last good sample, n missing pulses, time is s of last good sample]                 
 %
 % LM 2020
 

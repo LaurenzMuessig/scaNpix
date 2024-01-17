@@ -78,11 +78,15 @@ if contains(lower(trackProps.type),'sq')
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % 2 Sort out the CW and CCW runs properly ('radialLineariseSquare_v2' only does it on a sample-by-sample basis) %
     % First, rotate the dirs 90deg CCW, so as to switch from phys/eng convention to DACQ convention - makes the following code easier to think about.
-    direction                   = direction + 90;
+    direction                  = direction + 90;
     direction(direction>360)   = direction(direction>360) - 360;
     % Split the data by arm occupany, then for each arm check if we are facing CW or CCW %
     % armsDims(n,:) gives the upper and lower limits into arm n, arms start at the TL corner and run clockwise (usual xy->pol conversion is anti-clock, but DACQ coords have inverted y-axis).
-    dirDefs                     = [0, 90, 180, -90];  % These define the amount to be added to the actual dirs, before classifying CW and CCW. One for each arm.
+    if strcmp(trackProps.objType,'dacq')
+        dirDefs                 = [0, 90, 180, -90]; 
+    elseif strcmp(trackProps.objType,'npix')
+        dirDefs                 = [0, -90, 180, 90];  % These define the amount to be added to the actual dirs, before classifying CW and CCW. One for each arm.
+    end
     dirInd                      = zeros(size(direction));
     for i = 1:4
         tempDir                 = direction;

@@ -80,7 +80,7 @@ if ~isempty(regexp(lower(trackProps.type),'sq','once'))
 end
 
 %% linearise position
-[linPos, dirInd ] = scanpix.maps.linearisePosData(positions,direction,trackProps, prms);
+[linPos, dirInd ] = scanpix.maps.linearisePosData(positions,direction,trackProps,prms);
 dirInd = [dirInd == 1, dirInd == 2]; % make logical
 
 linPos = repmat(linPos,1,3);
@@ -197,7 +197,7 @@ for s = 1:length(spikeTimes)
         lin_rMaps{i}(s,:) = spkMaps(i,:) ./ lin_pMaps(i,:); %rate
     end
     
-    if prms.showWaitBar; waitbar(i/length(spikeTimes),hWait,sprintf('Making those Rate Maps... %i/%i done.',s,length(spikeTimes))); end
+    if prms.showWaitBar; waitbar(s/length(spikeTimes),hWait,sprintf('Making those Rate Maps... %i/%i done.',s,length(spikeTimes))); end
 end
 
 if prms.remTrackEnds > 0

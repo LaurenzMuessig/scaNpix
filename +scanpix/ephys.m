@@ -1197,8 +1197,9 @@ classdef ephys < handle
                                 obj.trialMetaData(trialInd).trackLength = str2double(uiInput{1});
                             end
                         end
-                        trackProps.ppm   = obj.trialMetaData(i).ppm;
-                        trackProps.posFs = obj.params('posFs');
+                        trackProps.ppm     = obj.trialMetaData(i).ppm;
+                        trackProps.posFs   = obj.params('posFs');
+                        trackProps.objType = obj.type;
                         
                         [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
                         obj.maps(1).linPos{i} = num2cell(posMap,2);
