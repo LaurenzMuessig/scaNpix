@@ -17,7 +17,7 @@ gridnessThresh      = 0.5;
 useLabelGoodOnly    = true;
 minNspikes          = 300; 
 minNCellsModule     = 3;
-plotModulesStats    = true;
+plotModulesStats    = false;
 hAx                 = "none";
 % UMAP
 binSzCoarseMap      = 5;
@@ -96,7 +96,7 @@ switch lower(method)
                 % subfuction
                 tempG      = subgraph(sG,components{i});
                 ind        = ismember(G.Nodes.Name,tempG.Nodes.Name);
-                sGraphs{i} = splitGraph(tempG,IUratio(ind,ind),p.Results.overlap(1));
+                sGraphs{i} = splitGraph(tempG,IUratio(ind,ind),p);
             end
             % format into cell array
             tmpG = sGraphs;
@@ -226,7 +226,7 @@ hold(axArr{1,1},'on');
 pltInd = 1;
 for i = modInData
     
-    scanpix.plot.mapsMultPlot({dataObj.maps.rate{1}(modInd==i),dataObj.maps.rate{2}(modInd==i)},{'rate'},'cellIDStr',cellstr(num2str(dataObj.cell_ID(modInd==i,1))));
+    scanpix.plot.mapsMultPlot({dataObj.maps.rate{trialInd}(modInd==i),dataObj.maps.rate{trialInd}(modInd==i)},{'rate'},'cellIDStr',cellstr(num2str(dataObj.cell_ID(modInd==i,1))));
  
     if i > 1
         

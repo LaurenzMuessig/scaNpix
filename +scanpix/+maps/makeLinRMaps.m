@@ -127,7 +127,7 @@ lin_pMaps(3,:) = histcounts(linPosBinned(dirInd(:,2)),binList) ./ trackProps.pos
 
 % Smooth pos maps %
 if prms.smoothFlagLinMaps    
-    if strcmpi(trackProps.type,'sqtrack')
+    if ~isempty(regexp(lower(trackProps.type),'sq','once'))
         lin_pMaps     = imfilter(lin_pMaps, kernel, 'conv', 'circular');
     else
         smMap         = imfilter(lin_pMaps, kernel, 'conv', 0);
@@ -184,7 +184,7 @@ for s = 1:length(spikeTimes)
     end
     
     if prms.smoothFlagLinMaps
-        if strcmpi(trackProps.type,'sqtrack')
+        if ~isempty(regexp(lower(trackProps.type),'sq','once'))
             spkMaps = imfilter(spkMaps, kernel, 'conv', 'circular');
         else
             smMap   = imfilter(spkMaps, kernel, 'conv', 0);
