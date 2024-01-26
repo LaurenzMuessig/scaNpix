@@ -29,6 +29,11 @@ if nColumns > 8; fmt = [fmt repmat('%u',1,nColumns-8)]; end
 csvData = textscan(fID,fmt,'HeaderLines',1,'delimiter',',');
 fclose(fID);
 
+% add possible extra data from Bonsai
+if nColumns > 8
+    bhaveData = csvData(9:end);
+end
+
 % 
 pos         = [csvData{3}, csvData{4}];
 pos(pos==0) = NaN;
@@ -69,6 +74,17 @@ if ~isempty(missFrames)
     temp2(missFrames,1)      = interp_sampleT;
     temp2(temp2(:,1) == 0,1) = sampleT;
     sampleT                  = temp2;
+    
+    % add mising trials to behav data
+    if nColumns > 8
+        for i = 1:size(bhaveData,2)
+            temp                 = zeros(length(pos), size(bhaveData{i},2));
+            temp(missFrames,:)   = nan;
+            temp(temp(:,1)==0,:) = bhaveData{i};
+            bhaveData{i}         = temp;
+        end
+    end
+
  
 end
 
