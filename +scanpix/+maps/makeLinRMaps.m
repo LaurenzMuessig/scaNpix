@@ -86,7 +86,8 @@ dirInd = [dirInd == 1, dirInd == 2]; % make logical
 linPos = repmat(linPos,1,3);
 linPos(~dirInd(:,1),2) = NaN;
 linPos(~dirInd(:,2),3) = NaN;
-
+%
+tmpLinPos = linPos;
 %% make rate maps
 
 % Make smoothing kernel %
@@ -95,12 +96,14 @@ kernel = fspecial('Gaussian',[1 5*prms.smoothKernelSD], prms.smoothKernelSD); % 
 % speed filter
 if prms.speedFilterFlagLMaps && ~isempty(speed)
     speedInd = speed <= prms.speedFilterLimits(1) | speed > prms.speedFilterLimits(2);
-    linPos(speedInd,:) = NaN;
+    tmpLinPos(speedInd,:) = NaN;
+else
+    
 end
   
 % bin pos
 binSizePix   = floor( (trackProps.ppm/100) * prms.binSizeLinMaps ); % is floor the right thing here? 
-linPosBinned = ceil(linPos(:,1)./binSizePix);
+linPosBinned = ceil(tmpLinPos(:,1)./binSizePix);
 nBins        = max(linPosBinned);  % 
 binList      = 0 : nBins;
 
