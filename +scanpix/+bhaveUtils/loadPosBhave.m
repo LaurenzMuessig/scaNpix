@@ -167,9 +167,17 @@ pathDists                                  = sqrt( diff(xy(:,1)).^2 + diff(xy(:,
 obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
 obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
 
+% crop overhang at the end
+endIdxNPix                           = min( [ length(obj.posData.sampleT{trialIterator}), find(obj.posData.sampleT{trialIterator} < obj.trialMetaData(trialIterator).duration,1,'last') + 1]);
+obj.posData.XYraw{trialIterator}     = obj.posData.XYraw{trialIterator}(1:endIdxNPix,:);
+obj.posData.XY{trialIterator}        = obj.posData.XY{trialIterator}(1:endIdxNPix,:);
+obj.posData.speed{trialIterator}     = obj.posData.speed{trialIterator}(1:endIdxNPix,:);
+obj.posData.direction{trialIterator} = obj.posData.direction{trialIterator}(1:endIdxNPix,:);
+obj.posData.sampleT{trialIterator}   = obj.posData.sampleT{trialIterator}(1:endIdxNPix,:);
+
 % add possible extra data from Bonsai
 if nColumns > 8
-    obj.bhaveData(1).data(trialIterator) = csvData(9:end);
+    obj.bhaveData(1).data(trialIterator) = cellfun(@(x) x(1:endIdxNPix,:),csvData(9:end),'uni',0);
 end
 
 fprintf('  DONE!\n');
@@ -180,10 +188,8 @@ end
 function pos = fixPositions(pos,sampleT,ppm,maxSpeed,maxPosInterpolateCM)
 
 % first we remove positions that are flanked by NaNs - these are mostly dodgy and are spurious values that don't correspond to tracking the LEDs (we have to accept that we'll remove a few legit positions as well)
-
 remPosInd = 1;
 while ~isempty(remPosInd) %any(speedInd)
-    
     trackedPosInd = ~isnan(pos(:,1));
     remPosInd = find(conv(trackedPosInd,ones(5,1),'same') <= 2 & trackedPosInd);
     pos(remPosInd,:) = NaN;
@@ -214,11 +220,13 @@ if ~isempty(missing_pos) && length(missing_pos) > 1
         missPosChunks = [[max([1,missing_pos(1)-1]); missing_pos(idx(1:end-1)+1)-1],missing_pos(idx)+1]; % make sure first index~=0
     end
 %     missPosChunks = [[max([1,missing_pos(1)-1]); missing_pos(idx(1:end-1)+1)-1],missing_pos(idx)+1]; % make sure first index~=0
-    indTooLong    = sqrt(diff([pos(missPosChunks(:,1),1),pos(missPosChunks(:,2),1)],[],2).^2+diff([pos(missPosChunks(:,1),2),pos(missPosChunks(:,2),2)],[],2).^2) ./ ppm .* 100 > maxPosInterpolateCM;
-    missPosChunks = missPosChunks(indTooLong,:); % only keep these
-    % remove all bad chunks
-    for i = 1:size(missPosChunks,1)
-        missing_pos = missing_pos(~ismember(missing_pos,missPosChunks(i,1)+1:missPosChunks(i,2)-1));
+    if ~isempty(missPosChunks)
+        indTooLong    = sqrt(diff([pos(missPosChunks(:,1),1),pos(missPosChunks(:,2),1)],[],2).^2+diff([pos(missPosChunks(:,1),2),pos(missPosChunks(:,2),2)],[],2).^2) ./ ppm .* 100 > maxPosInterpolateCM;
+        missPosChunks = missPosChunks(indTooLong,:); % only keep these
+        % remove all bad chunks
+        for i = 1:size(missPosChunks,1)
+            missing_pos = missing_pos(~ismember(missing_pos,missPosChunks(i,1)+1:missPosChunks(i,2)-1));
+        end
     end
 end
 

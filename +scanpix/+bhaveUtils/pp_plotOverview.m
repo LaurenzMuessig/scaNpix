@@ -31,6 +31,7 @@ for i = 1:length(dataObj.trialNames)
     tmp = dataObj.posData.XY{i};
     tmp(~ResTable.feederToRewZoneInd{i},:) = NaN;
     plot(axArray{i,3},tmp(:,1),tmp(:,2),'k-');
+    set(axArray{i,3},'ylim',[0 250],'xlim',[0 250]);
 
 end
 

@@ -3,6 +3,7 @@ function Tout = pp_analyse(dataObj)
 
 minSpeed     = 2.5;
 feederRadius = 50;
+minTimeBetweenCrossings = 0.5;
 
 % Set up results table %
 scoreDum     = nan(1,2);
@@ -34,22 +35,22 @@ Tout.Properties.VariableNames = varList(1,:);
 % Tout.Properties.UserData = prms;
 
 
-for i = 2:length(dataObj.trialNames)
+for i = 1:length(dataObj.trialNames)
 
     Tout.rat        = sscanf(dataObj.trialMetaData(i).animal,'%*c%d');
     Tout.age        = dataObj.trialMetaData(i).age;
     Tout.dataset    = dataObj.dataSetName;
     Tout.trialID{1,i} = dataObj.trialNames(i);
     % path data
-    Tout.pathLength(i)   = sum(sqrt( diff(dataObj.posData.XY{i}(:,1)).^2 + diff(dataObj.posData.XY{i}(:,2)).^2 ),'omitnan') ./ dataObj.trialMetaData(i).ppm; % in m
+    Tout.pathLength(i)   = sum(sqrt( diff(dataObj.posData.XY{i}(dataObj.posData.speed{i}>minSpeed,1)).^2 + diff(dataObj.posData.XY{i}(dataObj.posData.speed{i}>minSpeed,2)).^2 ),'omitnan') ./ dataObj.trialMetaData(i).ppm; % in m
     Tout.meanSpeed(i)    = mean(dataObj.posData.speed{i},'omitnan');
     Tout.prcntRunning(i) = sum(dataObj.posData.speed{i}>minSpeed,'omitnan') / length(dataObj.posData.speed{i});
     % scale reward locations (like position data)
     if dataObj.trialMetaData(i).PosIsScaled
-        rewCentre    = dataObj.trialMetaData(i).rewardZoneCentre .* (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org);
-        radius       = dataObj.trialMetaData(i).rewardZoneRadius * (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org); 
-        feederPos    = [dataObj.trialMetaData(i).feederCoords(1:2:end)', dataObj.trialMetaData(i).feederCoords(2:2:end)'] .* (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org);
-        feederRadius = feederRadius * (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org); 
+        rewCentre          = dataObj.trialMetaData(i).rewardZoneCentre .* (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org);
+        radius             = dataObj.trialMetaData(i).rewardZoneRadius * (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org); 
+        feederPos          = [dataObj.trialMetaData(i).feederCoords(1:2:end)', dataObj.trialMetaData(i).feederCoords(2:2:end)'] .* (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org);
+        feederRadiusScaled = feederRadius * (dataObj.trialMetaData(i).ppm/dataObj.trialMetaData(i).ppm_org); 
     end
 
     if dataObj.trialMetaData(i).PosIsFitToEnv{1,1}
@@ -64,7 +65,13 @@ for i = 2:length(dataObj.trialNames)
     inRewInd = (dataObj.posData.XY{i}(:,1) - rewCentre(1)).^2 + (dataObj.posData.XY{i}(:,2) - rewCentre(2)).^2 < radius.^2;
     % n Zone crossings
     zoneCrossings = [find(diff([0;inRewInd;0])==1),find(diff([0;inRewInd;0])==-1)];
-    
+    % join crossings that are too close in time 
+    while any(zoneCrossings(2:end,1) - zoneCrossings(1:end-1,2)  < minTimeBetweenCrossings * dataObj.params('posFs') )
+        idx = find(zoneCrossings(2:end,1) - zoneCrossings(1:end-1,2)  < minTimeBetweenCrossings * dataObj.params('posFs'),1,'first');
+        zoneCrossings(idx,2) = zoneCrossings(idx+1,2);
+        zoneCrossings(idx+1,:) = [];
+    end
+
     Tout.nZoneCross(i)      = size(zoneCrossings,1);
     Tout.zoneCrossings{1,i} = zoneCrossings;
     % n rewards
@@ -76,15 +83,15 @@ for i = 2:length(dataObj.trialNames)
     atFeeder = false(length(dataObj.posData.XY{i}),1);
     nFeeder  = zeros(length(dataObj.posData.XY{i}),1);
     for j = 1:size(feederPos,1)    
-        atFeeder = atFeeder | (dataObj.posData.XY{i}(:,1) - feederPos(j,1)).^2 + (dataObj.posData.XY{i}(:,2) - feederPos(j,2)).^2 < feederRadius.^2;
-        nFeeder((dataObj.posData.XY{i}(:,1) - feederPos(j,1)).^2 + (dataObj.posData.XY{i}(:,2) - feederPos(j,2)).^2 < feederRadius.^2) = j;
+        atFeeder = atFeeder | (dataObj.posData.XY{i}(:,1) - feederPos(j,1)).^2 + (dataObj.posData.XY{i}(:,2) - feederPos(j,2)).^2 < feederRadiusScaled.^2;
+        nFeeder((dataObj.posData.XY{i}(:,1) - feederPos(j,1)).^2 + (dataObj.posData.XY{i}(:,2) - feederPos(j,2)).^2 < feederRadiusScaled.^2) = j;
     end
     % now get those zone crossings that triggered reward delivery (first
     % pilot only)
-    zoneCrossingsRewTrig = nan(0,2);
+    zoneCrossingsRewTrig = nan(length(rewTriggered),2);
     c = 1;
     for j = 1:length(rewTriggered)
-        tmpInd        = find(zoneCrossings(:,1)<=rewTriggered(j),1,'last');
+        [~,tmpInd] = min(abs(zoneCrossings(:,1)-rewTriggered(j))); %
         if ~isempty(tmpInd)
             zoneCrossingsRewTrig(c,:) = zoneCrossings(tmpInd,:);
             c = c+1;

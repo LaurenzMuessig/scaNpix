@@ -34,14 +34,18 @@ obj.trialMetaData(trialIterator).envBorderCoords = [obj.trialMetaData(trialItera
 % end
 %
 if ~isfield(metaXMLFile,'posFs')
-    obj.trialMetaData(trialIterator).posFs = 50; % HARCODED ATM! Should maybe be added to xml file?
+    obj.trialMetaData(trialIterator).posFs = obj.params('posFs'); % HARCODED ATM! Should maybe be added to xml file?
 end
 
 obj.trialMetaData(trialIterator).ppm         = [];
 obj.trialMetaData(trialIterator).ppm_org     = [];
 
 if isempty(obj.dataSetName)
-    obj.dataSetName = ['r' num2str(metaXMLFile.animal) '_' num2str(metaXMLFile.date)];
+    if ischar(metaXMLFile.animal)
+        obj.dataSetName = [metaXMLFile.animal '_' num2str(metaXMLFile.date)];
+    else
+        obj.dataSetName = ['r' num2str(metaXMLFile.animal) '_' num2str(metaXMLFile.date)];
+    end
 end
 
 end
