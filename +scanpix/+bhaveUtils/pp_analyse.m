@@ -10,6 +10,7 @@ scoreDum     = nan(1,2);
 varList =   {
     'rat',         nan; ...
     'age',         nan; ...
+    'exp_group',   nan; ...
     'dataset',     'string'; ...
     'trialID', cell(size(scoreDum)); ....
 
@@ -39,6 +40,7 @@ for i = 1:length(dataObj.trialNames)
 
     Tout.rat        = sscanf(dataObj.trialMetaData(i).animal,'%*c%d');
     Tout.age        = dataObj.trialMetaData(i).age;
+    Tout.exp_group  = dataObj.trialMetaData(i).group;
     Tout.dataset    = dataObj.dataSetName;
     Tout.trialID{1,i} = dataObj.trialNames(i);
     % path data
@@ -76,9 +78,7 @@ for i = 1:length(dataObj.trialNames)
     Tout.zoneCrossings{1,i} = zoneCrossings;
     % n rewards
     rewTriggered            = find(diff([0;double(dataObj.bhaveData.data{i});0])>0);
-    Tout.nRewTrigg(i)       = length(rewTriggered);
-    Tout.rewTriggered{1,i}  = rewTriggered;
-
+  
     % feeder visits
     atFeeder = false(length(dataObj.posData.XY{i}),1);
     nFeeder  = zeros(length(dataObj.posData.XY{i}),1);
@@ -90,13 +90,24 @@ for i = 1:length(dataObj.trialNames)
     % pilot only)
     zoneCrossingsRewTrig = nan(length(rewTriggered),2);
     c = 1;
+    remInd = [];
     for j = 1:length(rewTriggered)
-        [~,tmpInd] = min(abs(zoneCrossings(:,1)-rewTriggered(j))); %
-        if ~isempty(tmpInd)
+        [diffVal,tmpInd] = min(abs(zoneCrossings(:,1)-rewTriggered(j))); %
+        if ~isempty(tmpInd) && diffVal < dataObj.params('posFs')
             zoneCrossingsRewTrig(c,:) = zoneCrossings(tmpInd,:);
             c = c+1;
+        elseif diffVal > dataObj.params('posFs')
+            % in case a manual reward was triggered by accident we want to
+            % remove those from the list - happened at least once
+            remInd = [remInd;j];
         end
     end
+    rewTriggered(remInd) = [];
+    zoneCrossingsRewTrig(isnan(zoneCrossingsRewTrig(:,1)),:) = [];
+
+    Tout.nRewTrigg(i)       = length(rewTriggered);
+    Tout.rewTriggered{1,i}  = rewTriggered;
+    
     % 
     atFeederInd        = find(atFeeder);
     feederToRewZoneInd = false(length(dataObj.posData.XY{i}),1);

@@ -270,19 +270,18 @@ classdef ephys < handle
                 % initialise empty field
                 values = repmat({[]},1,length(obj.trialNames));
             end
-            
+
             if ~iscell(values)
-                values = {values};
+                values = num2cell(values);
             end
-            
+
             if length(values) < length(obj.trialNames)
                 values = repmat(values,1,length(obj.trialNames)); % expand
             end
             
             % add metadata
-            for i = 1:length(obj.trialNames)
-                obj.trialMetaData(i).(name) = values{i};
-            end
+            [obj.trialMetaData.(name)] = values{:};
+
         end
         
         %%
@@ -1127,7 +1126,7 @@ classdef ephys < handle
                     
                     for i = trialInd
                         if ~isempty( obj.trialMetaData(i).envSize )
-                            prms.envSize = obj.trialMetaData(i).envSize / 100 * obj.trialMetaData(i).ppm; % in pixels
+                            prms.envSize = obj.trialMetaData(i).envSize ./ 100 .* obj.trialMetaData(i).ppm; % in pixels
                         elseif strcmp(obj.fileType,'.set')
                             prms.envSize = [obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin];
                         end

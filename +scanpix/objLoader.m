@@ -24,6 +24,7 @@ function obj = objLoader(objType,dataPath, varargin )
 
 
 %% PARAMS
+metaData         = {};
 defaultObjParams = [];
 defaultMapParams = [];
 loadPos          = true;
@@ -31,11 +32,15 @@ loadSpikes       = true;
 loadLFP          = false;
 
 p = inputParser;
+%
+addOptional(p, 'addMeta',metaData,@iscell);
 addParameter(p,'objParams',defaultObjParams, @(x) isa(x,'containers.Map') || ischar(x) || isempty(x));
 addParameter(p,'mapParams',defaultMapParams, @(x) isstruct(x) || ischar(x) || isempty(x));
 addParameter(p,'pos',loadPos, @islogical);
 addParameter(p,'spikes',loadSpikes, @islogical);
 addParameter(p,'lfp',loadLFP, @islogical);
+
+%
 parse(p,varargin{:});
 
 loadStr = {'pos','spikes','lfp'};
@@ -94,6 +99,12 @@ obj.trialNames = trialNames;
 % load
 loadStr = loadStr( [p.Results.pos p.Results.spikes p.Results.lfp] );
 obj.load(loadStr);
+
+if ~isempty(p.Results.addMeta)
+    for i = 1:size(p.Results.addMeta,1)
+        obj.addMetaData(p.Results.addMeta{i,1},p.Results.addMeta{i,2});
+    end
+end
 
 
 

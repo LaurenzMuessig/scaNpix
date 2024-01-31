@@ -24,6 +24,11 @@ for i = 1:length(f)
         obj.trialMetaData(trialIterator).(f{i}) = metaXMLFile.(f{i});
     end
 end
+
+if ~isnumeric(obj.trialMetaData(trialIterator).age)
+    obj.trialMetaData(trialIterator).age = str2double(extract(obj.trialMetaData(trialIterator).age, digitsPattern));
+end
+
 % reshape into more convenient format ([minX maxX; minY maxY])
 %             obj.trialMetaData(trialIterator).envBorderCoords = [min(obj.trialMetaData(trialIterator).envBorderCoords([1,3])),max(obj.trialMetaData(trialIterator).envBorderCoords([1,3])); min(obj.trialMetaData(trialIterator).envBorderCoords([2,4])),max(obj.trialMetaData(trialIterator).envBorderCoords([2,4]))];
 obj.trialMetaData(trialIterator).envBorderCoords = [obj.trialMetaData(trialIterator).envBorderCoords(1:2:end); obj.trialMetaData(trialIterator).envBorderCoords(2:2:end)];
