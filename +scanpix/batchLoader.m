@@ -29,7 +29,7 @@ loadLFP     = false;
 addMetaData = {};     
 
 p = inputParser;
-addOptional(p, 'addMetaField', addMetaData, @(x) isempty(x) || iscell(x) || ischar(x));
+addOptional(p, 'addMetaField', addMetaData, @(x) isempty(x) || iscell(x) || (ischar(x) && ~any(strcmp(x,p.Parameters))));
 addParameter(p,'objParams',    objParams,    @(x) isa(x,'containers.Map') || ischar(x) || isempty(x));
 addParameter(p,'mapParams',    mapParams,    @(x) isstruct(x) || ischar(x) || isempty(x));
 addParameter(p,'pos',          loadPos,      @islogical);
@@ -47,7 +47,7 @@ prms(2,:) = tmp(~strcmp(p.Parameters,'addMetaField'));
 expInfo = scanpix.helpers.readExpInfo( cribSheetPath, method );
 
 if ~all(ismember(p.Results.addMetaField,fieldnames(expInfo)))
-    error('scaNpix::batchLoader:At least one of the fields you want to add as metaData is not included in your experimetal info. So this just cannot work...');
+    error('scaNpix::batchLoader:At least one of the fields you want to add as metaData is not included in your experiment info. So this just cannot work...');
 end
 
 if ~iscell(p.Results.addMetaField); addFields = {p.Results.addMetaField}; else; addFields = p.Results.addMetaField; end 

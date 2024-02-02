@@ -86,7 +86,7 @@ positions = positions - min(positions) + eps;
 posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
 
 if isempty(prms.envSize)
-    nBins = [nanmax(posBinned(:,1)) nanmax(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
+    nBins = [max(posBinned(:,1)) max(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
 else
     nBins = fliplr( ceil( prms.envSize ./ binSizePix ) ); %+ min(posBinned)-1; 
 end
