@@ -14,6 +14,10 @@ function loadMetaData(obj, trialIterator)
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+obj.trialMetaData(trialIterator).log.missingPosData              = 0;
+obj.trialMetaData(trialIterator).log.missingFramesPosStream      = 0;
+obj.trialMetaData(trialIterator).log.PosLoadingStats             = ones(2,1);
+
 % first load xml file
 metaXMLFileInfo = dir(fullfile(obj.dataPath{trialIterator},'*.xml'));
 metaXMLFile     = scanpix.fxchange.xml_read(fullfile(obj.dataPath{trialIterator},metaXMLFileInfo.name)); %

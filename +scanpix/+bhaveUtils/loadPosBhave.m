@@ -84,10 +84,12 @@ if ~isempty(missFrames)
             bhaveData{i}         = temp;
         end
     end
-
- 
+    %
+    obj.trialMetaData(trialIterator).log.missingFramesPosStream = nMissFrames;
 end
-
+%
+[ sampleT, pos, bhaveData] = fixSetupFreeze(obj,trialIterator,sampleT,pos,bhaveData);
+%
 ppm = nan(2,1);
 if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')) && size(obj.trialMetaData(trialIterator).envBorderCoords,2) ~= 3; circleFlag = false; else; circleFlag = true; end
 % estimate ppm
@@ -139,7 +141,7 @@ end
 pos(envSzInd,:) = NaN;
 
 % fix positions (inline subfunction)
-pos = fixPositions(pos, mean(diff(sampleT)), ppm(1), obj.params('posMaxSpeed'), obj.params('maxPosInterpolate'));
+pos = fixPositions(pos, mean(diff(sampleT)), ppm(1), obj, trialIterator );
 
 % smooth
 kernel = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( obj.params('posSmooth') * obj.params('posFs') ); % as per Ephys standard - 400ms boxcar filter
@@ -177,7 +179,7 @@ obj.posData.sampleT{trialIterator}   = obj.posData.sampleT{trialIterator}(1:endI
 
 % add possible extra data from Bonsai
 if nColumns > 8
-    obj.bhaveData(1).data(trialIterator) = cellfun(@(x) x(1:endIdxNPix,:),csvData(9:end),'uni',0);
+    obj.bhaveData(1).data(trialIterator) = cellfun(@(x) x(1:endIdxNPix,:),bhaveData,'uni',0);
 end
 
 fprintf('  DONE!\n');
@@ -185,7 +187,9 @@ fprintf('  DONE!\n');
 end
 
 
-function pos = fixPositions(pos,sampleT,ppm,maxSpeed,maxPosInterpolateCM)
+function pos = fixPositions(pos,sampleT,ppm,obj,trialIterator)
+
+obj.trialMetaData(trialIterator).log.PosLoadingStats(1,1) = sum(~isnan(squeeze(pos(:,1,:))),1) / size(pos,1);
 
 % first we remove positions that are flanked by NaNs - these are mostly dodgy and are spurious values that don't correspond to tracking the LEDs (we have to accept that we'll remove a few legit positions as well)
 remPosInd = 1;
@@ -200,7 +204,7 @@ validPos                = pos(~isnan(pos(:,1)),:);
 pathDists               = sqrt( diff(validPos(:,1),[],1).^2 + diff(validPos(:,2),[],1).^2 ) ./ ppm(1); % % distances in m
 tempSpeed               = pathDists ./ sampleT; %diff(sampleT(~isnan(ledPos(:,1,i)))); % m/s
 tempSpeed(end+1)        = tempSpeed(end);
-speedInd                = tempSpeed > maxSpeed;
+speedInd                = tempSpeed >  obj.params('posMaxSpeed');
 validPos(speedInd,:)    = NaN;
 pos(~isnan(pos(:,1)),:) = validPos;
 
@@ -221,22 +225,71 @@ if ~isempty(missing_pos) && length(missing_pos) > 1
     end
 %     missPosChunks = [[max([1,missing_pos(1)-1]); missing_pos(idx(1:end-1)+1)-1],missing_pos(idx)+1]; % make sure first index~=0
     if ~isempty(missPosChunks)
-        indTooLong    = sqrt(diff([pos(missPosChunks(:,1),1),pos(missPosChunks(:,2),1)],[],2).^2+diff([pos(missPosChunks(:,1),2),pos(missPosChunks(:,2),2)],[],2).^2) ./ ppm .* 100 > maxPosInterpolateCM;
+        indTooLong    = sqrt(diff([pos(missPosChunks(:,1),1),pos(missPosChunks(:,2),1)],[],2).^2+diff([pos(missPosChunks(:,1),2),pos(missPosChunks(:,2),2)],[],2).^2) ./ ppm .* 100 > obj.params('maxPosInterpolate');
         missPosChunks = missPosChunks(indTooLong,:); % only keep these
         % remove all bad chunks
         for i = 1:size(missPosChunks,1)
             missing_pos = missing_pos(~ismember(missing_pos,missPosChunks(i,1)+1:missPosChunks(i,2)-1));
         end
     end
+    % interpolate as per usual
+    ok_pos      = find(~isnan(pos(:,1)));
+    for i = 1:2
+        pos(missing_pos, i)                            = interp1(ok_pos, pos(ok_pos, i), missing_pos, 'linear');
+        pos(missing_pos(missing_pos > max(ok_pos)), i) = pos( max(ok_pos), i);
+        pos(missing_pos(missing_pos < min(ok_pos)), i) = pos( min(ok_pos), i);
+    end
+    %
+    obj.trialMetaData(trialIterator).log.PosLoadingStats(2,1) = (length(missing_pos)+length(ok_pos)) / size(pos,1);
 end
 
-% interpolate as per usual
-ok_pos      = find(~isnan(pos(:,1)));
-for i = 1:2
-    pos(missing_pos, i)                            = interp1(ok_pos, pos(ok_pos, i), missing_pos, 'linear');
-    pos(missing_pos(missing_pos > max(ok_pos)), i) = pos( max(ok_pos), i);
-    pos(missing_pos(missing_pos < min(ok_pos)), i) = pos( min(ok_pos), i);
+
+
+end
+
+
+function [sampleT, pos, bhaveData] = fixSetupFreeze(obj,trialIterator,sampleT,pos,bhaveData)
+
+missedFrames = find(diff(sampleT) > 1.5*1/obj.params('posFs'));
+if ~isempty(missedFrames)
+    addFrames = [];
+    missedFrames(:,2) = floor((sampleT(missedFrames+1) - sampleT(missedFrames)) * obj.params('posFs'));
+    cs_NMissed = cumsum([0;missedFrames(:,2)]);
+    x = 1:length(sampleT);
+    for i = 1:size(missedFrames,1)
+        addFrames                = [addFrames,(missedFrames(i,1)+1:missedFrames(i,1)+missedFrames(i,2)) + cs_NMissed(i)];
+        x(missedFrames(i)+1:end) = x(missedFrames(i,1)+1:end) + missedFrames(i,2); % bump sample points for interpolation
+    end
+    interp_pulseT          = interp1(x, sampleT', addFrames);
+    temp                   = zeros(length(sampleT)+length(addFrames),1);
+    temp(addFrames,1)      = interp_pulseT;
+    temp(temp(:,1) == 0,1) = sampleT;
+    sampleT                = temp;
+
+    temp                   = zeros(length(pos)+length(addFrames), 2);
+    temp(addFrames,:,:)    = nan;
+    temp(temp(:,1)==0,:,:) = pos;
+    pos                    = temp;
+
+    % add mising trials to behav data
+    if ~isempty(bhaveData)
+        for i = 1:size(bhaveData,2)
+            temp                 = zeros(length(pos), size(bhaveData{i},2));
+            temp(addFrames,:)    = nan;
+            temp(temp(:,1)==0,:) = bhaveData{i};
+            bhaveData{i}         = temp;
+        end
+    end
+
+    warning('scaNpix::loadPosBhave: %i missing frames due to setup freeze across %i chunks in position data. Interpolated missing samples, but better go and check that',length(addFrames),size(missedFrames,1));
+    %
+    obj.trialMetaData(trialIterator).log.missingPosData = length(addFrames);
+
 end
 
 end
+
+
+
+
 
