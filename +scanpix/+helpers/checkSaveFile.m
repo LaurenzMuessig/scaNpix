@@ -17,7 +17,6 @@ function filenameOut = checkSaveFile(filenameIn)
 % LM 2020
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-overwriteFile = true; % Default to overwriting or creating new file.
 [path,tmpName,ext] = fileparts(filenameIn);
 
 %% check if file exist and generate unique filename if necessary

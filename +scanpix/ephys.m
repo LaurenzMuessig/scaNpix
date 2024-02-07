@@ -971,6 +971,32 @@ classdef ephys < handle
                 end
             end
         end
+
+        %%
+        function copyObj = deepCopy(obj)
+            % deepCopy - create a deep copy of an scanpix.ephys object
+            % which isn't straightforward due to derivation from handle
+            % class. This seems the only hacky way Matlab is currently
+            % offering (other than using Mixin.copyable instead of handle
+            % class)
+            %
+            % Syntax:
+            %       copyObj = obj.deepCopy
+            %       
+            %
+            % Inputs:
+            %
+            % Outputs:
+            %       copyObj - deep copy of input obj
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            filenameOut = scanpix.helpers.checkSaveFile(fullfile(obj.dataPath,'temp.mat'));
+            save(filenameOut, 'obj');
+            foo     = load(filenameOut);
+            copyObj = foo.obj;
+            delete(filenameOut);
+
+        end   
     end
     %
     methods

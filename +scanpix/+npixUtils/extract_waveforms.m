@@ -48,7 +48,7 @@ if strcmp(p.Results.mode,'cat')
     end
     % need a few details from concat log file
     fsLog   = dir(fullfile(fileparts(path2raw{1}),'*logFile.tsv'));
-    logFile = tdfread([fsLog.folder filesep fsLog.name],'tab');
+    logFile = tdfread(fullfile(fsLog.folder,fsLog.name),'tab');
     %
     [~,~,ext] = fileparts(path2raw{1});
     if strcmp(ext,'.dat')
