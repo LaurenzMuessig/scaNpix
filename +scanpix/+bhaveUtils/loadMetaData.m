@@ -1,17 +1,17 @@
 function loadMetaData(obj, trialIterator)
-% loadMeta - load meta data for neuropixel data
+% loadMeta - load meta data for behavioural data
 %
 % Syntax:  loadMeta(obj,trialIterator)
 %
 % Inputs:
-%    obj           - ephys class object ('npix')
+%    obj           - ephys class object ('bhave')
 %    trialIterator - numeric index for trial to be loaded
 %
 % Outputs:
 %
 % See also: 
 %
-% LM 2021
+% LM 2023
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 obj.trialMetaData(trialIterator).log.missingPosData              = 0;

@@ -6,13 +6,17 @@ function obj = objLoader(objType,dataPath, varargin )
 % 
 %
 % Usage:    obj = objLoader( objType, dataPath )
+%           obj = objLoader( objType, dataPath, metaData)
+%           obj = objLoader( objType, dataPath, metaData, 'inputName', inputVal, .. etc .. )
 %           obj = objLoader( objType, dataPath, 'inputName', inputVal, .. etc .. )
 %
 % Inputs:
-%    objType   - 'npix' or 'dacq' - data type
-%    dataPath  - path to data can be cell array of path strings
-%    objParams - optional; containers.Map (see 'scanpix.helpers.defaultParamsContainer' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat')
-%    mapParams - optional; mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat') 
+%    objType    - 'npix' or 'dacq' - data type
+%    dataPath   - path to data can be cell array of path strings
+%    metadata   - optional; name by values cell array of metadata to be added to object
+%    name-value - comma separated list of name-value pairs   
+%                 objParams  - optional; containers.Map (see 'scanpix.helpers.defaultParamsContainer' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat')
+%                 mapParams  - optional; mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat') 
 %
 % Outputs: obj - class object with data loaded
 %
@@ -27,9 +31,9 @@ function obj = objLoader(objType,dataPath, varargin )
 metaData         = {};
 defaultObjParams = [];
 defaultMapParams = [];
-loadPos          = true;
-loadSpikes       = true;
-loadLFP          = false;
+loadPos          = true;  % load position data y/n
+loadSpikes       = true;  % load neural data y/n
+loadLFP          = false; % load lfp data y/n
 
 p = inputParser;
 %
@@ -83,8 +87,8 @@ if ischar(dataPath)
 end
 % parse directories and trialnames
 [filepath,name,ext] = cellfun(@fileparts,dataPath,'uni',0);
-obj.dataPath        = [filepath filesep];
-obj.dataPathSort    = [filepath filesep];
+obj.dataPath        = cellfun(@(x) [x filesep],filepath,'uni',0);
+obj.dataPathSort    = cellfun(@(x) [x filesep],filepath,'uni',0);
 %
 if strcmp(ext,'.dat')
     obj.isConcat = true;
@@ -101,6 +105,7 @@ obj.trialNames = trialNames;
 loadStr = loadStr( [p.Results.pos p.Results.spikes p.Results.lfp] );
 obj.load(loadStr);
 
+% add meta data (optional)
 if ~isempty(p.Results.addMeta)
     for i = 1:size(p.Results.addMeta,1)
         obj.addMetaData(p.Results.addMeta{i,1},p.Results.addMeta{i,2});

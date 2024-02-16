@@ -11,6 +11,7 @@ varList =   {
     'rat',         nan; ...
     'age',         nan; ...
     'exp_group',   nan; ...
+    'day',         nan; ...
     'dataset',     'string'; ...
     'trialID', cell(size(scoreDum)); ....
 
@@ -38,10 +39,11 @@ Tout.Properties.VariableNames = varList(1,:);
 
 for i = 1:length(dataObj.trialNames)
 
-    Tout.rat        = sscanf(dataObj.trialMetaData(i).animal,'%*c%d');
-    Tout.age        = dataObj.trialMetaData(i).age;
-    Tout.exp_group  = dataObj.trialMetaData(i).group;
-    Tout.dataset    = dataObj.dataSetName;
+    Tout.rat          = sscanf(dataObj.trialMetaData(i).animal,'%*c%d');
+    Tout.age          = dataObj.trialMetaData(i).age;
+    Tout.exp_group    = dataObj.trialMetaData(i).group;
+    Tout.day          = dataObj.trialMetaData(i).experiment_ID;
+    Tout.dataset      = dataObj.dataSetName;
     Tout.trialID{1,i} = dataObj.trialNames(i);
     % path data
     Tout.pathLength(i)   = sum(sqrt( diff(dataObj.posData.XY{i}(dataObj.posData.speed{i}>minSpeed,1)).^2 + diff(dataObj.posData.XY{i}(dataObj.posData.speed{i}>minSpeed,2)).^2 ),'omitnan') ./ dataObj.trialMetaData(i).ppm; % in m

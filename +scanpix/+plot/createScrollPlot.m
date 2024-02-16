@@ -86,10 +86,10 @@ if evnt.VerticalScrollCount < 0 % scroll up/right
     % update panel - make sure we stay within canvas size
     switch type
         case 'x'
-            newPos  = max([-p(3)+orgPanelSz(1) p(1)-prctMove*p(3)]);
+            newPos = max([-p(3)+orgPanelSz(1) p(1)-prctMove*p(3)]);
             set(hPan,'Position',[newPos p(2:4)]);  
         case 'y'
-            newPos  = max([-p(4)+orgPanelSz(2) p(2)-prctMove*p(4)]);
+            newPos = max([-p(4)+orgPanelSz(2) p(2)-prctMove*p(4)]);
             set(hPan,'Position',[p(1) newPos  p(3:4)]);  
     end
 elseif evnt.VerticalScrollCount > 0 % scroll down/left
@@ -147,12 +147,12 @@ switch sliderType
     case 'X'
         % how much has slider moved 
         relSlidPos = offset/p(3);
-        newVal = -relSlidPos * (p(3)-orgPanelSz(1)); % subtract original canvas size so we don't scroll beyond panel size
+        newVal     = -relSlidPos * (p(3)-orgPanelSz(1)); % subtract original canvas size so we don't scroll beyond panel size
         set(hPan,'Position',[newVal p(2:4)]);
     case 'Y'
         % how much has slider moved 
         relSlidPos = offset/p(4);
-        newVal = -relSlidPos * (p(4)-orgPanelSz(2));
+        newVal     = -relSlidPos * (p(4)-orgPanelSz(2));
         set(hPan,'Position',[p(1) newVal p(3:4)]);    
 end  
 
@@ -166,6 +166,6 @@ function keyPressFcn(hFig,evt)
 end
 function keyReleaseFcn(hFig,evt)
     if strcmp(evt.Key,'control')
-        hFig.UserData.keyHeld = '';
+        hFig.UserData.keyHeld  = '';
     end
 end

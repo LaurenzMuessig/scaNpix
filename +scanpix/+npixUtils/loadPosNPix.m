@@ -61,28 +61,7 @@ else
     obj.trialMetaData(trialIterator).BonsaiCorruptFlag = false;
 end
 
-% deal with missing syncs - we just treat them as missing frames - this is a bit of a headache as sometimes there are incomplete sync pulses at the point they drop off (so they miss in npix stream but not in pos stream). We need to deal
-% with those
-% if ~isempty(obj.trialMetaData(trialIterator).missedSyncPulses)
-%     % first figure out if we have some extra frames in the pos stream
-%     addPosFrames = nan(1,size(obj.trialMetaData(trialIterator).missedSyncPulses,1));
-%     totalNAddPosFrames = 0;
-%     for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
-%         if sampleT(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)+1) - sampleT(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)) >= 1.1*1/obj.trialMetaData(trialIterator).posFs
-%             addPosFrames(i) = 0;
-%         else
-%             addPosFrames(i) = find(diff(sampleT(find(frameCount==obj.trialMetaData(trialIterator).missedSyncPulses(i,1)+totalNAddPosFrames):end))>1.5*1/obj.trialMetaData(trialIterator).posFs,1,'first') - 1;
-%         end
-%         totalNAddPosFrames = totalNAddPosFrames + addPosFrames(i);
-%     end
-%     % then update framecount accordingly
-%     cs_NMissed = [0;cumsum(obj.trialMetaData(trialIterator).missedSyncPulses(:,2)-addPosFrames')];
-%     missedSyncPosInd = obj.trialMetaData(trialIterator).missedSyncPulses(:,1) + cumsum(addPosFrames)' + cs_NMissed(1:end-1);
-%     for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
-%         frameCount(frameCount>missedSyncPosInd(i)) = frameCount(frameCount>missedSyncPosInd(i)) + obj.trialMetaData(trialIterator).missedSyncPulses(i,2) - addPosFrames(i);  
-%     end
-% end
-
+% deal with problems between data streams (inline function)
 [frameCount, sampleT] = fixFrameCounts(obj,trialIterator,frameCount,sampleT);
 
 % deal with missing frames (if any) - this currently doesn't take into account if 1st frame(s) would be missing, but I am not sure this would
@@ -260,6 +239,8 @@ ledPos(LEDdistInd,:,maxInd~=[1 2]) = ledPos(LEDdistInd,:,maxInd);
 obj.trialMetaData(trialIterator).log.PosLoadingStats(3,1:2) = sum(LEDdistInd) / size(ledPos,1);
 
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [frameCount, sampleT] = fixFrameCounts(obj,trialIterator,frameCount,sampleT)
 

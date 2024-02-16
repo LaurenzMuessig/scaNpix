@@ -141,11 +141,12 @@ switch lower(method)
         uniqueExpList   = unique(expUIDInd);
         
         for i = 1:length(uniqueExpList)   % i=iterator for EXPERIMENT
-            trialIndForExp            = find( expUIDInd == uniqueExpList(i) );
-            expInfo.animal{i,1}       = cribSheet.animal{trialIndForExp(1)};
-            expInfo.anNum(i,1)        = anNum(trialIndForExp(1));
-            expInfo.Tnames{i,1}       = cribSheet.trialName( trialIndForExp );  
-            expInfo.fullPath{i,1}     = fullfile(cribSheet.filePath(trialIndForExp),cribSheet.trialName(trialIndForExp)); %%%%%%%
+            trialIndForExp             = find( expUIDInd == uniqueExpList(i) );
+            expInfo.animal{i,1}        = cribSheet.animal{trialIndForExp(1)};
+            expInfo.anNum(i,1)         = anNum(trialIndForExp(1));
+            expInfo.Tnames{i,1}        = cribSheet.trialName( trialIndForExp );  
+            expInfo.fullPath{i,1}      = fullfile(cribSheet.filePath(trialIndForExp),cribSheet.trialName(trialIndForExp)); %%%%%%%
+            expInfo.experiment_ID{i,1} = cribSheet.experiment_ID( trialIndForExp ); 
             
             % additional data (meta data)
             if ~isempty(addFieldNames)

@@ -330,7 +330,7 @@ addParameter(p,'peelTmpl',   peelTemplates, @islogical);
 % addParameter(p,'unwhite',    defaultUnWhitedata);
 addParameter(p,'save',       saveWFs,@islogical);
 addParameter(p,'mode',       mode,@ischar);
-addParameter(p,'path2cat',   path2cat,@(x) ischar(x) || iscell(x));
+addParameter(p,'path2cat',   path2cat,@(x) ischar(x) || iscell(x) || isstring(x));
 addParameter(p,'clu',        cluIDs);
 
 parse(p,varargs{:});

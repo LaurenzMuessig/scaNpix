@@ -12,7 +12,7 @@ classdef ephys < handle
     %       obj = scanpix.ephys(type,prmsMode,setDirFlag);
     %
     % Inputs:
-    %       type:       data type ('dacq', 'npix', 'nexus')
+    %       type:       data type ('dacq', 'npix', 'nexus'. 'bhave')
     %
     %       prmsMode:   'default' - uses default parameter (default)
     %                   'ui'      - opens UI dialogue
