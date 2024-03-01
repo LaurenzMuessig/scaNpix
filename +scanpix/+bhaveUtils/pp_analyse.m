@@ -29,6 +29,9 @@ varList =   {
 
     'feederToRewZoneInd', cell(size(scoreDum)); 
 
+    'circuity', cell(size(scoreDum)); 
+    'meanCircuity', scoreDum; ...
+
     };
 
 varList = varList';
@@ -113,12 +116,19 @@ for i = 1:length(dataObj.trialNames)
     % 
     atFeederInd        = find(atFeeder);
     feederToRewZoneInd = false(length(dataObj.posData.XY{i}),1);
-    for j = 1:size(zoneCrossingsRewTrig,1)
+    circuity           = nan(size(zoneCrossingsRewTrig,1)-1,1);
+    for j = 2:size(zoneCrossingsRewTrig,1)  % don't use first crossing
         tmpInd        = find(atFeederInd<zoneCrossingsRewTrig(j,1),1,'last');
         lastFeederInd = atFeederInd(tmpInd);
         feederToRewZoneInd(lastFeederInd:zoneCrossingsRewTrig(j,1)) = true;
+        %
+        dist    = sum(sqrt(diff(dataObj.posData.XY{i}(lastFeederInd:zoneCrossingsRewTrig(j,1),1)).^2+diff(dataObj.posData.XY{i}(lastFeederInd:zoneCrossingsRewTrig(j,1),2)).^2),1,'omitnan') ./ dataObj.trialMetaData(i).ppm;
+        rewDist = sqrt((dataObj.posData.XY{i}(lastFeederInd,1) - dataObj.posData.XY{i}(zoneCrossingsRewTrig(j,1),1))^2 + (dataObj.posData.XY{i}(lastFeederInd,2) - dataObj.posData.XY{i}(zoneCrossingsRewTrig(j,1),2))^2) ./ dataObj.trialMetaData(i).ppm;
+        circuity(j-1) = (dist-rewDist)/dist;
     end
     Tout.feederToRewZoneInd{i} = feederToRewZoneInd;
+    Tout.circuity{i}           = circuity;
+    Tout.meanCircuity(i)       = mean(circuity,'omitnan');
 end
 
 end
