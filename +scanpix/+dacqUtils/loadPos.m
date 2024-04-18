@@ -97,6 +97,14 @@ end
 % convert to integers
 obj.posData(1).XY{trialIterator} = [double( floor(obj.posData(1).XYraw{trialIterator}(:,1)) + 1 ), double( floor(obj.posData(1).XYraw{trialIterator}(:,2)) + 1 )];  %%% NECESSARY??
 
+%
+if ~isempty(obj.trialMetaData(trialIterator).envSize )
+    boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
+    scanpix.maps.scalePosition(obj, trialIterator,'envszpix', boxExt);
+    %
+    % obj.posData(1).XY{trialIterator} = scanpix.helpers.rotatePoints(obj.posData(1).XY{trialIterator});
+end
+
 fprintf('  DONE!\n');
 
 end

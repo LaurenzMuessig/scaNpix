@@ -51,6 +51,7 @@ center       = ceil(length(ephysObj.maps.sACs{trialInd}{1})/2);
 
 % Intersection/Union ratio - according to Tocker et al. (2015)
 IUratio = nan(length(ephysObj.maps.sACs{trialInd}),length(ephysObj.maps.sACs{trialInd}));
+
 for i = 1:length(ephysObj.maps.sACs{trialInd})
     
     if ~cellFilter(i) || any(isnan(ellipseFits(i,2:3))); continue; end
@@ -58,7 +59,6 @@ for i = 1:length(ephysObj.maps.sACs{trialInd})
     radiusX = ellipseFits(i,3);
     radiusY = ellipseFits(i,2);
     ellipsePixA = (sin(ellipseFits(i,1)).*(cols - center) + cos(ellipseFits(i,1)).*(rows - center)).^2 ./ radiusX^2 + (cos(ellipseFits(i,1)).*(cols - center) - sin(ellipseFits(i,1)).*(rows - center)) .^2 ./ radiusY^2 <= 1;
-    
     for j = i+1:length(ephysObj.maps.sACs{trialInd})
         
         if ~cellFilter(j) || any(isnan(ellipseFits(j,2:3))); continue; end
@@ -66,8 +66,8 @@ for i = 1:length(ephysObj.maps.sACs{trialInd})
         radiusX = ellipseFits(j,2);
         radiusY = ellipseFits(j,3);
         ellipsePixB = (sin(ellipseFits(j,1)).*(cols - center) + cos(ellipseFits(j,1)).*(rows - center)).^2 ./ radiusX^2 + (cos(ellipseFits(j,1)).*(cols - center) - sin(ellipseFits(j,1)).*(rows - center)) .^2 ./ radiusY^2 <= 1;
-        
-        IUratio(i,j) = sum(ellipsePixA(:) & ellipsePixB(:)) / sum(ellipsePixA(:) | ellipsePixB(:)); % Intersection / Union
+
+        IUratio(i,j) = sum(ellipsePixA(:) & ellipsePixB(:),'omitnan') / sum(ellipsePixA(:) | ellipsePixB(:),'omitnan'); % Intersection / Union
     end
 end
 

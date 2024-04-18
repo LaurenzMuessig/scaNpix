@@ -23,11 +23,11 @@ function [meanR,meanDir,thetas,rhos] = rayleighVect(dirMap)
 binSz  = 2*pi / length(dirMap); % binSz
 
 thetas = linspace(binSz/2, 2*pi-binSz/2, length(dirMap))'; % binned angles
-rhos   = dirMap ./ nanmax(dirMap(:));   % normalised rates
+rhos   = dirMap ./ max(dirMap(:),[],'omitnan');   % normalised rates
 
 % get mean vector
-rVect = nansum(rhos .* exp(1i*thetas)); % rayleigh vector, complex
-meanR = abs(rVect)/nansum(rhos);        % magnitude (real part normalised by weights) 
+rVect = sum(rhos .* exp(1i*thetas), 'omitnan'); % rayleigh vector, complex
+meanR = abs(rVect)/sum(rhos,'omitnan');        % magnitude (real part normalised by weights) 
 meanDir = angle(rVect);                 % angle = imaginary part
 
 end

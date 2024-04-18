@@ -43,7 +43,7 @@ function [gridness, Props] = gridprops(autoCorr,varargin)
 
 %% Params
 % corrThr               = 0.1; 
-centrPeakThr          = 0.5;
+centrPeakThr          = 0.4;
 peakDetectMode        = 'zscore'; % {'zscore','log'}
 zScoreThr             = 1; % 90th percentile in units of std (1.282)
 peakCorrThr           = 0.25;
@@ -123,7 +123,8 @@ end
 autoCorrTemp = autoCorr;
 %
 
-autoCorrTemp(autoCorr <= p.Results.centthr | isnan(autoCorr)) = 0; 
+centThresh = p.Results.centthr * max(autoCorr(:),[],'omitnan'); % for the regularised sACs the central peaki can be < 1
+autoCorrTemp(autoCorr <= centThresh | isnan(autoCorr)) = 0; 
 [centrPeakMask,~]    = bwlabel(autoCorrTemp, 8);
 stats                = regionprops(centrPeakMask,autoCorr, 'Centroid','Area','EquivDiameter','Eccentricity');
 xyCoordMaxBin        = reshape([stats.Centroid], 2,[])'; %Still x,y pair
@@ -145,7 +146,7 @@ elseif stats(orderOfClose(1)).Eccentricity > 0.9
 end
 
 % radii for annuli increasing in size around the central peak
-% radiiStart = linspace(centrPeakDiam,length(autoCorr)/2-centrPeakDiam/2,floor(length(autoCorr)/2-centrPeakDiam));
+% radii = linspace(centrPeakDiam,length(autoCorr)/2,floor(length(autoCorr)/2-centrPeakDiam));
 radii = [centrPeakDiam,linspace(centrPeakDiam*2,length(autoCorr)/2,floor(length(autoCorr)/2-centrPeakDiam))];
 % make annulus mask
 [colsIm, rowsIm]            = meshgrid(1:length(autoCorr), 1:length(autoCorr));
@@ -210,7 +211,7 @@ if getGridProps || p.Results.getellgridness
     Props.orientationFull(:,outInd) = orientation;
     Props.ax_ind(:,outInd)          = [ax1_ind; sortInd(1); sortInd(2)];
     % wavelength
-    Props.wavelength(1,outInd)      = nanmean(distFromCentre([ax1_ind sortInd(1) sortInd(2)])); % wavelength
+    Props.wavelength(1,outInd)      = mean(distFromCentre([ax1_ind sortInd(1) sortInd(2)]),'omitnan'); % wavelength
     Props.wavelengthFull(:,outInd)  = distFromCentre([ax1_ind sortInd(1) sortInd(2)]); 
     % offset
     Props.offsetFull(:,outInd)      = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)
@@ -310,9 +311,9 @@ failFlag      = false;
      case 'zscore'
          % this works pretty well
          autoCorrTemp(~annMask) = NaN;
-         zAutoCorr              = (autoCorrTemp - nanmean(autoCorrTemp(autoCorrTemp~=0))) ./ nanstd(autoCorrTemp(autoCorrTemp~=0));
+         zAutoCorr              = (autoCorrTemp - mean(autoCorrTemp(:),'omitnan')) ./ std(autoCorrTemp(:),'omitnan');
          peaksAutoCorr          = zAutoCorr > thr;
-         stats                  = regionprops(peaksAutoCorr,autoCorr, 'WeightedCentroid');
+         stats                  = regionprops(peaksAutoCorr,autoCorr, 'WeightedCentroid','MaxIntensity','Area');
          xyCoordMaxBin          = reshape([stats.WeightedCentroid], 2,[])'; %r    
  end
  
@@ -880,7 +881,7 @@ regSac=interp2(regSac, linspace(xStart,xEnd, sacSize(2)), linspace(yStart, yEnd,
 %4) Rotate back to original orientation
 regSac=imrotate(regSac, orient, 'bilinear');
 
-%5) Finally keep onlyl the central porition of the sac so that it matches
+%5) Finally keep only the central portion of the sac so that it matches
 %the original size
 sizeDif=round((size(regSac)-size(sac))/2);
 regSac=regSac(1+sizeDif(1):end-sizeDif(1), 1+sizeDif(2):end-sizeDif(2));

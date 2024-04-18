@@ -22,6 +22,7 @@ function cornerPoints = findBoxCorners(corner1, L1, corner2, L2)
 % LM 2023
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
 %% Distance between points
 distC1C2 = sqrt( (corner2(1)-corner1(1))^2 + (corner2(2)-corner1(2))^2 );
 

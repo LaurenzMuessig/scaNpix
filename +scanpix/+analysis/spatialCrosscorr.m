@@ -43,7 +43,7 @@ switch lower(prms.method)
             spatCorr = nan(size(interpBlRm)*2-1);
             return
         end
-        [spatCorr,overlapBins] = normxcorr2_general(interpBlRm,interpCompRm);
+        [spatCorr,overlapBins] = scanpix.fxchange.normxcorr2_general(interpBlRm,interpCompRm);
         if prms.removeMinOverlap
             spatCorr(overlapBins<20) = NaN; % Remove autocorr bins with small overlaps.
         end

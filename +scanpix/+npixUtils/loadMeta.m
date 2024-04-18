@@ -21,6 +21,11 @@ obj.trialMetaData(trialIterator).log.PosLoadingStats             = ones(3,2);
 obj.trialMetaData(trialIterator).log.frameCountCorruptFromSample = NaN;
 obj.trialMetaData(trialIterator).log.nInterpSamplesCorruptFrames = NaN;
 obj.trialMetaData(trialIterator).log.SyncMismatchPosAP           = 0;
+if isKey(obj.params,'InterpPos2PosFs')
+    obj.trialMetaData(trialIterator).log.InterpPos2PosFs         = obj.params('InterpPos2PosFs');
+else
+    obj.trialMetaData(trialIterator).log.InterpPos2PosFs         = false;
+end
 
 % first load xml file
 metaXMLFileInfo = dir(fullfile(obj.dataPath{trialIterator},'*.xml'));

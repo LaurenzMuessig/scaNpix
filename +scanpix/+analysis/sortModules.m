@@ -11,7 +11,7 @@ addpath(genpath('D:\Dropbox\matlab\file_exchange\umapFileExchange\epp\'));
 %% PRMS
 % pairwise
 trialInd            = 1;
-overlapThresh       = [0.6 0.75];
+overlapThresh       = [0.6 0.7];
 propLowerThanThresh = 0.1;
 gridnessThresh      = 0.5;
 useLabelGoodOnly    = true;
@@ -55,7 +55,7 @@ nSpikes = cellfun(@(x) length(x),dataObj.spikeData.spk_Times{p.Results.trialn});
 
 [tmpGridness,props] = cellfun(@(x) scanpix.analysis.gridprops(x,'getellgridness',true),dataObj.maps.sACs{p.Results.trialn},'uni',0);
 tmp = cell2mat(tmpGridness);
-gridness = max(tmp,[],2);
+gridness = max(tmp,[],2,'omitnan');
 gridPropsStrct = cell2mat(cellfun(@(x) [x.gridness(1,1)' x.wavelength(1,1)' x.orientation(1,1) x.offset(1,1)'],props,'uni',0));
 ellipseFits    = cell2mat(cellfun(@(x) [x.ellOrient(1,2) x.ellAbScale(1,3:4)],props,'uni',0));
 %
@@ -143,7 +143,7 @@ switch lower(method)
         sACs              = reshape(sACs,[],size(sACs,3),1);
         % sACs(all(sACs==0,2),:) = [];
         % z-score
-        sACs              = (sACs - nanmean(sACs,1)) ./ nanstd(sACs,1);
+        sACs              = (sACs - mean(sACs,1,'omitnan')) ./ std(sACs,1,'omitnan');
         sACs(isnan(sACs)) = 0; 
         
         %% umap
@@ -155,7 +155,7 @@ switch lower(method)
         %
         meanOverlap = nan(length(cluIDs), 1);
         for i = cluIDs
-            meanOverlap(i) = nanmean(nanmean(IUratio( clusterIdentifiers' == i & cellind, clusterIdentifiers'== i & cellind )));
+            meanOverlap(i) = mean(mean(IUratio( clusterIdentifiers' == i & cellind, clusterIdentifiers'== i & cellind ),'omitnan'),'omitnan');
         end
         [~, sortInd] = sort(meanOverlap);
         %
@@ -219,13 +219,16 @@ cols = 'krgbymc';
 withinMod = []; acrossMod = [];
 modInData = unique(modInd);
 modInData = modInData(modInData~=0)';
+if ~any(modInData==1)
+    modInData = [1, modInData];
+end
 %
 axArr = scanpix.plot.multPlot([5 length(modInData)],'plotsize',[150 150],'plotsep',[75 40]);
 hold(axArr{1,1},'on');
 %
 pltInd = 1;
 for i = modInData
-    
+    %%%%% THIS IS WRONG AS IT PLOTS THE TRIAL TWICE NEEDS CHANGING %%%
     scanpix.plot.mapsMultPlot({dataObj.maps.rate{trialInd}(modInd==i),dataObj.maps.rate{trialInd}(modInd==i)},{'rate'},'cellIDStr',cellstr(num2str(dataObj.cell_ID(modInd==i,1))));
  
     if i > 1
@@ -247,7 +250,7 @@ for i = modInData
         %
         histogram(axArr{2,pltInd},gridProps(modInd==i,2),linspace(5,30,13));
         xlabel(axArr{2,pltInd},'grid scale');
-        histogram(axArr{3,pltInd},gridProps(modInd==i,3),linspace(-30*pi/180,30*pi/180,32));
+        histogram(axArr{3,pltInd},gridProps(modInd==i,3),linspace(-180*pi/180,180*pi/180,32));
         xlabel(axArr{3,pltInd},'grid orientation');
         histogram(axArr{4,pltInd},gridProps(modInd==i,4), linspace(0,30*pi/180,16));
         xlabel(axArr{4,pltInd},'offset');
@@ -261,14 +264,14 @@ for i = modInData
         tmpOrient( gridProps(modInd==i,3).*180/pi>0) = tmpOrient( gridProps(modInd==i,3).*180/pi>0) - 30;
         scatter(axArr{1,1},tmpOrient,gridProps(modInd==i,2)*2.5,'Filled','ko');
         %
-        imagesc(axArr{5,1},nanmean(cat(3,dataObj.maps.sACs{trialInd}{modInd == 0}),3)); 
+        imagesc(axArr{5,1},mean(cat(3,dataObj.maps.sACs{trialInd}{modInd == 0}),3),'omitnan'); 
         colormap(axArr{5,1},jet);
         axis(axArr{5,1},'square');
     end
     pltInd = pltInd + 1;
 end
 plot(axArr{1,1},[-30 -30; 30 30]',[0 62.5; 0 62.5]','k--');
-set(axArr{1,1},'xlim',[-40 40],'ylim',[12.5 62.5],'xtick',[-30:10:30],'xticklabel',{'0','10','20','30/-30','-20','-10','0'},'XTickLabelRotation',45);
+set(axArr{1,1},'xlim',[-180 180],'ylim',[12.5 62.5],'xtick',-180:10:180,'xticklabel',{'0','10','20','30/-30','-20','-10','0'},'XTickLabelRotation',45);
 hold(axArr{1,1},'off');
 ylabel(axArr{1,1},'grid scale (cm)'); xlabel(axArr{1,1},'grid orientation (deg)');
 %

@@ -54,20 +54,23 @@ plotCount = 1;
 hWait     = waitbar(0); 
 
 nFigs = ceil(length(data{1})/p.Results.nrows);
-rowCount = 1;
+rowCount = 1; mapIndex = 0;
 for n = 1:nFigs
     
-    maps2plot = min([p.Results.nrows,length(data{1}) - (rowCount-1)]);
-    
+    nMaps4plot = min([p.Results.nrows,length(data{1}) - (rowCount-1)]);
+        
     % gather plot tiling
     if ~noGridMode
-        nCols = min([maps2plot,p.Results.nplots]); % in case just 1 trial, we want to make a compact plot...
-        nRows = ceil(maps2plot/nCols);
+        nCols = min([nMaps4plot,p.Results.nplots]); % in case just 1 trial, we want to make a compact plot...
+        nRows = ceil(nMaps4plot/nCols);
         %nRows = maps2plot;
     else
         nCols = size(data,2) * size(data,3); % ...if it's several trials, we plot nCells across trials
-        nRows = maps2plot;
+        nRows = nMaps4plot;
     end
+    %
+    mapIndex  = mapIndex(end)+1:mapIndex(end)+nRows;
+
     
     [axArray, hScroll] = scanpix.plot.multPlot([nRows nCols],'offsetbase',p.Results.offsetbase,'plotsep',p.Results.plotsep,'plotsize',p.Results.plotsize,'figname',p.Results.figname);
     hScroll.hFig.Visible = 'off';
@@ -75,7 +78,7 @@ for n = 1:nFigs
     axRow = 1;
     %
     
-    for i = 1:maps2plot%nRows
+    for i = mapIndex%nRows
         
         for k = 1:size(data,2)
             
@@ -94,7 +97,7 @@ for n = 1:nFigs
                         scanpix.plot.plotRateMap(data{1,k,j}{i},hAx,'colmap',p.Results.cmap,'nsteps',p.Results.nsteps);
                         % scale all axes to the largest possible map here? makes
                         % everything appear in proportion
-                        if i == 1
+                        if i == mapIndex(1)
                             axLims = max(cell2mat(cellfun(@size,vertcat(data{1,:,j}),'UniformOutput',false)),2);
                         end
                         set(hAx,'ydir','reverse','xlim',[0 axLims(2)],'ylim',[0 axLims(1)]);
@@ -121,7 +124,7 @@ for n = 1:nFigs
                     % plot peak rate
                     if plotPeakRateFlag
                         t = text(hAx);
-                        set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',nanmax(data{1,k,j}{i}(:)) ),'FontSize',8 ); % harcoded text pos
+                        set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',max(data{1,k,j}{i}(:),[],'omitnan') ),'FontSize',8 ); % harcoded text pos
                     end
                     % plot cell ID string
                     if j == 1 && k == 1
@@ -129,7 +132,7 @@ for n = 1:nFigs
                         set(t,'Units','pixels','position',[-40 hAx.Position(4)/2],'String',p.Results.cellIDStr{i},'FontSize',8,'Interpreter','none' ); % harcoded text pos
                     end
                     
-                    if i == nRows && noGridMode
+                    if i == mapIndex(end) && noGridMode
                         if isempty(p.Results.headers)
                             title(hAx,['Trial_' num2str(k) '-' type{j}],'Interpreter','none');
                         else
@@ -149,6 +152,7 @@ for n = 1:nFigs
                 plotCount = plotCount + 1;
             end
         end
+        rowCount = rowCount + 1;
     end
     %
     if p.Results.save

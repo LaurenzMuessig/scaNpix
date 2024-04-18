@@ -130,7 +130,7 @@ for i = 1:length(spkTimes)
     
     % spike Map
 
-    if isempty(sampleTimes)
+    if isempty(sampleTimes) 
         spkPosBinInd = ceil(spkTimes{i} .* prms.posFs ); 
     else
         % as sample times in e.g. neuropixel can have some jitter we can't just bin by sample rate

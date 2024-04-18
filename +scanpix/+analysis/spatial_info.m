@@ -37,7 +37,7 @@ end
 %% grab a few things
 nCells         = length(rMaps); % number of cells
 mapSz          = numel(rMaps{1}); % n bins in rate map
-duration       = nansum(pMaps{1}(:)); % duration of trial
+duration       = sum(pMaps{1}(:), 'omitnan'); % duration of trial
 
 %% get spatial info
 rates          = reshape([rMaps{:}],[mapSz nCells]); % rate maps as 3D map x cell arrays
@@ -46,12 +46,12 @@ if nCells > length(pMaps)
     pMaps = repmat(pMaps,1,nCells);
 end
 pos            = reshape([pMaps{:}], [mapSz nCells]);
-mean_rates     = nansum(rates .* pos, 1) ./ duration;  % mean rate per map
+mean_rates     = sum(rates .* pos, 1, 'omitnan') ./ duration;  % mean rate per map
 % calculate bits for formula
 p_x            = pos ./ duration;
 p_r            = bsxfun(@rdivide, rates, mean_rates);                   
-bits_per_sec   = nansum(p_x .* rates .* log2(p_r), 1);   % sum( p_pos .* rates .* log2(p_rates) )
-bits_per_spike = bits_per_sec ./ mean_rates;
+bits_per_sec   = sum(p_x .* rates .* log2(p_r), 1,'omitnan')';   % sum( p_pos .* rates .* log2(p_rates) )
+bits_per_spike = bits_per_sec ./ mean_rates';
 
 end
 

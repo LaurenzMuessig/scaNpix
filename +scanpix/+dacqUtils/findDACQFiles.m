@@ -58,6 +58,9 @@ switch type
             splitNames  = regexp(fNames, '[.]', 'split'); % split into name + extension
             splitNames  = vertcat(splitNames{:});
             validTrodes = sort(str2double(splitNames(:,2)))'; % terode numbers that were recorded;
+            % in case your identifier matches more trials, careful here as
+            % a bit of hack!
+            validTrodes = unique(validTrodes);
         end  
     otherwise        
         error(['"' type '"' 'is not a valid file type! That''s embarrassing mate'])

@@ -113,7 +113,7 @@ templateMap = templateMap'; % transpose back to original format
 for i = 1:length(maps)
     
     % find all fields above thresh
-    bwMap    = maps{i} >= ( nanmax(maps{i}(:))*prms.rateThr );
+    bwMap    = maps{i} >= ( max(maps{i}(:),[],'omitnan')*prms.rateThr );
     fieldMap = bwlabel(bwMap,4);
     stats    = regionprops(fieldMap,'Area','PixelList');
     % only keep fields that are big enough
@@ -132,7 +132,7 @@ for i = 1:length(maps)
     coverageOnFourWalls(3) = sum(ismember(binListFields,indS,'rows'));
     coverageOnFourWalls(4) = sum(ismember(binListFields,indW,'rows'));
     % calculate Cm
-    [maxCov, mainWall(i)]     = nanmax( coverageOnFourWalls );
+    [maxCov, mainWall(i)]     = max( coverageOnFourWalls, [], 'omitnan' );
     if ~mod(mainWall(i),2)
         Cm = maxCov / size(templateMap,1);
     else

@@ -990,7 +990,12 @@ classdef ephys < handle
             %       copyObj - deep copy of input obj
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            filenameOut = scanpix.helpers.checkSaveFile(fullfile(obj.dataPath,'temp.mat'));
+            if ~isfolder(obj.dataPath{1})
+                tmpPath = cd;
+            else
+                tmpPath = obj.dataPath{1};
+            end 
+            filenameOut = scanpix.helpers.checkSaveFile(fullfile(tmpPath,'temp.mat'));
             save(filenameOut, 'obj');
             foo     = load(filenameOut);
             copyObj = foo.obj;
@@ -1145,6 +1150,12 @@ classdef ephys < handle
             prms.posFs               = obj.params('posFs');
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
+            %
+            if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                sampleTimes = repmat({[]},1,length(obj.trialNames));
+            else
+                sampleTimes = obj.spikeData.sampleT;
+            end
             % make some maps
             switch lower(mapType)
                 case {'pos','rate'}
@@ -1162,7 +1173,7 @@ classdef ephys < handle
                             prms.posOnly = true;
                         end
                         
-                        [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
+                        [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
                     end
                     
                     %         % pad maps so size is the same for all maps is set
@@ -1183,7 +1194,7 @@ classdef ephys < handle
                 case 'dir'
                     prms.speedFilterLimits = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
                     for i = trialInd
-                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, obj.spikeData.sampleT{i}, obj.posData.speed{i},  prms  );
+                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, sampleTimes{i}, obj.posData.speed{i},  prms  );
                     end
                     
                 case 'lin'
@@ -1226,7 +1237,7 @@ classdef ephys < handle
                         trackProps.posFs   = obj.params('posFs');
                         trackProps.objType = obj.type;
                         
-                        [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+                        [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
                         obj.maps(1).linPos{i} = num2cell(posMap,2);
                     end
                     
@@ -1245,7 +1256,7 @@ classdef ephys < handle
                 case 'objvect'
                     for i = trialInd
                         if isfield(obj.trialMetaData(i),'objectPos') && ~isempty(obj.trialMetaData(i).objectPos)
-                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
+                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
                         else
                             warning('scaNpix::ephys::addMaps:If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
                         end
