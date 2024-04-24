@@ -437,7 +437,6 @@ classdef ephys < handle
                             end
                         end
                     end
-                    
                     % remove the last bits if object is now empty
                     if isempty(obj.trialNames)
                         for i = 1:length(obj.fields2spare)
@@ -1138,24 +1137,19 @@ classdef ephys < handle
             % explicitly
             if ~isempty(varargin) && (nargin > 4 || isstruct(varargin{1}) )
                 prms = obj.mapParams.(mapType);
-                if ischar(varargin{1})                                                           %
-                    for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   %
-                elseif isstruct(varargin{1})                                                     %
-                    s = varargin{1};   f = fieldnames(s.(mapType));                                        %
-                    for i=1:length(f);   prms.(f{i}) = s.(mapType).(f{i});   end                        %
+                if ischar(varargin{1})                                                           
+                    for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   
+                elseif isstruct(varargin{1})                                                     
+                    s = varargin{1};   f = fieldnames(s.(mapType));                                      
+                    for i=1:length(f);   prms.(f{i}) = s.(mapType).(f{i});   end                        
                 end
             end
             
             % these params get set from general data params container
-            prms.posFs               = obj.params('posFs');
+            
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             %
-            if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                sampleTimes = repmat({[]},1,length(obj.trialNames));
-            else
-                sampleTimes = obj.spikeData.sampleT;
-            end
             % make some maps
             switch lower(mapType)
                 case {'pos','rate'}
@@ -1172,8 +1166,16 @@ classdef ephys < handle
                             prms.smooth = 'boxcar';
                             prms.posOnly = true;
                         end
+
+                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                            sampleTimes = [];
+                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
+                        else
+                            sampleTimes = obj.spikeData.sampleT{i};
+                            prms.posFs  = obj.params('posFs');
+                        end
                         
-                        [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
+                        [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
                     end
                     
                     %         % pad maps so size is the same for all maps is set
@@ -1194,7 +1196,14 @@ classdef ephys < handle
                 case 'dir'
                     prms.speedFilterLimits = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
                     for i = trialInd
-                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, sampleTimes{i}, obj.posData.speed{i},  prms  );
+                         if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                            sampleTimes = [];
+                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
+                        else
+                            sampleTimes = obj.spikeData.sampleT{i};
+                            prms.posFs  = obj.params('posFs');
+                        end
+                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, sampleTimes, obj.posData.speed{i},  prms  );
                     end
                     
                 case 'lin'
@@ -1212,11 +1221,11 @@ classdef ephys < handle
                                 warning('scaNpix::ephys::addMaps:No track properties, no linear rate maps...');
                                 return;
                             else
-                                trackProps.type = uiInput{1};
-                                obj.trialMetaData(i).trialType = uiInput{1};
-                                trackProps.length = str2double(uiInput{2});
+                                trackProps.type                  = uiInput{1};
+                                obj.trialMetaData(i).trialType   = uiInput{1};
+                                trackProps.length                = str2double(uiInput{2});
                                 obj.trialMetaData(i).trackLength = str2double(uiInput{2});
-                                skipNextUI = true;
+                                skipNextUI                       = true;
                             end
                         end
                         
@@ -1234,10 +1243,20 @@ classdef ephys < handle
                             end
                         end
                         trackProps.ppm     = obj.trialMetaData(i).ppm;
-                        trackProps.posFs   = obj.params('posFs');
+                        % trackProps.posFs   = obj.params('posFs');
                         trackProps.objType = obj.type;
+
+                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                            sampleTimes      = [];
+                            prms.posFs       = obj.trialMetaData(i).log.InterpPosFs;
+                            trackProps.posFs = obj.trialMetaData(i).log.InterpPosFs;
+                        else
+                            sampleTimes      = obj.spikeData.sampleT{i};
+                            prms.posFs       = obj.params('posFs');
+                            trackProps.posFs = obj.trialMetaData(i).log.InterpPosFs;
+                        end
                         
-                        [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+                        [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
                         obj.maps(1).linPos{i} = num2cell(posMap,2);
                     end
                     
@@ -1256,7 +1275,14 @@ classdef ephys < handle
                 case 'objvect'
                     for i = trialInd
                         if isfield(obj.trialMetaData(i),'objectPos') && ~isempty(obj.trialMetaData(i).objectPos)
-                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
+                            if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                                sampleTimes = [];
+                                prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
+                            else
+                                sampleTimes = obj.spikeData.sampleT{i};
+                                prms.posFs  = obj.params('posFs');
+                            end
+                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
                         else
                             warning('scaNpix::ephys::addMaps:If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
                         end
@@ -1265,6 +1291,11 @@ classdef ephys < handle
                 case 'speed'
                     
                     for i = trialInd
+                         if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
+                        else
+                            prms.posFs  = obj.params('posFs');
+                        end
                         obj.maps(1).speed{i} = scanpix.maps.makeSpeedMap( obj.spikeData.spk_Times{i}, obj.posData.speed{i}, obj.trialMetaData(i).duration,  prms  );
                     end
                     
@@ -1276,13 +1307,17 @@ classdef ephys < handle
         end
         
         %%
-        function spatProps = getSpatialProps(obj, score)
+        function spatProps = getSpatialProps(obj, score, trialInd)
             
             if strcmp(obj.type,'bhave')
                 warning('scaNpix::ephys::addMaps:This ain''t gonna work for behavioural data. I guess you had to try...');
                 return;
             end
-            
+
+            if nargin < 3
+                trialInd = 1:length(obj.trialNames);
+            end
+            c = 1;
             switch lower(score)
                 case {'spatialinfo','si'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
@@ -1291,9 +1326,11 @@ classdef ephys < handle
                         return
                     end
                     
-                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
-                    for i = 1:length(obj.trialNames)
-                        spatProps(:,i) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},obj.maps(1).pos{i});
+                    spatProps = nan(size(obj.cell_ID,1),length(trialInd));
+
+                    for i = trialInd
+                        spatProps(:,c) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},obj.maps(1).pos{i});
+                        c = c + 1;
                     end
                 case {'raleighvect','rv'}
                     if isempty(obj.maps(1).dir) || isempty(obj.maps(1).dir{1})
@@ -1302,25 +1339,27 @@ classdef ephys < handle
                         return
                     end
                     
-                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
-                    for i = 1:length(obj.trialNames)
-                        spatProps(:,i) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
+                    spatProps = nan(size(obj.cell_ID,1),length(trialInd));
+                    for i = 1:trialInd
+                        spatProps(:,c) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
+                        c = c + 1;
                     end
-                case {'gridprops','grid'}
+                case {'gridprops','grid','gridness'}
                     if isempty(obj.maps(1).sACs) || isempty(obj.maps(1).sACs{1})
                         warning('scaNpix::ephys::getSpatialProps::gridProps:You need to make spatial ACs before demanding grid properties.');
                         spatProps = [];
                         return
                     end
                     
-                    spatProps = nan(size(obj.cell_ID,1),3,length(obj.trialNames));
+                    spatProps = nan(size(obj.cell_ID,1),6,length(trialInd));
                     % format params
                     prms      = fieldnames(obj.mapParams.gridProps)';
                     prms(2,:) = struct2cell(obj.mapParams.gridProps)'; 
-                    for i = 1:length(obj.trialNames)
+                    for i = trialInd
                         [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,prms{:}),obj.maps(1).sACs{i},'uni',0);
                         % for now just output the basics
-                        spatProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.wavelength x.orientation],temp,'uni',0));
+                        spatProps(:,:,c) = cell2mat(cellfun(@(x) [x.gridness x.wavelength x.orientation],temp,'uni',0));
+                        c = c + 1;
                     end
                 case {'borderscore','bs'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
@@ -1329,9 +1368,10 @@ classdef ephys < handle
                         return
                     end
                     
-                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
-                    for i = 1:length(obj.trialNames)
-                        [spatProps(:,i), ~] = scanpix.analysis.getBorderScore(obj.maps(1).rate{i},obj.mapParams.rate.binSizeSpat);
+                    spatProps = nan(size(obj.cell_ID,1),length(trialInd));
+                    for i = trialInd
+                        [spatProps(:,c), ~] = scanpix.analysis.getBorderScore(obj.maps(1).rate{i},obj.mapParams.rate.binSizeSpat);
+                        c = c + 1;
                     end
                 otherwise
             end

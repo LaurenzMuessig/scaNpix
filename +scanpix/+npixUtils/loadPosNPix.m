@@ -92,7 +92,7 @@ if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')) &
 % estimate ppm
 if isempty(obj.trialMetaData(trialIterator).envBorderCoords)
     envSzPix  = [double(csvData{6}(1)) double(csvData{7}(1))];
-    ppm(:) = mean(envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) );
+    ppm(:)    = mean(envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) );
 else
     % this case should be default
     if ~circleFlag
@@ -154,12 +154,53 @@ smLightBack    = imfilter(led(:, :, 2), kernel, 'replicate');
 
 correction                              = obj.trialMetaData(trialIterator).LEDorientation(1); %To correct for light pos relative to rat subtract angle of large light
 dirData                                 = mod((180/pi) * ( atan2(smLightFront(:,2)-smLightBack(:,2), smLightFront(:,1)-smLightBack(:,1)) ) - correction, 360); %
-obj.posData(1).direction{trialIterator} = dirData(:);
+
 % Get position from smoothed individual lights %%
 wghtLightFront = 1-obj.params('posHead');
 wghtLightBack  = obj.params('posHead');
 xy = smLightFront .* wghtLightFront + smLightBack .* wghtLightBack;  %
 
+% some sanity checks for the data loading
+scanpix.npixUtils.dataLoadingReport(length(sampleT),length(obj.spikeData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
+obj.trialMetaData(trialIterator).log.SyncMismatchPosAP = length(sampleT)-length(obj.spikeData.sampleT{trialIterator});
+
+% align pos data with sync data
+endIdxNPix                                = min( [ length(obj.spikeData.sampleT{trialIterator}), find(obj.spikeData.sampleT{trialIterator} < obj.trialMetaData(trialIterator).duration,1,'last') + 1]);
+obj.spikeData.sampleT{trialIterator}      = obj.spikeData.sampleT{trialIterator}(1:endIdxNPix);
+sampleT                                   = sampleT(1:endIdxNPix);
+xy                                        = xy(1:endIdxNPix,:);
+obj.posData(1).direction{trialIterator}   = dirData(1:endIdxNPix);
+
+
+% interpolate positions to pos fs exactly - this will speed up map making significantly 
+if obj.params('InterpPos2PosFs')
+    sampleTimes = obj.spikeData.sampleT{trialIterator};
+    % newT = (0:1/obj.params('posFs'):(length(sampleTimes)-1)*(1/obj.params('posFs')))'; %
+    newT = linspace(0,sampleTimes(end),length(sampleTimes))'; %
+    obj.trialMetaData(trialIterator).log.InterpPosFs = length(sampleTimes) / sampleTimes(end);
+
+    if length(xy) - length(sampleTimes) == 1
+        newTint = newT(2) - newT(1);
+        % newT(end+1) = newT(end) + 1/obj.params('posFs');
+        % sampleTimes(end+1) = sampleTimes(end) + 1/obj.params('posFs');
+        newT(end+1) = newT(end) + newTint;
+        sampleTimes(end+1) = sampleTimes(end) + newTint;
+    elseif length(xy) - length(sampleTimes) > 1
+        error('scaNpix::loadPosNPix:Something went wrong here. Mismatch of n of pos frames and sync pulses for %s!',obj.trialnames{trialIterator});
+    end
+    obj.trialMetaData(trialIterator).log.InterpPosSampleTimes = newT;
+    %
+    % nanInd = isnan(xy(:,1));
+    % sampleTimes(nanInd) = [];
+    % tmp = xy; tmp(nanInd,:) = [];
+    % newT(nanInd) = [];
+    % xy1 = nan(length(nanInd),2);
+    for i = 1:2
+        xy(:,i) = interp1(sampleTimes, xy(:,i), newT);
+    end
+
+end
+    
 % pos data
 obj.posData(1).XYraw{trialIterator}        = xy;
 obj.posData(1).XY{trialIterator}           = [floor(xy(:,1)) + 1, floor(xy(:,2)) + 1];

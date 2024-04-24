@@ -23,15 +23,6 @@ fprintf('Loading Neural Data for %s .......... ', obj.trialNames{trialIterator})
 %% grab sync channel data
 
 cd(obj.dataPath{trialIterator});
-if reloadFlag
-    syncTTLs = obj.trialMetaData(trialIterator).offSet;
-else
-    syncTTLs = obj.spikeData(1).sampleT{trialIterator};
-% elseif ~isfield(obj.trialMetaData,'BonsaiCorruptFlag')
-%     syncTTLs = scanpix.npixUtils.loadSyncData();
-% else
-%     syncTTLs = scanpix.npixUtils.loadSyncData(length(obj.posData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
-end
 
 %% load sorting resuts
 % deal with directories in case of reload or KS output is in different directory to raw data
@@ -72,13 +63,11 @@ end
 
 % load spike times
 spikeTimes         = readNPY(fullfile(path2data_A,'spike_times.npy'));
-spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
-% obj.trialMetaData(trialIterator).offSet = syncTTLs(1); % this is offset of first TTL from trial start - need  a record for anything related to raw data
+% spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - syncTTLs(1); % align to first TTL
+spikeTimes         = double(spikeTimes) ./ obj.params('APFs') - obj.trialMetaData(trialIterator).offSet; % align to first TTL
+
 % load cluster IDs
 clustIDs           = readNPY(fullfile(path2data_A,'spike_clusters.npy')) + 1; % 0 based index
-% load amplitude
-% amps               = readNPY(fullfile(path2data_A,'amplitudes.npy')) + 1; % 0 based index
-% spkTemps           = readNPY(fullfile(path2data_A,'spike_templates.npy')) + 1; % 0 based index
 
 if loadFromPhy
     % phy curated output - only load clusters labelled good
@@ -122,14 +111,10 @@ ind2keep       = indGood ~= 0 & indSTimes;
 % remove from data
 clustIDs       = clustIDs(ind2keep);
 spikeTimes     = spikeTimes(ind2keep);
-% amps           = amps(ind2keep);
-% spkTemps       = spkTemps(ind2keep);
 
 % sort clusters, so accumarray output is sorted
 [clustIDs, sortInd] = sort(clustIDs);
 spikeTimes          = spikeTimes(sortInd);
-% amps                = amps(sortInd);
-% spkTemps            = spkTemps(sortInd);
 
 % reformat into more convenient form
 spikeTimesFin  = accumarray(clustIDs,spikeTimes,[max([unGoodClustIDs;good_clusts]) 1],@(x) {x});
@@ -139,12 +124,10 @@ spikeTimesFin  = accumarray(clustIDs,spikeTimes,[max([unGoodClustIDs;good_clusts
 % only fire in some trials of a trial sequence (we are assuming here that
 % you clustered all data together and then split back into individual
 % trials)
-OtherClusters    = true(length(spikeTimesFin),1);
+OtherClusters              = true(length(spikeTimesFin),1);
 OtherClusters(good_clusts) = false;
-indEmpty       = cellfun('isempty',spikeTimesFin) & OtherClusters;
-spikeTimesFin  = spikeTimesFin(~indEmpty);
-% amps           = amps(~indEmpty);
-% spkTemps       = spkTemps(~indEmpty);
+indEmpty                   = cellfun('isempty',spikeTimesFin) & OtherClusters;
+spikeTimesFin              = spikeTimesFin(~indEmpty);
 
 %%%%%%%% I SHOULD CHECK WHETHER THIS WORKS FOR ALL CIRCUMSTANCES!!!!!!!
 if ~loadFromPhy
@@ -154,44 +137,26 @@ end
 % sort by depth
 [clu_Depth, indSort] = sort(clu_Depth,'ascend'); % should be changed to descent to be sorted naturally
 spikeTimesFin        = spikeTimesFin(indSort);
-% ampScaling           = amps(indSort);
-% spkTemps             = spkTemps(indSort);
-%
-% if loadAmps; return; end
-
-if ~isempty(obj.posData.sampleT)
-    scanpix.npixUtils.dataLoadingReport(length(obj.posData.sampleT{trialIterator}),length(syncTTLs),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
-    obj.trialMetaData(trialIterator).log.SyncMismatchPosAP = length(obj.posData.sampleT{trialIterator})-length(syncTTLs);
-end
 
 %% output
 obj.spikeData(1).spk_Times{trialIterator} = spikeTimesFin;
-if ~reloadFlag
-    endIdxNPix                                = min( [ length(syncTTLs), find(syncTTLs < obj.trialMetaData(trialIterator).duration + syncTTLs(1),1,'last') + 1]);
-    obj.spikeData(1).sampleT{trialIterator}   = syncTTLs(1:endIdxNPix) - syncTTLs(1);
+if ~isempty(obj.posData.sampleT)
+    obj.spikeData(1).sampleT{trialIterator}   = obj.spikeData(1).sampleT{trialIterator}(1:length(obj.posData(1).sampleT{trialIterator}));
 else
-    endIdxNPix = size(obj.posData.XYraw{trialIterator},1);
+    endIdxNPix                                = min( [ length(obj.spikeData(1).sampleT{trialIterator} ), find(obj.spikeData(1).sampleT{trialIterator} < obj.trialMetaData(trialIterator).duration,1,'last') + 1]);
+    obj.spikeData(1).sampleT{trialIterator}   = obj.spikeData(1).sampleT{trialIterator}(1:endIdxNPix);
 end
-% we'll only need to grab this once - this assumes data was clustered together, but wouldn't make much sense otherwise?
+
 % what about reload?
 if reloadFlag || trialIterator == 1
-    good_clusts          = good_clusts(indSort);
-    cluLabel             = cluLabel(indSort);
-    clu_Ch               = clu_Ch(indSort);
+    good_clusts    = good_clusts(indSort);
+    cluLabel       = cluLabel(indSort);
+    clu_Ch         = clu_Ch(indSort);
     % likely at least the ref channel will have been removed before sorting - this will map channel ID back to raw data
-    clu_Ch_mapped = scanpix.npixUtils.mapChans(obj.chanMap(trialIterator).connected,clu_Ch);
+    clu_Ch_mapped  = scanpix.npixUtils.mapChans(obj.chanMap(trialIterator).connected,clu_Ch);
     
     obj.cell_ID    = [good_clusts, clu_Depth, clu_Ch clu_Ch_mapped];
     obj.cell_Label = cluLabel;
-end
-
-% also keep only tracking data within trial times
-if ~isempty(obj.posData.XYraw) && ~isempty(obj.posData.XYraw{trialIterator})
-    obj.posData.XYraw{trialIterator}     = obj.posData.XYraw{trialIterator}(1:endIdxNPix,:);
-    obj.posData.XY{trialIterator}        = obj.posData.XY{trialIterator}(1:endIdxNPix,:);
-    obj.posData.speed{trialIterator}     = obj.posData.speed{trialIterator}(1:endIdxNPix,:);
-    obj.posData.direction{trialIterator} = obj.posData.direction{trialIterator}(1:endIdxNPix,:);
-    obj.posData.sampleT{trialIterator}   = obj.posData.sampleT{trialIterator}(1:endIdxNPix,:);
 end
 
 fprintf('  DONE!\n');

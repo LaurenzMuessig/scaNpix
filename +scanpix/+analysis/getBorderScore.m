@@ -132,7 +132,7 @@ for i = 1:length(maps)
     coverageOnFourWalls(3) = sum(ismember(binListFields,indS,'rows'));
     coverageOnFourWalls(4) = sum(ismember(binListFields,indW,'rows'));
     % calculate Cm
-    [maxCov, mainWall(i)]     = max( coverageOnFourWalls, [], 'omitnan' );
+    [maxCov, mainWall(i)]  = max( coverageOnFourWalls, [], 'omitnan' );
     if ~mod(mainWall(i),2)
         Cm = maxCov / size(templateMap,1);
     else

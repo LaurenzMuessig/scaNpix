@@ -6,14 +6,30 @@ function [mapSeries, timeInt] = makeMapTimeSeries(obj,timeInt,trialInd,varargin)
 mapType        = 'rate';
 repeatInterval = true;
 cellInd        = true(size(obj.cell_ID,1),1);
+mapParams      = scanpix.maps.defaultParamsRateMaps;
 
 %%
 p = inputParser;
-addOptional(p,'cellind', cellInd,        ( @(x) islogical(x) || isnumeric(x) ) );
-addParameter(p,'type',   mapType,        ( @(x) ischar(x) || isstring(x) )     );
-addParameter(p,'rep',    repeatInterval, @islogical                            );
+addOptional(p, 'cellind', cellInd,        ( @(x) islogical(x) || isnumeric(x) ) );
+addParameter(p,'type',    mapType,        ( @(x) mustBeMember(x,{'rate','dir'})));
+addParameter(p,'rep',     repeatInterval, @islogical                            );
+addOptional(p, 'prms',    mapParams,      ( @(x) isstruct(x) || isempty(x) )    );
 %
 parse(p,varargin{:});
+%
+if isempty(p.Results.prms)
+    prms = obj.mapParams.(p.Results.mapType);
+else
+    prms = p.Results.prms;
+end
+
+if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+    sampleTimes = [];
+    prms.posFs  = obj.trialMetaData(trialInd).log.InterpPosFs;
+else
+    sampleTimes = obj.spikeData.sampleT{trialInd};
+end
+
 
 %%
 if p.Results.rep
@@ -34,11 +50,11 @@ for i = 1:size(timeInt,1)
         case 'rate'
             tempPos             = obj.posData.XY{trialInd};
             tempPos(~keepInd,:) = NaN;
-            mapSeries{1,i}      = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{trialInd}(p.Results.cellind),tempPos,obj.spikeData.sampleT{trialInd},obj.trialMetaData.ppm,tempSpeed,obj.mapParams.rate);
+            mapSeries{1,i}      = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{trialInd}(p.Results.cellind),tempPos,sampleTimes,obj.trialMetaData(trialInd).ppm,tempSpeed,prms);
         case 'dir'
             tempDir             = obj.posData.dir{trialInd};
             tempDir(~keepInd,:) = NaN;
-            mapSeries{1,i}      = scanpix.maps.makeDirMaps(obj.spikeData.spk_Times{trialInd}(p.Results.cellind),tempDir,obj.spikeData.sampleT{trialInd},tempSpeed,obj.mapParams.dir);
+            mapSeries{1,i}      = scanpix.maps.makeDirMaps(obj.spikeData.spk_Times{trialInd}(p.Results.cellind),tempDir,sampleTimes,tempSpeed,prms);
         case 'speed'
             % to do
     end

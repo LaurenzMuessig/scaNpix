@@ -129,7 +129,6 @@ for i = 1:length(spkTimes)
     end
     
     % spike Map
-
     if isempty(sampleTimes) 
         spkPosBinInd = ceil(spkTimes{i} .* prms.posFs ); 
     else
@@ -167,6 +166,8 @@ if prms.trimNaNs
 end
 
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function maps = trimNaNs(maps)
 

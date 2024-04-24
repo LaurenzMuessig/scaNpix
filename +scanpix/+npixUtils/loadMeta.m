@@ -25,6 +25,7 @@ if isKey(obj.params,'InterpPos2PosFs')
     obj.trialMetaData(trialIterator).log.InterpPos2PosFs         = obj.params('InterpPos2PosFs');
 else
     obj.trialMetaData(trialIterator).log.InterpPos2PosFs         = false;
+    obj.trialMetaData(trialIterator).log.InterpPosSampleTimes    = {};
 end
 
 % first load xml file
@@ -81,6 +82,7 @@ end
 if ~noSyncFlag
     [obj.spikeData(1).sampleT{trialIterator}, obj.trialMetaData(trialIterator).missedSyncPulses] = scanpix.npixUtils.loadSyncData(obj, trialIterator);
     obj.trialMetaData(trialIterator).offSet                                                      = obj.spikeData(1).sampleT{trialIterator}(1); 
+    obj.spikeData(1).sampleT{trialIterator}                                                      = obj.spikeData(1).sampleT{trialIterator} - obj.trialMetaData(trialIterator).offSet; 
 else
     warning('scaNpix::ephys::loadMeta:Sync data not loaded. I hope you know what you''re doing...');
 end

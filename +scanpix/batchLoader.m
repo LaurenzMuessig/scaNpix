@@ -63,6 +63,9 @@ c = 1;
 for i = 1:length(expInfo.animal)
 
     try
+        % if length(addMetaData{i,2}) == 1 &&  length(expInfo.fullPath{i}) > 1
+        %     addMetaData{i,2} = {repmat(addMetaData{i,2},1,length(expInfo.fullPath{i}))};
+        % end
         tmp = cellfun(@(x) x{i}, addMetaData(:,2),'uni',0);
         objData{c} = scanpix.objLoader(dataType, expInfo.fullPath{i}, {addMetaData{:,1}; tmp{:}}', prms{:});
     catch 
