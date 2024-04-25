@@ -60,7 +60,7 @@ end
 % remove empty fields and sort by creation date
 indEmpty = cellfun('isempty',dataOut(:,1));
 dataOut = dataOut(~indEmpty,:);
-[~,sortInd] = sort(datetime(datestr(dataOut(~indEmpty,2))));
+[~,sortInd] = sort(datetime(dataOut(~indEmpty,2)));
 dataOut = dataOut(sortInd,:);
 dataOut(:,3) = num2cell(1+p.Results.npre:size(dataOut,1)+p.Results.npre,1);
 end

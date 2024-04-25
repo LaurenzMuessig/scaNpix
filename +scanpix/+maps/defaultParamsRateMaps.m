@@ -68,7 +68,6 @@ prms.lin.dirTolerance            = prms.lin.dirTolerance * pi/180; % radians
 %% object vector maps
 prms.objVect.binSz_dist          = 2.5;   % in cm;  2cm in Høydal et al (2019)
 prms.objVect.binSz_dir           = 5;     % in degrees;  5deg in Høydal et al (2019)
-% prms.ov.posFs                  = 50;    % sample rate
 prms.objVect.smKernelSz_OV       = 5;
 prms.objVect.smSigma_OV          = 2;
 prms.objVect.showWaitBar         = showWaitBar;
@@ -92,7 +91,7 @@ prms.sac.sigma                   = 1.5;
 
 %% grid props
 prms.gridProps.peakmode          = 'zscore';     % 
-prms.gridProps.centthr           = 0.5;          % 
+prms.gridProps.centthr           = 0.4;          % 
 prms.gridProps.zscorethr         = 1;            % 
 prms.gridProps.peakthr           = 0.25;    % 
 prms.gridProps.getprops          = true;  
@@ -100,6 +99,6 @@ prms.gridProps.getellgridness    = false;
 
 prms.gridProps.plot              = false;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
 prms.gridProps.ax                = {}; 
-
+prms.gridProps.verbose           = false; 
 end
 

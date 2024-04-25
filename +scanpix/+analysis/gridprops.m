@@ -52,6 +52,7 @@ propsStruct           = [];
 getEllipticalGridness = false;
 plotProps             = false;  
 axArr                 = {};
+verbose               = false;
 %
 p = inputParser;
 addOptional(p,'isEllipseFit',false,@islogical);
@@ -66,6 +67,7 @@ addParameter(p,'getellgridness',getEllipticalGridness,@islogical);
 % addParameter(p,'minor',minOrient,@isscalar);
 addParameter(p,'plot',plotProps,@islogical);
 addParameter(p,'ax',axArr,@iscell);
+addParameter(p,'verbose',verbose,@islogical);
 
 parse(p,varargin{:});
 %
@@ -139,10 +141,12 @@ distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;
 centrPeakMask(centrPeakMask~=orderOfClose(1)) = 0;
 centrPeakDiam = stats(orderOfClose(1)).EquivDiameter;
 % sanity checks for central peak
-if centrPeakDiam >= length(autoCorr)/2 - centrPeakDiam/2
-    warning('scaNpix::analysis::gridprops: Central peak of autoCorr is too large. Skipping grid cell properties calculation'); return;
-elseif stats(orderOfClose(1)).Eccentricity > 0.9
-    warning('scaNpix::analysis::gridprops: Central peak of autoCorr has bad shape. Skipping grid cell properties calculation'); return;
+if centrPeakDiam >= length(autoCorr)/2 - centrPeakDiam/2 
+    if p.Results.verbose; warning('scaNpix::analysis::gridprops: Central peak of autoCorr is too large. Skipping grid cell properties calculation'); end
+    return;
+elseif stats(orderOfClose(1)).Eccentricity > 0.9 
+    if p.Results.verbose; warning('scaNpix::analysis::gridprops: Central peak of autoCorr has bad shape. Skipping grid cell properties calculation'); end
+    return;
 end
 
 % radii for annuli increasing in size around the central peak
@@ -189,7 +193,10 @@ if getGridProps || p.Results.getellgridness
         [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, failFlag] = findGridPeaks(autoCorr,annMask,p.Results.peakmode,p.Results.zscorethr); 
     end
     
-    if failFlag; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); return; end
+    if failFlag
+        if p.Results.verbose; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); end
+        return; 
+    end
     
     % sometimes annulus can end up too big, so here we are making sure to
     % crop it to max extent of 6 central peaks - this is only for the
@@ -237,7 +244,7 @@ end
 % --------------------------------------------------------------------------------------------------
 if p.Results.getellgridness
 
-    [ ~, ~, orient, abScale ] = gridEllipse_fit( autoCorr, xyCoordMaxBin, p.Results.plot, axArr{2} );
+    [ ~, ~, orient, abScale ] = gridEllipse_fit( autoCorr, xyCoordMaxBin, p.Results.plot, axArr{2}, p.Results.verbose );
     if ~isnan(abScale)
         autoCorrReg = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
         [tmp, Props] = scanpix.analysis.gridprops(autoCorrReg,true,'peakmode',p.Results.peakmode,'centthr',p.Results.centthr,'zscorethr',p.Results.zscorethr,'getprops',getGridProps,'getellgridness',false,'plot',p.Results.plot,'ax',axArr(3),'props',Props);
@@ -415,7 +422,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % From Barry lab:
-function [ xyScale, eccent, orient, abScale ] = gridEllipse_fit( sac, closestPeaksCoord, plotEllipse, hAx )
+function [ xyScale, eccent, orient, abScale ] = gridEllipse_fit( sac, closestPeaksCoord, plotEllipse, hAx, verboseFlag )
 %GRIDELLIPSE_FIT Fits elipse to grid sac - esimates xy scale
 % Grids are often not regular. This code takes a sac and attempts to fit an
 % elipse to the central six peaks. This enables an estimate of the scale in
@@ -501,7 +508,7 @@ function [ xyScale, eccent, orient, abScale ] = gridEllipse_fit( sac, closestPea
 %Check how many peaks are found - must be ==6 to proceed
 if length(closestPeaksCoord)<6
     [ xyScale, eccent, orient, abScale ] = deal(nan);
-    warning('scaNpix::analysis::gridprops:Too few peaks to define elipse - returning nan');
+    if verboseFlag; warning('scaNpix::analysis::gridprops:Too few peaks to define elipse - returning nan'); end
     return
 end
 

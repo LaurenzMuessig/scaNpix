@@ -26,7 +26,7 @@ function ResShuf = generateShuffData(objData,varargin)
 mode            = 'cell';
 nShuffles       = 10000;  % this many shuffles - only relevant for population shuffle
 minShift        = 10;     % in sec
-minTrialDur     = 30;    % 
+minTrialDur     = 600;    % 
 minNspikes      = [];
 ageBins         = [20 25; 26 40];
 scores          = {'SI','RV','gridness','borderScore'};
@@ -83,7 +83,7 @@ end
 % loop over data
 parfor j = 1:length(objData)
 
-    copyObj = objData{j}.deepCopy;
+    copyObj = objData{j}.deepCopy; % make a copy of the current object
 
     if copyObj.mapParams.rate.showWaitBar
         [copyObj.mapParams.rate.showWaitBar,copyObj.mapParams.dir.showWaitBar] = deal(false);
@@ -172,7 +172,11 @@ parfor j = 1:length(objData)
     tmpT.cellID  = copyObj.cell_ID(:,1);
     % final output
     ResShuf      = vertcat(ResShuf,tmpT);
+    
+    fprintf('Finished shuffling %s\n',copyObj.dataSetName);
 end
+% save
+save(['ResShuf_' char(datetime('today','format','yyMMdd')) '.mat'],'ResShuf','-v7.3');
 
 
 end
