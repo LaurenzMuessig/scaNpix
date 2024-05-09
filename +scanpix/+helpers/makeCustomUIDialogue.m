@@ -37,7 +37,7 @@ logInd = cellfun(@islogical,defaultVals);
 if any(logInd); defaultVals(logInd) = num2cell(double([defaultVals{logInd}])); end
 
 
-nLines   = 20;
+nLines  = 20;
 lineSz1 = [120 20]; % need to check if this scales well on e.g. laptop!
 if nargin < 3
     lineSz2 = [120 20];  % need to check if this scales well on e.g. laptop!

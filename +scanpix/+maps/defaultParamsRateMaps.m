@@ -90,10 +90,10 @@ prms.sac.hSize                   = 5;
 prms.sac.sigma                   = 1.5;
 
 %% grid props
-prms.gridProps.peakmode          = 'zscore';     % 
-prms.gridProps.centthr           = 0.4;          % 
+% prms.gridProps.peakmode          = 'zscore';     % 
+% prms.gridProps.centthr           = 0.4;          % 
 prms.gridProps.zscorethr         = 1;            % 
-prms.gridProps.peakthr           = 0.25;    % 
+% prms.gridProps.peakthr           = 0.25;    % 
 prms.gridProps.getprops          = true;  
 prms.gridProps.getellgridness    = false;  
 
@@ -101,4 +101,3 @@ prms.gridProps.plot              = false;         % Display figure with 'doughnu
 prms.gridProps.ax                = {}; 
 prms.gridProps.verbose           = false; 
 end
-

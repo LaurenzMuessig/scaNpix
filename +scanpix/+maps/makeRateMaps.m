@@ -100,17 +100,18 @@ unVisPos   = posMapRaw == 0; % keep record of unvisited positions
 rMaps                     = cell(length(spkTimes),1);
 sm_spkMaps                = cell(length(spkTimes),1);
 % if using boxcar filtering only need to do pos map once
-if strcmp(prms.smooth,'boxcar')
+if strcmp(prms.smooth,'boxcar') || prms.posOnly
     visMask               = ones(size(posMapRaw));
     visMask(unVisPos)     = 0;
     visMask_sm            = imfilter(visMask, kernel);
     sm_pMaps{1}           = imfilter(posMapRaw, kernel) ./ visMask_sm;
     sm_pMaps{1}(unVisPos) = NaN;
+    %
+    if prms.posOnly; return; end
 else
     sm_pMaps              = cell(length(spkTimes), 1); % pre-allocate for adaptive smoothing
 end
 
-if prms.posOnly; return; end
 
 if prms.showWaitBar; hWait = waitbar(0); end
 

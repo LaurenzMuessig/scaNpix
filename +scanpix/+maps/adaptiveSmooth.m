@@ -57,7 +57,7 @@ while any(any(~smoothedCheck))
     % Check radius isn't getting too big (if >map/2, stop running) %
     if r>max(size(pos))/2
         smoothedSpk(~smoothedCheck) = 0;  % Comment LM: This seems the wrong behaviour as NaN is reserved for unvisited positions. Should be 0
-        smoothedPos(~smoothedCheck) = eps; % this can't be 0
+        smoothedPos(~smoothedCheck) = 0;
         break
     end
     % Construct filter kernel ...

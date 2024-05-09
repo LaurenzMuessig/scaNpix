@@ -201,11 +201,11 @@ classdef ephys < handle
             
             switch lower(type)
                 case 'container'
-                    prmsMap = obj.params; %#okagrow
+                    prmsMap = obj.params; %#ok<SAGROW>
                     outStr  = 'prmsMap';
                     suggest = 'MyParams';
                 case 'maps'
-                    prms    = obj.mapParams; %#okagrow
+                    prms    = obj.mapParams; %#ok<SAGROW>
                     outStr  = 'prms';
                     suggest = 'MyRateMapParams';
                 otherwise
@@ -634,7 +634,7 @@ classdef ephys < handle
             end
             
             % make sure to add empty cells to all trials if a unit fires 
-            % only on some trials
+            % only on some trials - DACQ only
             if check0spikeCells
                 cellTet  = vertcat( cellTet,{ obj.cell_ID(:,1:2) } );
                 allCellN = sortrows(unique(vertcat(cellTet{:}),'rows'),2);
@@ -876,10 +876,10 @@ classdef ephys < handle
                 warning('scaNpix::ephys::fetchFileNamesAndPath:No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
                 return
             end
-            
-            [~,ind]      = sort([trialStruct.datenum]);
-            tempNames    = {trialStruct(ind).name}';
-            C = regexp(tempNames,fileExt,'split');
+            %
+            [~,ind]   = sort([trialStruct.datenum]);
+            tempNames = {trialStruct(ind).name}';
+            C         = regexp(tempNames,fileExt,'split');
             
             if nargout > 1
                 dataDir = strcat({trialStruct(ind).folder}', filesep);
@@ -973,8 +973,8 @@ classdef ephys < handle
 
         %%
         function copyObj = deepCopy(obj)
-            % deepCopy - create a deep copy of an scanpix.ephys object
-            % which isn't straightforward due to derivation from handle
+            % deepCopy - create a deep copy of a scanpix.ephys object
+            % which isn't straightforward due to its derivation from the handle
             % class. This seems the only hacky way Matlab is currently
             % offering (other than using Mixin.copyable instead of handle
             % class)
@@ -994,7 +994,7 @@ classdef ephys < handle
             else
                 tmpPath = obj.dataPath{1};
             end 
-            filenameOut = scanpix.helpers.checkSaveFile(fullfile(tmpPath,'temp.mat'));
+            filenameOut = scanpix.helpers.checkSaveFile(fullfile(tmpPath,[char(datetime('now','format','yyyyMMddHHmmssSSS')) '.mat']));
             save(filenameOut, 'obj');
             foo     = load(filenameOut);
             copyObj = foo.obj;
@@ -1174,8 +1174,11 @@ classdef ephys < handle
                             sampleTimes = obj.spikeData.sampleT{i};
                             prms.posFs  = obj.params('posFs');
                         end
-                        
-                        [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
+                        if strcmpi(mapType,'pos')
+                            [ ~, obj.maps(1).pos{i}, ~ ]                                      = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
+                        else
+                            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
+                        end
                     end
                     
                     %         % pad maps so size is the same for all maps is set
@@ -1307,16 +1310,17 @@ classdef ephys < handle
         end
         
         %%
-        function spatProps = getSpatialProps(obj, score, trialInd)
-            
+        function spatProps = getSpatialProps(obj, score, trialInd, varargin)
+            %
             if strcmp(obj.type,'bhave')
                 warning('scaNpix::ephys::addMaps:This ain''t gonna work for behavioural data. I guess you had to try...');
                 return;
             end
-
+            %
             if nargin < 3
                 trialInd = 1:length(obj.trialNames);
             end
+            %
             c = 1;
             switch lower(score)
                 case {'spatialinfo','si'}
@@ -1325,11 +1329,39 @@ classdef ephys < handle
                         spatProps = [];
                         return
                     end
+                    %
+                    prms         = obj.mapParams.rate;
+                    prms.posOnly = true;
                     
                     spatProps = nan(size(obj.cell_ID,1),length(trialInd));
-
+                    
                     for i = trialInd
-                        spatProps(:,c) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},obj.maps(1).pos{i});
+                        % sample rate for positions
+                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
+                        else
+                            prms.posFs  = obj.params('posFs');
+                        end
+                        prms.envSize = obj.trialMetaData(i).envSize ./ 100 .* obj.trialMetaData(i).ppm;
+                        % need to get a boxcar pos map as a canonical estimate of dwell in case of adaptively smoothed maps
+                        if strcmp(prms.smooth,'adaptive')
+                            [ ~, posMap, ~ ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, [], obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms);
+                        else
+                            posMap = obj.maps(1).pos{i};
+                        end
+                        % get mean rates
+                        % if nargin < 4
+                        %     if prms.speedFilterFlagRMaps
+                        %         speedLims = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
+                        %     else
+                        %         speedLims = 'none';
+                        %     end
+                        %     meanRates     = scanpix.analysis.getMeanRate(obj.spikeData.spk_Times{i},prms.posFs,obj.posData.speed{i},speedLims);
+                        % else
+                        %     meanRates     = varargin{1};
+                        % end
+                        % SI
+                        spatProps(:,c) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},cell2mat(posMap));
                         c = c + 1;
                     end
                 case {'raleighvect','rv'}
@@ -1340,7 +1372,7 @@ classdef ephys < handle
                     end
                     
                     spatProps = nan(size(obj.cell_ID,1),length(trialInd));
-                    for i = 1:trialInd
+                    for i = trialInd
                         spatProps(:,c) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
                         c = c + 1;
                     end
@@ -1356,7 +1388,7 @@ classdef ephys < handle
                     prms      = fieldnames(obj.mapParams.gridProps)';
                     prms(2,:) = struct2cell(obj.mapParams.gridProps)'; 
                     for i = trialInd
-                        [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,prms{:}),obj.maps(1).sACs{i},'uni',0);
+                        [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,true,prms{:}),obj.maps(1).sACs{i},'uni',0);
                         % for now just output the basics
                         spatProps(:,:,c) = cell2mat(cellfun(@(x) [x.gridness x.wavelength x.orientation],temp,'uni',0));
                         c = c + 1;

@@ -30,18 +30,18 @@ minTrialDur     = 600;    %
 minNspikes      = [];
 ageBins         = [20 25; 26 40];
 scores          = {'SI','RV','gridness','borderScore'};
-trialSelectMode = 'rand';
-trialType       = 'fam';
+trialSelectMode = 'fam';
+trialType       = 1:2;
 
 %
 p = inputParser;
 addOptional(p, 'mode'     ,mode,           ( @(x) mustBeMember(x,{'cell','pop'}) ) );
 addParameter(p,'nshuf'    ,nShuffles,      @isscalar);
 addParameter(p,'minshift' ,minShift,       @isscalar);
-addParameter(p,'mindur'   ,minTrialDur,          @isscalar);
+addParameter(p,'mindur'   ,minTrialDur,    @isscalar);
 addParameter(p,'minspikes',minNspikes,     @isscalar);
 addParameter(p,'age'      ,ageBins                  );
-addParameter(p,'scores'   ,scores,         @iscell);
+addParameter(p,'scores'   ,scores,         @iscell  );
 addParameter(p,'trialsel' ,trialSelectMode,(@(x) strcmp(x,'all') || strcmp(x,'rand') ) );
 addParameter(p,'trialtype',trialType,      (@(x) ischar(x) || iscell(x) ) );
 
@@ -56,6 +56,8 @@ if strcmp(p.Results.trialsel,'all')
     maxNtrials = max(cellfun(@(x) sum(x), cellfun(@(x) ismember(x,trialType), allTrials,'UniformOutput',0)));
 elseif strcmp(p.Results.trialsel,'rand')
     maxNtrials = 1;
+elseif isnumeric(p.Results.trialtype)
+    maxNtrials = length(p.Results.trialtype);
 end
 
 %%
@@ -109,6 +111,14 @@ parfor j = 1:length(objData)
         if ~all(selInd)
             copyObj.deleteData('trials',copyObj.trialNames(~selInd));
         end
+    elseif isnumeric(p.Results.trialtype)
+        ind      = find(ismember({copyObj.trialMetaData.trialType},p.Results.trialsel));
+        selTrial = ind(min(min(p.Results.trialtype),length(ind)):min(max(p.Results.trialtype),length(ind)));
+        selInd   = false(size(ind));
+        selInd(selTrial) = true;
+        if ~all(selInd)
+            copyObj.deleteData('trials',copyObj.trialNames(~selInd));
+        end
     end
     % remove low spike n cells if desired
     if ~isempty(p.Results.minspikes)
@@ -125,14 +135,14 @@ parfor j = 1:length(objData)
 
         shiftsAll = linspace( p.Results.minshift,copyObj.trialMetaData(k).duration - p.Results.minshift, nStep)'; % all possible shifts
 
-        % shift nShiftCells times
+        % shift 'nShiftCells' times
         for l = 1:nShiftCells
             if strcmp(p.Results.mode,'pop')
                 % pick a random shift for each cell from the dataset in case of population shuffle
                 shiftInd  = randi(length(shiftsAll),size(copyObj.cell_ID,1),1);
                 shifts    = shiftsAll(shiftInd); % diffent shift for each cell
             else
-                shifts    = shiftsAll(l); % for cell shuffle just pick linearly from ditribution all shifts
+                shifts    = shiftsAll(l); % for cell shuffle just pick linearly from distribution of all shifts
             end
             % shift spikes
             copyObj.spikeData.spk_Times{k} = scanpix.shuffle.randSpikes(copyObj.spikeData.spk_Times{k},copyObj.trialMetaData(k).duration,shifts);
@@ -150,9 +160,7 @@ parfor j = 1:length(objData)
             if any(strcmp(p.Results.scores,'RV'))
                 copyObj.addMaps('dir',k);
             end
-            % reset shift
-            copyObj.spikeData.spk_Times{k} = scanpix.shuffle.randSpikes(copyObj.spikeData.spk_Times{k},copyObj.trialMetaData(k).duration,shifts,true);
-
+            
             % compute scores; could probably be a bit more elegant, but it
             % works
             for m = 1:length(p.Results.scores)
@@ -163,6 +171,9 @@ parfor j = 1:length(objData)
                     tmpT.(p.Results.scores{m})(:,k) = num2cell([vertcat(tmpT.(p.Results.scores{m}){:,k}),copyObj.getSpatialProps(p.Results.scores{m}, k)],2);
                 end
             end
+
+            % reset shift
+            copyObj.spikeData.spk_Times{k} = scanpix.shuffle.randSpikes(copyObj.spikeData.spk_Times{k},copyObj.trialMetaData(k).duration,shifts,true);
         end
     end
     % fill in rest of table
@@ -172,7 +183,7 @@ parfor j = 1:length(objData)
     tmpT.cellID  = copyObj.cell_ID(:,1);
     % final output
     ResShuf      = vertcat(ResShuf,tmpT);
-    
+    %
     fprintf('Finished shuffling %s\n',copyObj.dataSetName);
 end
 % save

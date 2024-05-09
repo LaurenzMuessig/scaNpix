@@ -21,10 +21,9 @@ parse(p,varargin{:});
 
 
 %% 
-dirIn = fullfile(p.Results.dirparent, ratStr);
-
+dirIn        = fullfile(p.Results.dirparent, ratStr);
 FolderStruct = dir(dirIn);
-dataOut = cell(0,3);
+dataOut      = cell(0,3);
 
 if isempty(FolderStruct)
     warning('scaNpix::npixUtils::getNExp:: Can''t find a folder called ''%s'' in ''%s''.',ratStr,p.Results.dirparent);
@@ -45,7 +44,7 @@ for i = 1:length(FolderStruct)
         warning('No raw data found in %s%s',FolderStruct(i).folder,FolderStruct(i).name);
         continue
     end
-    
+    %
     for j = 1:length(pathXMLFiles)
         
         tmpXML = scanpix.fxchange.xml_read(fullfile(pathXMLFiles(j).folder,pathXMLFiles(j).name));
@@ -58,10 +57,10 @@ for i = 1:length(FolderStruct)
     end
 end
 % remove empty fields and sort by creation date
-indEmpty = cellfun('isempty',dataOut(:,1));
-dataOut = dataOut(~indEmpty,:);
-[~,sortInd] = sort(datetime(dataOut(~indEmpty,2)));
-dataOut = dataOut(sortInd,:);
+indEmpty     = cellfun('isempty',dataOut(:,1));
+dataOut      = dataOut(~indEmpty,:);
+[~,sortInd]  = sort(datetime(dataOut(~indEmpty,2)));
+dataOut      = dataOut(sortInd,:);
 dataOut(:,3) = num2cell(1+p.Results.npre:size(dataOut,1)+p.Results.npre,1);
 end
 

@@ -57,12 +57,13 @@ copyObj.deleteData('cells',ind);
 %% Set up results table %
 scoreDum  = nan(1,maxNCol);
 varList   =   {
-                'cellID',      NaN; ...
                 'rat',         NaN; ...
                 'age',         scoreDum; ...
                 'dataset',     cell(1,1); ...
+                'cellID',      NaN; ...
                 %'trialInd',    scoreDum; ...
                 'envType',     cell(size(scoreDum)); ...
+                'nExp',        scoreDum; ...
                 
                 'posData',     cell(size(scoreDum)); ...
 
@@ -106,43 +107,37 @@ prmsRate = copyObj.mapParams.rate;
 
 %%
 % populate fields
-
 if isfield(copyObj.trialMetaData,'animal')
     ResT.rat               = copyObj.trialMetaData(1).animal .* ones(nCells,1);
 elseif isfield(copyObj.trialMetaData,'anNum')
-    ResT.rat              = copyObj.trialMetaData(1).anNum .* ones(nCells,1);
+    ResT.rat               = copyObj.trialMetaData(1).anNum .* ones(nCells,1);
 end
 if isfield(copyObj.trialMetaData,'age')
-    ResT.age(:,tabInd)    = [copyObj.trialMetaData(dataInd).age] .* ones(nCells,1);
+    ResT.age(:,tabInd)     = [copyObj.trialMetaData(dataInd).age] .* ones(nCells,1);
 else
-    ResT                  = removevars(ResT,'age');
+    ResT                   = removevars(ResT,'age');
 end
-ResT.dataset              = repmat({copyObj.dataSetName},nCells,1);
+ResT.dataset               = repmat({copyObj.dataSetName},nCells,1);
 if ~all(cellfun('isempty',{copyObj.trialMetaData(dataInd).trialType}))
     ResT.envType(:,tabInd) = repmat({copyObj.trialMetaData(dataInd).trialType},nCells,1);
 else
     ResT                   = removevars(ResT,'envType');
 end
-
+if isfield(copyObj.trialMetaData,'nExp')
+    ResT.nExp(:,tabInd)    = [copyObj.trialMetaData(dataInd).nExp] .* ones(nCells,1);
+else
+    ResT                   = removevars(ResT,'nExp');
+end
 %
 switch p.Results.rowformat
     case 'cell'
 
         ResT = removevars(ResT,'posData');
         %
-        if strcmp(copyObj.fileType,'.set')
-            ResT.cellID = copyObj.cell_ID(:,1:2);
-        else
-            ResT.cellID = copyObj.cell_ID(:,1);
-        end
+        ResT.cellID = copyObj.cell_ID(:,1:2);
         %
         tmp                     = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times(dataInd),'uni',0);
-        nSpikes                 = cell2mat(horzcat(tmp{:}));
-        ResT.nSpks(:,tabInd)    = nSpikes;
-
-        % 
-        ResT.meanRate(:,tabInd) = bsxfun(@rdivide,nSpikes,[copyObj.trialMetaData(dataInd).duration]);
-
+        ResT.nSpks(:,tabInd)    = cell2mat(horzcat(tmp{:}));
         %
         ResT.spkTimes(:,tabInd) = horzcat(copyObj.spikeData.spk_Times{dataInd});
         %
@@ -151,64 +146,77 @@ switch p.Results.rowformat
                 copyObj.addMaps('rate',dataInd);
             end
             ResT.rateMap(:,tabInd) = horzcat(copyObj.maps.rate{dataInd});
-            ResT.posMap(:,tabInd)  = horzcat(copyObj.maps.pos{dataInd});
+            if any(cellfun(@(x) length(x) > 1,copyObj.maps.pos(dataInd)))
+                copyObj.addMaps('pos',dataInd);
+            end
+            ResT.posMap(:,tabInd)  = repmat(horzcat(copyObj.maps.pos{dataInd}),nCells,1); % a bit redundant to have same pos map for every cell but better than to store the adaptively smoothed pos maps
 
             if any(cellfun('isempty',copyObj.maps.dir(dataInd)))
                 copyObj.addMaps('dir',dataInd);
             end
             ResT.dirMap(:,tabInd)  = horzcat(copyObj.maps.dir{dataInd});
         end
+        % we need this for getting the true mean rate of each cell
+        if copyObj.mapParams.rate.speedFilterFlagRMaps
+            speedLims = [copyObj.mapParams.rate.speedFilterLimitLow copyObj.mapParams.rate.speedFilterLimitHigh];
+        else
+            speedLims = 'none';
+        end
 
         % loop over trials
-        if any(scoreInd)
-            c = 1;
-            for i = dataInd
-                if scoreInd(1)
-                    if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
-                        copyObj.addMaps('rate',dataInd);
-                    end
-                    ResT.SI(:,tabInd(c))           = scanpix.analysis.spatial_info(copyObj.maps.rate{i},copyObj.maps.pos{i});
-                end
-                if scoreInd(2)
-                    if any(cellfun('isempty',copyObj.maps.dir(dataInd)))
-                        copyObj.addMaps('dir',dataInd);
-                    end
-                    ResT.RV(:,tabInd(c))           = cell2mat( cellfun(@(x) scanpix.analysis.rayleighVect(x),copyObj.maps.dir{i},'uni',0) );
-                end
-                if scoreInd(3)
-                    if any(cellfun('isempty',copyObj.maps.sACs(dataInd)))
-                        copyObj.addMaps('sac',dataInd);
-                    end
-                    tmp                            = cell2mat( cellfun(@(x) scanpix.analysis.gridprops(x,'getell',true),copyObj.maps.sACs{i},'uni',0) );
-                    ResT.gridness(:,tabInd(c))     = tmp(:,1);
-                    ResT.gridness_ell(:,tabInd(c)) = tmp(:,2);
-                end
-                if scoreInd(4)
-                    if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
-                        copyObj.addMaps('rate',dataInd);
-                    end
-                    ResT.borderScore(:,tabInd(c))  = cell2mat( cellfun(@(x) scanpix.analysis.getBorderScore(x,copyObj.mapParams.rate.binSizeSpat),copyObj.maps.rate{i},'uni',0) );
-                end
-                %
-                if scoreInd(5)
-                    mapSeries                      = scanpix.maps.makeMapTimeSeries(copyObj,[0 copyObj.trialMetaData(i).duration/2],i,'prms',prmsRate);
-                    ResT.intraStab(:,tabInd(c))    = scanpix.analysis.spatialCorrelation(mapSeries{1},mapSeries{2});
-                end
-                c = c + 1;
+        c = 1;
+        for i = dataInd
+            % get true mean rate in case of speed filtering
+            if isKey(copyObj.params,'InterpPos2PosFs') && copyObj.params('InterpPos2PosFs')
+                posFs  = copyObj.trialMetaData(i).log.InterpPosFs;
+            else
+                posFs  = copyObj.params('posFs');
             end
+            ResT.meanRate(:,tabInd(c))  = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims);
+            %
+            if scoreInd(1)
+                if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
+                    copyObj.addMaps('rate',dataInd);
+                end
+                ResT.SI(:,tabInd(c))           = copyObj.getSpatialProps('SI', i);
+            end
+            if scoreInd(2)
+                if any(cellfun('isempty',copyObj.maps.dir(dataInd)))
+                    copyObj.addMaps('dir',dataInd);
+                end
+                ResT.RV(:,tabInd(c))           = copyObj.getSpatialProps('RV', i);
+            end
+            if scoreInd(3)
+                if any(cellfun('isempty',copyObj.maps.sACs(dataInd)))
+                    copyObj.addMaps('sac',dataInd);
+                end
+                tmpGridProps                   = copyObj.getSpatialProps('gridprops', i);
+                ResT.gridness(:,tabInd(c))     = tmpGridProps(:,1);
+                ResT.gridness_ell(:,tabInd(c)) = tmpGridProps(:,2);
+            end
+            if scoreInd(4)
+                if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
+                    copyObj.addMaps('rate',dataInd);
+                end
+                ResT.borderScore(:,tabInd(c))  = copyObj.getSpatialProps('bs', i);
+            end
+            %
+            if scoreInd(5)
+                mapSeries                      = scanpix.maps.makeMapTimeSeries(copyObj,[0 copyObj.trialMetaData(i).duration/2],i,'prms',prmsRate);
+                ResT.intraStab(:,tabInd(c))    = scanpix.analysis.spatialCorrelation(mapSeries{1},mapSeries{2});
+            end
+            c = c + 1;
         end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
     case 'dataset'
-        if strcmp(copyObj.fileType,'.set')
-            ResT.cellID             = {copyObj.cell_ID(:,1:2)};
-        else
-            ResT.cellID             = {copyObj.cell_ID(:,1)};
-        end
+        %
+        ResT.cellID             = {copyObj.cell_ID(:,1:2)};
         ResT.posData(1,tabInd)      = copyObj.posData.XY(dataInd);
         tmp                         = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times,'uni',0);
         nSpikes                     = cell2mat(horzcat(tmp{:,dataInd}));
         ResT.nSpks(1,tabInd)        = tmp(dataInd);
-        ResT.meanRate(1,tabInd)     = num2cell(bsxfun(@rdivide,nSpikes,[copyObj.trialMetaData(dataInd).duration]),1);
+        %%%%%%%%%%%%%%%%%%%%%%% NEED TO AACOUNT FOR SPEED FILTERING HERE %%%%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%
+        % ResT.meanRate(1,tabInd)     = num2cell(bsxfun(@rdivide,nSpikes,[copyObj.trialMetaData(dataInd).duration]),1);
 
         %
         ResT.spkTimes(1,tabInd)     = copyObj.spikeData.spk_Times(dataInd);
@@ -255,10 +263,10 @@ switch p.Results.rowformat
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
                     copyObj.addMaps('rate',dataInd);
                 end
-                ResT.borderScore(1,tabInd)  = cellfun(@(y) cellfun(@(x) scanpix.analysis.getBorderScore(x,copyObj.mapParams.rate.binSizeSpat),y),copyObj.maps.rate(dataInd),'uni',0);
+                ResT.borderScore(1,tabInd) = cellfun(@(y) cellfun(@(x) scanpix.analysis.getBorderScore(x,copyObj.mapParams.rate.binSizeSpat),y),copyObj.maps.rate(dataInd),'uni',0);
             end
             if scoreInd(5)
-                tmpStab                     = cell(1,length(dataInd));
+                tmpStab                    = cell(1,length(dataInd));
                 c = 1;
                 for i = dataInd
                     mapSeries              = scanpix.maps.makeMapTimeSeries(copyObj,[0 copyObj.trialMetaData(i).duration/2],i);

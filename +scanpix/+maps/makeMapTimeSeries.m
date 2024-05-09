@@ -18,16 +18,20 @@ addOptional(p, 'prms',    mapParams,      ( @(x) isstruct(x) || isempty(x) )    
 parse(p,varargin{:});
 %
 if isempty(p.Results.prms)
-    prms = obj.mapParams.(p.Results.mapType);
+    prms = obj.mapParams.(p.Results.type);
 else
     prms = p.Results.prms;
 end
-
+%
 if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
     sampleTimes = [];
     prms.posFs  = obj.trialMetaData(trialInd).log.InterpPosFs;
 else
     sampleTimes = obj.spikeData.sampleT{trialInd};
+end
+%
+if strcmp(p.Results.type,'rate') && ~isempty( obj.trialMetaData(trialInd).envSize ) 
+    prms.envSize = obj.trialMetaData(trialInd).envSize ./ 100 .* obj.trialMetaData(trialInd).ppm; % in pixels
 end
 
 
