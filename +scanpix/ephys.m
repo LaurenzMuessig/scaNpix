@@ -233,7 +233,7 @@ classdef ephys < handle
         end
         
         %%
-        function addMetaData(obj,name,values)
+        function addMetaData(obj, name, values, trialInd)
             % addMetaData - add meta data tags to object. These will be added to obj.trialMetaData.(name)
             %
             % Syntax:
@@ -265,6 +265,10 @@ classdef ephys < handle
                     end
                 end
             end
+
+            if nargin < 4
+                trialInd = 1:length(obj.trialNames);
+            end
             
             if nargin == 2
                 % initialise empty field
@@ -275,12 +279,15 @@ classdef ephys < handle
                 values = num2cell(values);
             end
 
-            if length(values) < length(obj.trialNames)
+            % if length(values) < length(obj.trialNames)
+            %     values = repmat(values,1,length(obj.trialNames)); % expand
+            % end
+            if length(values) < length(trialInd)
                 values = repmat(values,1,length(obj.trialNames)); % expand
             end
             
             % add metadata
-            [obj.trialMetaData.(name)] = values{:};
+            [obj.trialMetaData(trialInd).(name)] = values{:};
 
         end
         
@@ -1388,7 +1395,7 @@ classdef ephys < handle
                     prms      = fieldnames(obj.mapParams.gridProps)';
                     prms(2,:) = struct2cell(obj.mapParams.gridProps)'; 
                     for i = trialInd
-                        [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,true,prms{:}),obj.maps(1).sACs{i},'uni',0);
+                        [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,prms{:}),obj.maps(1).sACs{i},'uni',0);
                         % for now just output the basics
                         spatProps(:,:,c) = cell2mat(cellfun(@(x) [x.gridness x.wavelength x.orientation],temp,'uni',0));
                         c = c + 1;

@@ -47,7 +47,7 @@ switch lower(prms.method)
         if prms.removeMinOverlap
             spatCorr(overlapBins<20) = NaN; % Remove autocorr bins with small overlaps.
         end
-    case 'caswell'
+    case 'barry'
         % Make visited bin filters, mark unvis as 0 %
         interpBlRm(interpBlRm==-1) = NaN;       % Catch unvis = -1 maps
         interpCompRm(interpCompRm==-1) = NaN;   %

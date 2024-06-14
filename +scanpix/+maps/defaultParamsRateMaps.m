@@ -95,7 +95,7 @@ prms.sac.sigma                   = 1.5;
 prms.gridProps.zscorethr         = 1;            % 
 % prms.gridProps.peakthr           = 0.25;    % 
 prms.gridProps.getprops          = true;  
-prms.gridProps.getellgridness    = false;  
+prms.gridProps.getellgridness    = true;  
 
 prms.gridProps.plot              = false;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
 prms.gridProps.ax                = {}; 

@@ -93,7 +93,7 @@ for i = 1:length(obj.trialNames)
     for j = 1:length(obj.cell_ID)
         
                 
-        meanWFs  = squeeze( nanmean( obj.spikeData.spk_waveforms{i}{j}, 1) ); % mean waveforms
+        meanWFs  = squeeze( mean( obj.spikeData.spk_waveforms{i}{j}, 1, 'omitnan') ); % mean waveforms
         
         % Get max2min amplitude, and the maximum amplitude channel %
         [~, maxCh]                       = max( max(meanWFs, [], 1) - min(meanWFs, [], 1) );

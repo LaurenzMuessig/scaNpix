@@ -45,7 +45,7 @@ function [gridness, Props] = gridprops(autoCorr,varargin)
 zScoreThr             = 1; % 90th percentile in units of std (1.282)
 getGridProps          = true;
 propsStruct           = [];
-getEllipticalGridness = false;
+getEllipticalGridness = true;
 plotProps             = false;  
 axArr                 = {};
 verbose               = false;
@@ -84,11 +84,12 @@ if ~isstruct(p.Results.props)
     Props.closestPeaksCoord = nan(6,4);
     Props.offset            = [NaN NaN];
     Props.offsetFull        = nan(3,2);
-    Props.phaseOffset       = [NaN NaN];
+    % Props.phaseOffset       = [NaN NaN];
     % Props.centralPeakMask   = {nan(size(autoCorr)),nan(size(autoCorr))};
     Props.fieldSize         = [NaN NaN];
     Props.ellOrient         = [NaN NaN];
     Props.ellAbScale        = nan(1,4);
+    Props.acReg             = nan(size(autoCorr));
 else
     Props                   = p.Results.props;
 end
@@ -200,11 +201,11 @@ if getGridProps || p.Results.getellgridness
     %
     Props.closestPeaksCoord(1:length(xyCoordMaxBin),outInd*2-1:outInd*2) = round(xyCoordMaxBin);
 
-    % field size
+    % field size THIS NEEDS WORK AS NOT MATCHING WITH THE GENERAL ALGORTIHM
     aboveThrMask               = bwlabel(autoCorr>0.4,8);
     aboveThrMask( aboveThrMask ~= aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 0;
     aboveThrMask( aboveThrMask == aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 1;
-    Props.fieldSize(1,outInd) = sum(logical(aboveThrMask(:)));
+    Props.fieldSize(1,outInd)  = sum(logical(aboveThrMask(:)));
 
     if p.Results.plot
         % make a nice figure with auto corr props - adapted from Dan Manson's code
@@ -226,6 +227,7 @@ if p.Results.getellgridness
         %
         Props.ellOrient(1,2)    = orient;
         Props.ellAbScale(1,3:4) = abScale;
+        Props.acReg             = autoCorrReg;  
     end   
     
 end
@@ -259,7 +261,6 @@ failFlag      = false;
      if ~centrPeakOnlyFlag
          failFlag = true;
      end
-
      return
  end
  [~, orderOfClose]      = sort(distFromCentre);
@@ -811,29 +812,43 @@ if abScale(1)==abScale(2) %Grid is already regular
     return
 end
 
+% LM edit
+tmpSAC             = sac;
+tmpSAC(isnan(sac)) = 0; % leaving the nan's in sac makes them spread during the interpolation
+
 %Grids aren't regular to start to regularise
 %1)First rotate so major axis aligns to x-axis
-regSac=imrotate(sac, -orient, 'bilinear');
+% regSac=imrotate(sac, -orient, 'bilinear');
+regSac=imrotate(tmpSAC, -orient, 'bilinear');
+
 
 %2)Decide by how much to resize - major axis is x so work on y axis to
 %bring to same scale
 sacSize=size(regSac);
 xStart=1;
 xEnd=sacSize(2);
-    tmp=sacSize(1)/2 - (sacSize(1)/2)*(abScale(2)/abScale(1));
-    yStart=1+tmp;
-    yEnd=sacSize(1)-tmp;
-
+tmp=sacSize(1)/2 - (sacSize(1)/2)*(abScale(2)/abScale(1));
+yStart=1+tmp;
+yEnd=sacSize(1)-tmp;
+% LM EDIT: need to add +1 to size in case it's even
+sacSize(rem(sacSize,2) == 0) = sacSize(rem(sacSize,2) == 0) + 1;    
 %3) Do the resample the sac to regularise the grid
-regSac=interp2(regSac, linspace(xStart,xEnd, sacSize(2)), linspace(yStart, yEnd, sacSize(1))');
+% regSac=interp2(regSac, linspace(xStart,xEnd, sacSize(2)), linspace(yStart, yEnd, sacSize(1))');
+% LM edit
+regSac=interp2(regSac, linspace(xStart,xEnd, sacSize(2)), linspace(yStart, yEnd, sacSize(1))'); 
+
 
 %4) Rotate back to original orientation
-regSac=imrotate(regSac, orient, 'bilinear');
+% regSac=imrotate(regSac, orient, 'bilinear','crop');
+% LM edit - crop to keep size == odd
+regSac=imrotate(regSac, orient, 'bilinear','crop');
 
 %5) Finally keep only the central portion of the sac so that it matches
 %the original size
 sizeDif=round((size(regSac)-size(sac))/2);
 regSac=regSac(1+sizeDif(1):end-sizeDif(1), 1+sizeDif(2):end-sizeDif(2));
+% LM edit
+regSac(regSac==0) = NaN; % reassign original nan's 
 
 end
 

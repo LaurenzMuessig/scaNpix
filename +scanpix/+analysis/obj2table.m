@@ -1,11 +1,23 @@
 function ResT = obj2table(obj,varargin)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
-
-%% TODO %
-% deal with reordering trials in output T to standard seq
-
+% obj2table - convert a scanpix.ephys object to a table 
+% package: scanpix.analysis
 %
+% Syntax:  
+%    scanpix.analysis.obj2table(obj)
+%    scanpix.analysis.obj2table(obj,key-value pairs)
+%
+% Inputs:
+%    obj       - scanpix.ephys object
+%    varargin  -  
+%
+%
+% Outputs:
+%    ResT      - table output
+%
+% LM 2024
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
 scores = {'SI','RV','gridness','borderScore','intraStab'};
 
 %% Params
@@ -15,15 +27,17 @@ minNSpikes   = [];
 trialIndex   = [];
 addMaps      = true;
 addScores    = true(1,length(scores));
+addWFprops   = true;
 
 %
 p = inputParser;
 addOptional(p, 'rowformat', rowFormat,    ( @(x) mustBeMember(x,{'cell','dataset'}) ));
 addParameter(p,'maxn',      maxNTrial,    ( @(x) isscalar(x) || isempty(x) ) );
 addParameter(p,'minspikes', minNSpikes,   ( @(x) isscalar(x) || isempty(x) ) );
-addParameter(p,'tindex',    trialIndex,   ( @(x) isempty(x) || ischar(x) || isstring(x) ) );
+addParameter(p,'tindex',    trialIndex,   ( @(x) isempty(x) || ischar(x) || isstring(x) || iscell(x)) );
 addParameter(p,'addmaps',   addMaps,      @islogical );
 addParameter(p,'scores',    addScores,    ( @(x) islogical(x) || iscell(x) ) );
+addParameter(p,'addWFprops',addWFprops,    @islogical );
 %
 parse(p,varargin{:});
 
@@ -55,7 +69,11 @@ end
 copyObj.deleteData('cells',ind);
 
 %% Set up results table %
-scoreDum  = nan(1,maxNCol);
+if strcmp(p.Results.rowformat,'dataset')
+    scoreDum  = cell(1,maxNCol);
+else
+    scoreDum  = nan(1,maxNCol);
+end
 varList   =   {
                 'rat',         NaN; ...
                 'age',         scoreDum; ...
@@ -84,6 +102,10 @@ varList   =   {
                 'intraStab',   scoreDum; ...
                 % 'interStab',   nan; ...        % 
                 'borderScore', scoreDum; ...
+                %
+                'waveForms',   cell(size(scoreDum)); ...
+                'spikeWidth',  scoreDum; ...
+                'meanAC',      scoreDum; ...
 
       };
 varList = varList';
@@ -98,7 +120,14 @@ ResT.Properties.VariableNames = varList(1,:);
 
 %% assigning index
 if ~isempty(p.Results.tindex)
-    [dataInd, tabInd] = getIndex({copyObj.trialMetaData.trialType},p.Results.tindex);
+    [dataInd, missTrials] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},p.Results.tindex);
+    tabInd = 1:length(p.Results.tindex);
+    tabInd(missTrials) = [];
+    % ind = 1:length(copyObj.trialNames);
+    % ind(dataInd) = [];
+    % if ~isempty(dataInd)
+    %     copyObj.deleteData('trials',copyObj.trialNames(ind));
+    % end
 else
     [dataInd, tabInd] = deal(1:length(copyObj.trialNames));
 end
@@ -172,7 +201,7 @@ switch p.Results.rowformat
             else
                 posFs  = copyObj.params('posFs');
             end
-            ResT.meanRate(:,tabInd(c))  = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims);
+            ResT.meanRate(:,tabInd(c))  = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims); % NEED TO THINK ABOUT WEHETHER THIS IS A GOOD IDEA? 
             %
             if scoreInd(1)
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
@@ -207,16 +236,24 @@ switch p.Results.rowformat
             end
             c = c + 1;
         end
+
+        if p.Results.addWFprops
+            % spikeProps                = scanpix.analysis.getWaveFormProps(copyObj);
+            % ResT.waveForms(1,tabInd)  = copyObj.spikeData.spk_waveforms(dataInd);
+            % ResT.spikeWidth(1,tabInd) = num2cell(squeeze(spikeProps(:,3,dataInd)),1);
+            % ResT.meanAC(1,tabInd)     = num2cell(squeeze(spikeProps(:,4,dataInd)),1);
+        else
+            ResT                      = removevars(ResT,'waveForms','spikeWidth','meanAC');
+        end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
     case 'dataset'
         %
         ResT.cellID             = {copyObj.cell_ID(:,1:2)};
-        ResT.posData(1,tabInd)      = copyObj.posData.XY(dataInd);
-        tmp                         = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times,'uni',0);
-        nSpikes                     = cell2mat(horzcat(tmp{:,dataInd}));
-        ResT.nSpks(1,tabInd)        = tmp(dataInd);
-        %%%%%%%%%%%%%%%%%%%%%%% NEED TO AACOUNT FOR SPEED FILTERING HERE %%%%%%%%%%%%%%%%%%%%%%% %%%%%%%%%%%%%%
-        % ResT.meanRate(1,tabInd)     = num2cell(bsxfun(@rdivide,nSpikes,[copyObj.trialMetaData(dataInd).duration]),1);
+        ResT.posData(1,tabInd)  = copyObj.posData.XY(dataInd);
+        tmp                     = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times,'uni',0);
+        nSpikes                 = cell2mat(horzcat(tmp{:,dataInd}));
+        ResT.nSpks(1,tabInd)    = tmp(dataInd);
+        ResT.meanRate(1,tabInd) = num2cell(bsxfun(@rdivide,nSpikes,[copyObj.trialMetaData(dataInd).duration]),1);
 
         %
         ResT.spkTimes(1,tabInd)     = copyObj.spikeData.spk_Times(dataInd);
@@ -243,27 +280,27 @@ switch p.Results.rowformat
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
                     copyObj.addMaps('rate',dataInd);
                 end
-                ResT.SI(1,tabInd)    = cellfun(@(x,y) scanpix.analysis.spatial_info(x,y),copyObj.maps.rate(dataInd),copyObj.maps.pos(dataInd),'uni',0);
+                ResT.SI(1,tabInd)    = num2cell(copyObj.getSpatialProps('SI',dataInd),1); 
             end
             if scoreInd(2)
                 if any(cellfun('isempty',copyObj.maps.dir(dataInd)))
                     copyObj.addMaps('dir',dataInd);
                 end
-                ResT.RV(1,tabInd)    = cellfun(@(y) cellfun(@(x) scanpix.analysis.rayleighVect(x),y),copyObj.maps.dir(dataInd),'uni',0);
+                ResT.RV(1,tabInd)    = num2cell(copyObj.getSpatialProps('rv',dataInd),1); 
             end
             if scoreInd(3)
                 if any(cellfun('isempty',copyObj.maps.sACs(dataInd)))
                     copyObj.addMaps('sac',dataInd);
                 end
-                tmp                         = cellfun(@(y) cell2mat(cellfun(@(x) scanpix.analysis.gridprops(x,'getell',true),y,'uni',0)),copyObj.maps.sACs(dataInd),'uni',0);
-                ResT.gridness(1,tabInd)     = cellfun(@(x) x(:,1),tmp,'uni',0);
-                ResT.gridness_ell(1,tabInd) = cellfun(@(x) x(:,2),tmp,'uni',0);
+                % tmp                         = copyObj.getSpatialProps('gridprops',dataInd); 
+                % ResT.gridness(1,tabInd)     = cellfun(@(x) x(:,1),tmp,'uni',0);
+                % ResT.gridness_ell(1,tabInd) = cellfun(@(x) x(:,2),tmp,'uni',0);
             end
             if scoreInd(4)
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
                     copyObj.addMaps('rate',dataInd);
                 end
-                ResT.borderScore(1,tabInd) = cellfun(@(y) cellfun(@(x) scanpix.analysis.getBorderScore(x,copyObj.mapParams.rate.binSizeSpat),y),copyObj.maps.rate(dataInd),'uni',0);
+                ResT.borderScore(1,tabInd) = num2cell(copyObj.getSpatialProps('bs', dataInd),1);
             end
             if scoreInd(5)
                 tmpStab                    = cell(1,length(dataInd));
@@ -277,22 +314,20 @@ switch p.Results.rowformat
             end
 
         end
+        
+        if p.Results.addWFprops
+            spikeProps                = scanpix.analysis.getWaveFormProps(copyObj);
+            ResT.waveForms(1,tabInd)  = copyObj.spikeData.spk_waveforms(dataInd);
+            ResT.spikeWidth(1,tabInd) = num2cell(squeeze(spikeProps(:,3,dataInd)),1);
+            ResT.meanAC(1,tabInd)     = num2cell(squeeze(spikeProps(:,4,dataInd)),1);
+        else
+            ResT                      = removevars(ResT,'waveForms','spikeWidth','meanAC');
+        end
 end
 %
 ResT = removevars(ResT,scores(~scoreInd));
 if ~ismember('gridness', ResT.Properties.VariableNames)
     ResT = removevars(ResT,'gridness_ell');
 end
-
-end
-
-% -------------------------------------------------------------------------------------------------
-% --- INLINE FUNCTIONS ----------------------------------------------------------------------------
-% -------------------------------------------------------------------------------------------------
-function [dataIndex, tableIndex] = getIndex(trialSeqObj,pattern2extract)  
-
-
-
-
 
 end
