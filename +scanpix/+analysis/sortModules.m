@@ -45,13 +45,13 @@ parse(p,varargin{:});
 % [~,props]       = cellfun(@(x) scanpix.analysis.gridprops(x,'getellgridness',true),spatialACs,'uni',0);
 if isempty(p.Results.gridprops)
     [gridProps, bestACs] = scanpix.analysis.selectBestGridProps(spatialACs,'trialSel','maxall');
-    tmpProps_reg   = gridProps{1};
-    tmpProps_ell   = gridProps{2};
-    tmpACs_reg = bestACs{1};
-    tmpACs_ell = bestACs{2};
+    tmpProps_reg         = gridProps{1};
+    tmpProps_ell         = gridProps{2};
+    tmpACs_reg           = bestACs{1};
+    tmpACs_ell           = bestACs{2};
 else
-    [tmpACs_reg,tmpACs_ell]  = deal(spatialACs);
-    [tmpProps_reg,tmpProps_ell]  = deal( p.Results.gridprops);
+    [tmpACs_reg,tmpACs_ell,bestACs]       = deal(spatialACs);
+    [tmpProps_reg,tmpProps_ell,gridProps] = deal( p.Results.gridprops);
 end
 
 %% sanity check
@@ -107,7 +107,7 @@ switch lower(method)
                     tmpModInd( currModInd ) = i+1;
                     % get scale of mean spat autocorr
                     % meanAC       = mean(cat(3,selectACs{currModInd}),3,'omitnan');
-                    meanAC       = mean(cat(3,bestACs{1}{currModInd}),3,'omitnan');
+                    meanAC       = mean(cat(3,tmpACs_reg{currModInd}),3,'omitnan');
 
                     [~,tmpProps] = scanpix.analysis.gridprops(meanAC,'getellgridness', true);
                     % [~,tmpMxInd] = max(tmpProps.gridness);

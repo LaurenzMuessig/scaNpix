@@ -173,7 +173,7 @@ obj.posData(1).direction{trialIterator}   = dirData(1:endIdxNPix);
 
 
 % interpolate positions to pos fs exactly - this will speed up map making significantly 
-if obj.params('InterpPos2PosFs')
+if obj.trialMetaData(trialIterator).log.InterpPos2PosFs 
     sampleTimes = obj.spikeData.sampleT{trialIterator};
     % newT = (0:1/obj.params('posFs'):(length(sampleTimes)-1)*(1/obj.params('posFs')))'; %
     newT = linspace(0,sampleTimes(end),length(sampleTimes))'; %

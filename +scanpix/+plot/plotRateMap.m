@@ -19,19 +19,19 @@ function plotRateMap(map,varargin)
 %% parse input
 defaultColMap   = 'jet';
 defaultNSteps   = 11;
-defaulthAx      = "none";
+defaulthAx      = 'none';
 interpolate     = false;
 defaultCMapEdge = [];
 
 p = inputParser;
-addOptional(p,'ax',       defaulthAx,     ( @(x) ishghandle(x, 'axes') || isstring(x)));
+addOptional(p,'ax',       defaulthAx,     ( @(x) ishghandle(x, 'axes') || mustBeMember(x,{'none'})));
 addParameter(p,'colmap',  defaultColMap,  @ischar);
 addParameter(p,'nsteps',  defaultNSteps,  @isscalar);
 addParameter(p,'interp',  interpolate,    @islogical);
 addParameter(p,'cmapEdge',defaultCMapEdge);
 parse(p,varargin{:});
 
-if p.Results.ax == "none"
+if strcmp(p.Results.ax,'none')
     hAx = axes;
 else
     hAx = p.Results.ax;

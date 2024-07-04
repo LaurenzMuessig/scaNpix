@@ -63,13 +63,15 @@ for n = 1:nFigs
     if ~noGridMode
         nCols = min([nMaps4plot,p.Results.nplots]); % in case just 1 trial, we want to make a compact plot...
         nRows = ceil(nMaps4plot/nCols);
+        mapIndex  = mapIndex(end)+1:mapIndex(end)+min([p.Results.nrows,nMaps4plot]);
         %nRows = maps2plot;
     else
         nCols = size(data,2) * size(data,3); % ...if it's several trials, we plot nCells across trials
         nRows = nMaps4plot;
+        mapIndex  = mapIndex(end)+1:mapIndex(end)+nRows;
     end
     %
-    mapIndex  = mapIndex(end)+1:mapIndex(end)+nRows;
+    % mapIndex  = mapIndex(end)+1:mapIndex(end)+nRows;
 
     
     [axArray, hScroll] = scanpix.plot.multPlot([nRows nCols],'offsetbase',p.Results.offsetbase,'plotsep',p.Results.plotsep,'plotsize',p.Results.plotsize,'figname',p.Results.figname);
