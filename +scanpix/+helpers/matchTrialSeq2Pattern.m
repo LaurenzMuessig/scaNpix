@@ -19,9 +19,11 @@ function [dataIndex, missingTrials] = matchTrialSeq2Pattern(trialSeqObj,pattern2
 %
 %% Params
 bslKey  = 'fam';
+ignoreTrialOrder = false;
 %
 p = inputParser;
-addParameter(p,'bslk',  bslKey, ( @(x) ischar(x) || isstring(x) ));
+addParameter(p,'bslk',         bslKey,           ( @(x) ischar(x) || isstring(x) ));
+addParameter(p,'ignoreTOrder', ignoreTrialOrder, @islogical);
 
 parse(p,varargin{:});
 %%
@@ -29,10 +31,18 @@ parse(p,varargin{:});
 firstNonBslInTrialSeq = find( ~strcmp(trialSeqObj,p.Results.bslk), 1, 'first' );
 firstNonBslInPattern  = find( ~strcmp(pattern2extract,p.Results.bslk), 1, 'first' );
 %
-if isempty(firstNonBslInPattern)
-    nBSL = length(pattern2extract);
+if p.Results.ignoreTOrder
+    bslInd = find( strcmp(trialSeqObj,p.Results.bslk));
+    nBSL   = firstNonBslInPattern - 1;
+    if length(bslInd) > nBSL
+        bslInd = bslInd(end-(nBSL-1):end);
+    end
 else
-    nBSL = firstNonBslInPattern - 1;
+    if isempty(firstNonBslInPattern)
+        nBSL = length(pattern2extract);
+    else
+        nBSL = firstNonBslInPattern - 1;
+    end
 end
 
 if isempty(firstNonBslInTrialSeq)
@@ -42,16 +52,24 @@ end
 
 dataIndex = nan(1,length(pattern2extract));
 % Get the n last bsl trials before the first probe.
-for i = 1:nBSL
-    if firstNonBslInTrialSeq-i < 1
-        continue
-    else
-        dataIndex( nBSL - (i-1) ) = firstNonBslInTrialSeq - i;
+if p.Results.ignoreTOrder
+    dataIndex(1:length(bslInd)) = bslInd;
+else
+    for i = 1:nBSL
+        if firstNonBslInTrialSeq-i < 1
+            continue
+        else
+            dataIndex( nBSL - (i-1) ) = firstNonBslInTrialSeq - i;
+        end
     end
 end
 % now do all trials after the (pre-probe) baseline trials
 postBSLTrial2Extr = pattern2extract(firstNonBslInPattern:end);
-remainTrials      = trialSeqObj(firstNonBslInTrialSeq:end);
+if p.Results.ignoreTOrder
+    remainTrials      = trialSeqObj(~strcmp(trialSeqObj,p.Results.bslk));
+else
+    remainTrials      = trialSeqObj(firstNonBslInTrialSeq:end);
+end
 %
 c1 = firstNonBslInTrialSeq - 1;
 c2 = nBSL + 1;

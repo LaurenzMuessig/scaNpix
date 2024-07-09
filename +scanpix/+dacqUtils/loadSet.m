@@ -87,7 +87,7 @@ else
         if any( mode == [1 3] ) % Mode B or -B (ref or -ref)
             chTemp = scanpix.dacqUtils.getValue(sFileTxt, ['b_in_ch_' num2str(recordingChannel(i)-1)]);
             % if not free referencing system need to fetch ref channel ID from ref field
-            if ~isempty(scanpix.dacqUtils.getValue(sFileTxt,'modeanalog32'))
+            if isempty(scanpix.dacqUtils.getValue(sFileTxt,'modeanalog32'))
                 chTemp = scanpix.dacqUtils.getValue(sFileTxt, ['ref_' chTemp]);
             end
             setFile.lfp_channel(i) = str2double(chTemp) + 1;

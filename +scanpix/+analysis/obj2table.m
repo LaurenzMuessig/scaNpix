@@ -25,9 +25,11 @@ rowFormat    = 'cell';
 maxNTrial    = [];
 minNSpikes   = [];
 trialIndex   = [];
+ignoreOrder  = false;
 addMaps      = true;
 addScores    = true(1,length(scores));
-addWFprops   = true;
+addWFprops   = false;
+addLFP       = false;
 
 %
 p = inputParser;
@@ -35,9 +37,11 @@ addOptional(p, 'rowformat', rowFormat,    ( @(x) mustBeMember(x,{'cell','dataset
 addParameter(p,'maxn',      maxNTrial,    ( @(x) isscalar(x) || isempty(x) ) );
 addParameter(p,'minspikes', minNSpikes,   ( @(x) isscalar(x) || isempty(x) ) );
 addParameter(p,'tindex',    trialIndex,   ( @(x) isempty(x) || ischar(x) || isstring(x) || iscell(x)) );
+addParameter(p,'ignoreTOrd',ignoreOrder,  @islogical );
 addParameter(p,'addmaps',   addMaps,      @islogical );
 addParameter(p,'scores',    addScores,    ( @(x) islogical(x) || iscell(x) ) );
 addParameter(p,'addWFprops',addWFprops,    @islogical );
+addParameter(p,'addlfp'    ,addLFP,       @islogical );
 %
 parse(p,varargin{:});
 
@@ -53,6 +57,13 @@ if iscell(p.Results.scores)
 else
     scoreInd = p.Results.scores;
 end
+
+if p.Results.addlfp && strcmp(p.Results.rowformat,'dataset')
+    addlfp = true;
+else
+    addlfp = false;
+end
+
 
 %%
 copyObj = obj.deepCopy;
@@ -76,12 +87,12 @@ else
 end
 varList   =   {
                 'rat',         NaN; ...
-                'age',         scoreDum; ...
+                'age',         nan(1,maxNCol); ...
                 'dataset',     cell(1,1); ...
                 'cellID',      NaN; ...
                 %'trialInd',    scoreDum; ...
                 'envType',     cell(size(scoreDum)); ...
-                'nExp',        scoreDum; ...
+                'nExp',        nan(1,maxNCol); ...
                 
                 'posData',     cell(size(scoreDum)); ...
 
@@ -92,6 +103,9 @@ varList   =   {
                 'rateMap',     cell(size(scoreDum)); ...
                 'posMap',      cell(size(scoreDum)); ...
                 'dirMap',      cell(size(scoreDum)); ...
+
+                'linMap',      cell(size(scoreDum)); ...
+                'linPos',      cell(size(scoreDum)); ...
 
                 'spkTimes',    cell(size(scoreDum)); ...
 
@@ -106,6 +120,9 @@ varList   =   {
                 'waveForms',   cell(size(scoreDum)); ...
                 'spikeWidth',  scoreDum; ...
                 'meanAC',      scoreDum; ...
+                'lfp',         cell(size(scoreDum)); ...
+                'lfpChannel',  scoreDum; ...
+                'lfpFilter',   scoreDum; ...
 
       };
 varList = varList';
@@ -120,7 +137,7 @@ ResT.Properties.VariableNames = varList(1,:);
 
 %% assigning index
 if ~isempty(p.Results.tindex)
-    [dataInd, missTrials] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},p.Results.tindex);
+    [dataInd, missTrials] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},p.Results.tindex,'ignoreTOrder',p.Results.ignoreTOrd);
     tabInd = 1:length(p.Results.tindex);
     tabInd(missTrials) = [];
     % ind = 1:length(copyObj.trialNames);
@@ -131,7 +148,7 @@ if ~isempty(p.Results.tindex)
 else
     [dataInd, tabInd] = deal(1:length(copyObj.trialNames));
 end
-
+%
 prmsRate = copyObj.mapParams.rate;
 
 %%
@@ -158,12 +175,26 @@ else
     ResT                   = removevars(ResT,'nExp');
 end
 %
+% TODO: case when there is no high dample rate lfp for dacq data
+if addlfp
+    if strcmp(copyObj.fileType,'.set')
+        ResT.lfp(:,tabInd)        = copyObj.lfpData.lfpHighSamp(dataInd); 
+        ResT.lfpChannel(:,tabInd) = copyObj.lfpData.lfpTet(dataInd);
+        ResT.lfpFilter(:,tabInd)  = {copyObj.trialMetaData(dataInd).lfp_filter};
+    else
+        %%%%%% ?????? %%%%%%
+    end
+else
+    ResT = removevars(ResT,{'lfp','lfpChannel','lfpFilter'});
+end
+
+%%
 switch p.Results.rowformat
     case 'cell'
 
-        ResT = removevars(ResT,'posData');
+        ResT                    = removevars(ResT,'posData');
         %
-        ResT.cellID = copyObj.cell_ID(:,1:2);
+        ResT.cellID             = copyObj.cell_ID(:,1:2);
         %
         tmp                     = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times(dataInd),'uni',0);
         ResT.nSpks(:,tabInd)    = cell2mat(horzcat(tmp{:}));
@@ -184,6 +215,16 @@ switch p.Results.rowformat
                 copyObj.addMaps('dir',dataInd);
             end
             ResT.dirMap(:,tabInd)  = horzcat(copyObj.maps.dir{dataInd});
+
+             % lin maps are special case - need to be pre-made to avoideovercomplicating things
+            if any(strcmpi(ResT.envType(1,tabInd),'sqtrack'))
+                % NEEDS WORK
+                % idx                = find(strcmpi(ResT.envType(1,tabInd),'sqtrack'));
+                % ResT.linMap(:,idx) = horzcat(copyObj.maps.lin(dataInd(idx)));
+                % ResT.linPos(:,idx) = horzcat(copyObj.maps.linPos(dataInd(idx)));
+            else
+                ResT = removevars(ResT,{'linMap','linPos'});
+            end
         end
         % we need this for getting the true mean rate of each cell
         if copyObj.mapParams.rate.speedFilterFlagRMaps
@@ -243,7 +284,7 @@ switch p.Results.rowformat
             % ResT.spikeWidth(1,tabInd) = num2cell(squeeze(spikeProps(:,3,dataInd)),1);
             % ResT.meanAC(1,tabInd)     = num2cell(squeeze(spikeProps(:,4,dataInd)),1);
         else
-            ResT                      = removevars(ResT,'waveForms','spikeWidth','meanAC');
+            ResT                      = removevars(ResT,{'waveForms','spikeWidth','meanAC'});
         end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
     case 'dataset'
@@ -269,8 +310,18 @@ switch p.Results.rowformat
                 copyObj.addMaps('dir',dataInd);
             end
             ResT.dirMap(1,tabInd)   = copyObj.maps.dir(dataInd);
+
+            % lin maps are special case - need to be pre-made to avoideovercomplicating things
+            if any(strcmpi(ResT.envType(1,tabInd),'sqtrack'))
+                idxOut                = find(strcmpi(ResT.envType,'sqtrack'));
+                idxIn                 = find(strcmpi({copyObj.trialMetaData.trialType},'sqtrack')); 
+                ResT.linMap(1,idxOut) = copyObj.maps.lin(idxIn);
+                ResT.linPos(1,idxOut) = copyObj.posData.linXY(idxIn);
+            else
+                ResT               = removevars(ResT,{'linMap','linPos'});
+            end
         else
-            ResT = removevars(ResT,{'rateMap','posMap','dirMap'});
+            ResT                   = removevars(ResT,{'rateMap','posMap','dirMap','linMap','linPos'});
         end
 
         if any(scoreInd)
@@ -321,10 +372,11 @@ switch p.Results.rowformat
             ResT.spikeWidth(1,tabInd) = num2cell(squeeze(spikeProps(:,3,dataInd)),1);
             ResT.meanAC(1,tabInd)     = num2cell(squeeze(spikeProps(:,4,dataInd)),1);
         else
-            ResT                      = removevars(ResT,'waveForms','spikeWidth','meanAC');
+            ResT                      = removevars(ResT,{'waveForms','spikeWidth','meanAC'});
         end
 end
-%
+
+%%
 ResT = removevars(ResT,scores(~scoreInd));
 if ~ismember('gridness', ResT.Properties.VariableNames)
     ResT = removevars(ResT,'gridness_ell');

@@ -40,8 +40,8 @@ for i = it
     scanpix.fxchange.textprogressbar(['Loading ' lfp2load{1}(end-3:end) ' data for ' obj.trialNames{trialIterator} ' ']);
     
     for j = 1:length(lfp2load)
-        
-        fid = fopen(fullfile(obj.dataPath{trialIterator}, lfp2load{j}),'r','ieee-be');  % 'ieee-be' is machine format, 'big endian'.
+        % Note in some rare cases it seems that fopen gets the encoding scheme wrong and reads in a gibberish header so we want to be explicit 
+        fid = fopen(fullfile(obj.dataPath{trialIterator}, lfp2load{j}),'r','ieee-be',"UTF-8");  % 'ieee-be' is machine format, 'big endian'.
         if fid == -1
             noEGFflag = true;
             scanpix.fxchange.textprogressbar(0);
@@ -53,7 +53,7 @@ for i = it
         % more convenient format - read some info from header
         frewind(fid);
         %%%%%%%
-        tempHeader = textscan(fid,'%s %[^\n]',11);
+        tempHeader = textscan(fid,'%s %[^\r\n]',11);
         tempHeader = horzcat(tempHeader{:});
         
         %%%%%%%

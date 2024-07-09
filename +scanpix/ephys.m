@@ -1002,7 +1002,7 @@ classdef ephys < handle
                 tmpPath = obj.dataPath{1};
             end 
             filenameOut = scanpix.helpers.checkSaveFile(fullfile(tmpPath,[char(datetime('now','format','yyyyMMddHHmmssSSS')) '.mat']));
-            save(filenameOut, 'obj');
+            save(filenameOut, 'obj','-v7.3');
             foo     = load(filenameOut);
             copyObj = foo.obj;
             delete(filenameOut);
@@ -1262,8 +1262,8 @@ classdef ephys < handle
                             trackProps.posFs = obj.trialMetaData(i).log.InterpPosFs;
                         else
                             sampleTimes      = obj.spikeData.sampleT{i};
-                            prms.posFs       = obj.params('posFs');
-                            trackProps.posFs = obj.trialMetaData(i).log.InterpPosFs;
+                            % prms.posFs       = obj.params('posFs');
+                            trackProps.posFs = obj.params('posFs');
                         end
                         
                         [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
