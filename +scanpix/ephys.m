@@ -1003,6 +1003,7 @@ classdef ephys < handle
             end 
             filenameOut = scanpix.helpers.checkSaveFile(fullfile(tmpPath,[char(datetime('now','format','yyyyMMddHHmmssSSS')) '.mat']));
             save(filenameOut, 'obj','-v7.3');
+            %
             foo     = load(filenameOut);
             copyObj = foo.obj;
             delete(filenameOut);
@@ -1166,7 +1167,12 @@ classdef ephys < handle
                         if ~isempty( obj.trialMetaData(i).envSize )
                             prms.envSize = obj.trialMetaData(i).envSize ./ 100 .* obj.trialMetaData(i).ppm; % in pixels
                         elseif strcmp(obj.fileType,'.set')
-                            prms.envSize = [obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin];
+                            if obj.trialMetaData(i).PosIsScaled
+                                scaleFact = obj.trialMetaData(i).ppm / obj.trialMetaData(i).ppm_org; 
+                                prms.envSize = ceil([obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin] .* scaleFact);
+                            else
+                                prms.envSize = ceil([obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin]);
+                            end
                         end
                         
                         if strcmpi(mapType,'pos')

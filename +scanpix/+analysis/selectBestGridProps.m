@@ -48,18 +48,23 @@ for i = 1:2
 end
 spatACsReg = cellfun(@(x) x.acReg,gridPropsStruct(:,nTrials),'uni',0);
 
+if length(nTrials) == 1
+
+else
+end
+
 switch p.Results.trialSel
     case 'maxabs'
-        tmpGridProps = {reshape(tmpGridProps,size(tmpGridProps,1),size(tmpGridProps,2)/2,[])};
+        tmpGridProps = {reshape(tmpGridProps,size(tmpGridProps,1),7,[])};
         spatACsOut   = {horzcat(spatACs,spatACsReg)};
     case 'maxall'
-        tmpGridProps = {reshape(tmpGridProps(:,:,1),size(tmpGridProps,1),size(tmpGridProps,2)/2,size(spatACs,2)) reshape(tmpGridProps(:,:,2),size(tmpGridProps,1),size(tmpGridProps,2)/2,size(spatACs,2))};
+        tmpGridProps = {reshape(tmpGridProps(:,:,1),size(tmpGridProps,1),7,size(spatACs,2)) reshape(tmpGridProps(:,:,2),size(tmpGridProps,1),7,size(spatACs,2))};
         spatACsOut   = {spatACs,spatACsReg};
     case 'maxreg'
-        tmpGridProps = {reshape(tmpGridProps(:,:,1),size(tmpGridProps,1),size(tmpGridProps,2)/2,size(spatACs,2))};
+        tmpGridProps = {reshape(tmpGridProps(:,:,1),size(tmpGridProps,1),7,size(spatACs,2))};
         spatACsOut   = {spatACs};
     case 'maxell'
-        tmpGridProps = {reshape(tmpGridProps(:,:,2),size(tmpGridProps,1),size(tmpGridProps,2)/2,size(spatACs,2))};
+        tmpGridProps = {reshape(tmpGridProps(:,:,2),size(tmpGridProps,1),7,size(spatACs,2))};
         spatACsOut   = {spatACsReg};
     case 'reg'
         tmpGridProps = {tmpGridProps(:,:,1)};
@@ -68,7 +73,7 @@ switch p.Results.trialSel
         tmpGridProps = {tmpGridProps(:,:,2)};
         spatACsOut   = {spatACsReg(:,nTrials)};
     case 'besttrial'
-        tmpGridProps = {reshape(tmpGridProps(:,:,1),size(tmpGridProps(:,:,1),1),size(tmpGridProps(:,:,1),2)/2,[])};
+        tmpGridProps = {reshape(tmpGridProps(:,:,1),size(tmpGridProps(:,:,1),1),7,[])};
         % spatACsOut   = {spatACs(:,nTrials)};
 end
 %

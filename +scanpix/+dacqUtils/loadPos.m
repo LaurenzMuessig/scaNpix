@@ -41,7 +41,7 @@ data         = reshape(data, [10 nPosSamples])';
 data         = data(:,3:10);
 data         = reshape(data, [nPosSamples, 2, 4]); % Now in format [nSamp, x:y, nLight]
 % Separate numpix, if existing, switch format to [nSamp, nLight, x:y] %
-nLights      = sum(obj.trialMetaData(trialIterator).colactive);
+nLights      = obj.trialMetaData(trialIterator).tracked_spots;
 if strcmp(scanpix.dacqUtils.getValue(posHeader,'pos_format'), 't,x1,y1,x2,y2,numpix1,numpix2') && nLights <= 2
     led_pos  = nan(nPosSamples, nLights, 2);
     led_pix  = nan(nPosSamples, nLights);
@@ -72,10 +72,10 @@ if ~isempty(obj.params('ScalePos2PPM'))
     scaleFact = (obj.params('ScalePos2PPM') / str2double(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre')));
     led_pos = floor( led_pos .*  scaleFact);
     posHeader{strcmp(posHeader(:,1),'pixels_per_metre'),2} = num2str(obj.params('ScalePos2PPM'));
-    obj.trialMetaData(trialIterator).xmin = obj.trialMetaData(trialIterator).xmin * scaleFact;
-    obj.trialMetaData(trialIterator).xmax = obj.trialMetaData(trialIterator).xmax * scaleFact;
-    obj.trialMetaData(trialIterator).ymin = obj.trialMetaData(trialIterator).ymin * scaleFact;
-    obj.trialMetaData(trialIterator).ymax = obj.trialMetaData(trialIterator).ymax * scaleFact;
+    %
+    obj.trialMetaData(trialIterator).PosIsScaled = true;
+else
+    obj.trialMetaData(trialIterator).PosIsScaled = false;
 end
 obj.trialMetaData(trialIterator).ppm = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
 

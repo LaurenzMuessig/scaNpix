@@ -95,6 +95,8 @@ varList   =   {
                 'nExp',        nan(1,maxNCol); ...
                 
                 'posData',     cell(size(scoreDum)); ...
+                'dirData',     cell(size(scoreDum)); ...
+                'speed',     cell(size(scoreDum)); ...
 
                 'nSpks',       scoreDum; ...
                 'meanRate',    scoreDum; ...
@@ -192,7 +194,7 @@ end
 switch p.Results.rowformat
     case 'cell'
 
-        ResT                    = removevars(ResT,'posData');
+        ResT                    = removevars(ResT,{'posData','dirData','speed'});
         %
         ResT.cellID             = copyObj.cell_ID(:,1:2);
         %
@@ -291,6 +293,8 @@ switch p.Results.rowformat
         %
         ResT.cellID             = {copyObj.cell_ID(:,1:2)};
         ResT.posData(1,tabInd)  = copyObj.posData.XY(dataInd);
+        ResT.dirData(1,tabInd)  = copyObj.posData.direction(dataInd);
+        ResT.speed(1,tabInd)    = copyObj.posData.speed(dataInd);
         tmp                     = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times,'uni',0);
         nSpikes                 = cell2mat(horzcat(tmp{:,dataInd}));
         ResT.nSpks(1,tabInd)    = tmp(dataInd);

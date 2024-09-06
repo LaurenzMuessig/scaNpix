@@ -90,7 +90,7 @@ if n_leds == 1
     %CB verified calc of dir in next line is correct & concords with tint
     dir(pos2) = mod((180/pi)*(atan2( -xy(pos2+1, 2)+xy(pos2, 2), xy(pos2+1, 1)-xy(pos2, 1) )), 360);
     dir(n_pos) = dir(n_pos-1);
-    dir_disp=dir; %Return dir_disp for completness even though == dir
+    dir_disp=dir'; %Return dir_disp for completness even though == dir
 elseif n_leds == 2
     % 2 LEDs are assumed to be at 180deg to each other with their midpoint over the
     % animals head. Convention is that colbearings_set(1) is the large light (normally

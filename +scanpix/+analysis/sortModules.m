@@ -13,7 +13,7 @@ rateMaps            = [];
 % pairwise
 overlapThresh       = [0.6 0.7];
 propLowerThanThresh = 0.1;
-trialSel            = 'maxreg';
+% trialSel            = 'maxreg';
 minNCellsModule     = 3;
 gridProps           = [];
 plotModulesStats    = false;
@@ -29,7 +29,7 @@ addParameter(p,'rmaps',     rateMaps,(@(x) isempty(x) || iscell(x)));
 addParameter(p,'minmod',    minNCellsModule,@isscalar);
 addParameter(p,'overlap',   overlapThresh,@isscalar);
 addParameter(p,'proplowthr',propLowerThanThresh,@isscalar);
-addParameter(p,'trialSel',  trialSel, @ischar);
+% addParameter(p,'trialSel',  trialSel, @ischar);
 addParameter(p,'gridprops', gridProps,(@(x) isempty(x) || isnumeric(x)));
 % addParameter(p,'binsz',binSzCoarseMap,@isscalar);
 % addParameter(p,'radius',radiusExclude);
@@ -51,7 +51,7 @@ if isempty(p.Results.gridprops)
     tmpACs_ell           = bestACs{2};
 else
     [tmpACs_reg,tmpACs_ell,bestACs]       = deal(spatialACs);
-    [tmpProps_reg,tmpProps_ell,gridProps] = deal( p.Results.gridprops);
+    [tmpProps_reg,tmpProps_ell,gridProps] = deal(p.Results.gridprops);
 end
 
 %% sanity check

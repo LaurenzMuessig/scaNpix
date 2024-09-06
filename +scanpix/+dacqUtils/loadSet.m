@@ -115,6 +115,7 @@ setFile.trialType       = []; % no method yet for dacq data to gather that
 setFile.trackLength     = []; % no method yet for dacq data to gather that
 setFile.envSize         = []; % no method yet for dacq data to gather that
 setFile.envBorderCoords = []; % no method yet for dacq data to gather that
+setFile.PosIsScaled     = []; % no method yet for dacq data to gather that
 
 % output
 if isempty(obj.trialMetaData)

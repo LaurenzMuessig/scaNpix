@@ -69,7 +69,7 @@ for i = 1:length(obj.trialNames)
     maxAmp{i}          = nan(length(obj.cell_ID), 1);
     spkWidth{i}        = nan(length(obj.cell_ID), 1);
 
-    % check if there are spike props files s owe can skip calculating all
+    % check if there are spike props files so we can skip calculating all
     % properties
     if prms.loadFlag
         try
@@ -86,7 +86,7 @@ for i = 1:length(obj.trialNames)
             spikeProps(:,:,i) = tmp.f{1}(cellInd,:);
             continue
         catch
-            warning(['scaNpix::analysis::getWaveforms: Can''t find spikeProps file for ' obj.trialNames{i} ' in ' obj.dataPath{i} '.']);
+            warning(['scaNpix::analysis::getWaveFormProps: Can''t find spikeProps file for ' obj.trialNames{i} ' in ' obj.dataPath{i} '.']);
         end
     end
     % loop though cells in data set
@@ -110,7 +110,7 @@ for i = 1:length(obj.trialNames)
         % For very bad waveforms, can be no local max or mins on maxAmp channel. In this case, give up and return all as NaN. %
         if isempty(peakAmp) || isempty(troughAmp)
             [maxAmp{i}(j),spkWidth{i}(j),firstMomentAC{i}(j),meanRate{i}(j) ] = deal(NaN);
-            warning(['scaNpix::analysis::getWaveforms: Waveform for cell' num2str(obj.cell_ID(j,1)) '_tet' num2str(obj.cell_ID(j,2)) ' in ' obj.trialNames{i} ' is bad' ...
+            warning(['scaNpix::analysis::getWaveFormProps: Waveform for cell' num2str(obj.cell_ID(j,1)) '_tet' num2str(obj.cell_ID(j,2)) ' in ' obj.trialNames{i} ' is bad ' ...
                        '(nSpikes = ' num2str( length(obj.spikeData.spk_Times{i}{j})  ) '). No local max or min found. You might want to remove that shit!']);
             continue;
         else

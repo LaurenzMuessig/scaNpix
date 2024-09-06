@@ -64,7 +64,7 @@ end
 eeg       = eeg( ~isnan(eeg(:,1)), : ); % we are assuming that NaNs will be the same in every eeg after e.g. speed filtering 
 
 %% remove DC shift (i.e. detrend)
-eeg       = bsxfun(@minus,eeg,nanmean(eeg,1));
+eeg       = bsxfun(@minus,eeg,mean(eeg,1,'omitnan'));
 
 %% Fourier transform 
 nFFT      = nextpow2(length(eeg));
@@ -107,7 +107,7 @@ end
 
 %% get s2n ratio
 peakFreqInd = freq > peakFreq' - prms.s2nBand & freq < peakFreq' + prms.s2nBand;
-s2n         = nanmean( reshape( power(peakFreqInd'), [], size(power,2) ), 1 ) ./ nanmean( reshape( power(~peakFreqInd'), [], size(power,2) ), 1 ); % might make sense to exclude all f<1-2Hz for this?
+s2n         = mean( reshape( power(peakFreqInd'), [], size(power,2) ), 1, 'omitnan' ) ./ mean( reshape( power(~peakFreqInd'), [], size(power,2) ), 1, 'omitnan' ); % might make sense to exclude all f<1-2Hz for this?
 
 %% best EEG index
 [maxVal, bestEEGInd] = max(s2n);
