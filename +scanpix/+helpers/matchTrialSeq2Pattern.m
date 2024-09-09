@@ -46,7 +46,12 @@ else
 end
 
 if isempty(firstNonBslInTrialSeq)
-    dataIndex = find(strcmp(trialSeqObj,p.Results.bslk),nBSL,'last'); % extract the n last baseline trials
+    dataIndex     = find(strcmp(trialSeqObj,p.Results.bslk),nBSL,'last'); % extract the n last baseline trials
+    if length(dataIndex) < nBSL 
+        missingTrials = length(dataIndex)+1:nBSL;
+    else
+        missingTrials = [];
+    end
     return
 end
 

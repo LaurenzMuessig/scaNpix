@@ -101,6 +101,8 @@ end
 % Assign Output %
 % warning('off', 'MATLAB:divideByZero');
 smoothedRate=smoothedSpk./smoothedPos;
+% set rates to 0 for parts where no smoothing occured (these are NaN otherwise) - this is only relevant for maps with very few spikes
+smoothedRate(isnan(smoothedRate)) = 0;
 % warning('on', 'MATLAB:divideByZero');
 smoothedRate(pos==0)=nan;
 smoothedPos(pos==0) =nan;
