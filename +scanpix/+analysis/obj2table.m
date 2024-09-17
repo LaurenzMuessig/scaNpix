@@ -347,9 +347,11 @@ switch p.Results.rowformat
                 if any(cellfun('isempty',copyObj.maps.sACs(dataInd)))
                     copyObj.addMaps('sac',dataInd);
                 end
-                % tmp                         = copyObj.getSpatialProps('gridprops',dataInd); 
+                tmp                         = copyObj.getSpatialProps('gridprops',dataInd); 
                 % ResT.gridness(1,tabInd)     = cellfun(@(x) x(:,1),tmp,'uni',0);
                 % ResT.gridness_ell(1,tabInd) = cellfun(@(x) x(:,2),tmp,'uni',0);
+                ResT.gridness(1,tabInd)     = num2cell(squeeze(tmp(:,1,:)),1);
+                ResT.gridness_ell(1,tabInd) = num2cell(squeeze(tmp(:,2,:)),1);
             end
             if scoreInd(4)
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
