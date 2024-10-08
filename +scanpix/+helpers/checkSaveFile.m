@@ -20,14 +20,24 @@ function filenameOut = checkSaveFile(filenameIn)
 [path,tmpName,ext] = fileparts(filenameIn);
 
 %% check if file exist and generate unique filename if necessary
-if exist(filenameIn, 'file') == 2
-  filenameOut = [tmpName '_1'];
+if isfolder(filenameIn)
+    filenameOut = [path '_1'];
+    c = 2;
+    while isfolder(filenameOut)
+        filenameOut = [path '_' num2str(c)];
+        c = c+1;
+    end   
+    
+elseif exist(filenameIn, 'file') == 2
+
+    filenameOut = [tmpName '_1'];
     c = 2;
     while exist(fullfile(path,[filenameOut ext]), 'file') == 2
         filenameOut = [tmpName '_' num2str(c)];
         c = c+1;
     end
     filenameOut = fullfile(path,[filenameOut ext]);
+
 else
     filenameOut = filenameIn;
 end

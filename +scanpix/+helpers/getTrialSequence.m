@@ -14,7 +14,7 @@ function trialData = getTrialSequence(trialTypes,dataDir)
 %    trialData  - cell array of datapaths to the raw data that matches the  trial types in the session
 %                 {/path/2/raw,bin file name,trial type}
 %
-% See also: 
+% See also: scanpix.helpers.batchGetTrialSequence
 %
 % LM 2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

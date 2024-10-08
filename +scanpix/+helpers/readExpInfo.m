@@ -45,6 +45,7 @@ defaultSheet        = 1;
 defaultAnimalID     = ''; 
 defaultExperimentID = [];
 defaultTrialName    = '';
+keepSheetFilesep    = false;
 
 p = inputParser;
 validMethodInput = @(x) any(strcmp(x,{'single','singletrial','exp','singleexp'}));
@@ -53,6 +54,7 @@ addParameter(p,'sheetN', defaultSheet);
 addParameter(p,'animal', defaultAnimalID, @ischar);
 addParameter(p,'experiment', defaultExperimentID);
 addParameter(p,'trialname', defaultTrialName, @ischar);
+addParameter(p,'keepsep', keepSheetFilesep, @islogical);
 
 parse(p,varargin{:});
 
@@ -105,7 +107,11 @@ switch lower(method)
         expInfo.animal       = cribSheet.animal;
         expInfo.anNum        = anNum;
         expInfo.Tnames       = cribSheet.trialName;
-        expInfo.fullPath     = fullfile(cribSheet.filePath,cribSheet.trialName);
+        if p.Results.keepsep
+            expInfo.fullPath = strcat(cribSheet.filePath,cribSheet.trialName);
+        else
+            expInfo.fullPath = fullfile(cribSheet.filePath,cribSheet.trialName);
+        end
         % additional data (meta data)
         if ~isempty(addFieldNames)
             for j = 1:length(addFieldNames)
@@ -125,7 +131,11 @@ switch lower(method)
         expInfo.animal       = cribSheet.animal(ind4trial);
         expInfo.anNum        = anNum(ind4trial);
         expInfo.Tnames       = cribSheet.trialName(ind4trial);
-        expInfo.fullPath     = fullfile(cribSheet.filePath(ind4trial),cribSheet.trialName(ind4trial));
+        if p.Results.keepsep
+            expInfo.fullPath = strcat(cribSheet.filePath(ind4trial),cribSheet.trialName(ind4trial));
+        else
+            expInfo.fullPath = fullfile(cribSheet.filePath(ind4trial),cribSheet.trialName(ind4trial));
+        end
         % additional data (meta data)
         if ~isempty(addFieldNames)
             for j = 1:length(addFieldNames)
@@ -145,7 +155,11 @@ switch lower(method)
             expInfo.animal{i,1}        = cribSheet.animal{trialIndForExp(1)};
             expInfo.anNum{i,1}         = anNum(trialIndForExp);
             expInfo.Tnames{i,1}        = cribSheet.trialName( trialIndForExp );  
-            expInfo.fullPath{i,1}      = fullfile(cribSheet.filePath(trialIndForExp),cribSheet.trialName(trialIndForExp)); %%%%%%%
+            if p.Results.keepsep
+                expInfo.fullPath{i,1}  = strcat(cribSheet.filePath(trialIndForExp),cribSheet.trialName(trialIndForExp));
+            else
+                expInfo.fullPath{i,1}  = fullfile(cribSheet.filePath(trialIndForExp),cribSheet.trialName(trialIndForExp)); %%%%%%%
+            end
             expInfo.experiment_ID{i,1} = cribSheet.experiment_ID( trialIndForExp ); 
             
             % additional data (meta data)
@@ -160,11 +174,15 @@ switch lower(method)
         
     case 'singleexp'
         % read in single experiment
-        ind4Exp             = find( strcmp(cribSheet.animal,animal) & cribSheet.experiment_ID == expID );
-        expInfo.animal      = cribSheet.animal{ind4Exp(1)};
-        expInfo.anNum       = anNum(ind4Exp(1));
-        expInfo.Tnames      = cribSheet.trialName(ind4Exp);
-        expInfo.fullPath    = fullfile(cribSheet.filePath(ind4Exp),cribSheet.trialName(ind4Exp));
+        ind4Exp              = find( strcmp(cribSheet.animal,animal) & cribSheet.experiment_ID == expID );
+        expInfo.animal       = cribSheet.animal{ind4Exp(1)};
+        expInfo.anNum        = anNum(ind4Exp(1));
+        expInfo.Tnames       = cribSheet.trialName(ind4Exp);
+        if p.Results.keepsep
+            expInfo.fullPath = strcat(cribSheet.filePath(ind4Exp),cribSheet.trialName(ind4Exp));
+        else
+            expInfo.fullPath = fullfile(cribSheet.filePath(ind4Exp),cribSheet.trialName(ind4Exp));
+        end
         % additional data (meta data)
         if ~isempty(addFieldNames)
             for j = 1:length(addFieldNames)
