@@ -51,7 +51,8 @@ if p.Results.plotmaps
 end
 
 if length(spikeTimes) < 2
-    error('scaNpix::plot::plotCGsGroup: You need to supply spike times for at least 2 cells to make this figure. It''s a comparison figure, duh.');
+    warning('scaNpix::plot::plotCGsGroup: You need to supply spike times for at least 2 cells to make this figure. It''s a comparison figure, duh.');
+    return
 end
 
 %% plot

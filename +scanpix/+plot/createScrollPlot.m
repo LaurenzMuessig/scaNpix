@@ -31,7 +31,7 @@ end
 %% create figure, panel, and slider
 % main figure
 % Note: Matlab's annoying axis toolbars create a big delay after plotting figure - removing toolbar altogether for the whole figure is more efficient than disabling the interactivity of every axis and making its toolbar invisible 
-hScroll.hFig  = figure('Menubar','figure', 'Resize','off','Units','pixel', 'Position',figSize,'WindowScrollWheelFcn',@wheelScroll,'KeyReleaseFcn',@keyReleaseFcn,'KeyPressFcn',@keyPressFcn,'ToolBar','none');
+hScroll.hFig  = figure('Menubar','figure', 'Resize','off','Units','pixel', 'Position',figSize,'WindowScrollWheelFcn',@wheelScroll,'KeyReleaseFcn',@keyReleaseFcn,'KeyPressFcn',@keyPressFcn,'ToolBar','none','Renderer','painters');
 figSizePix    = get(hScroll.hFig,'Position');
 
 % make canvas
