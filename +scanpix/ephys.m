@@ -925,15 +925,16 @@ classdef ephys < handle
             end
             
             % UI selection
-            [select, loadCheck] = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400],'CancelString','Keep All');
+            [select, loadCheck]  = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400],'CancelString','Keep All');
             if ~loadCheck
                 return;
             else
-                trialNameStrOut = trialNameStrIn(select);
+                trialNameStrOut  = trialNameStrIn(select);
                 %
-                ind            = ismember(obj.trialNames,trialNameStrOut);
-                obj.trialNames = obj.trialNames(ind);
-                obj.dataPath   = obj.dataPath(ind);
+                ind              = ismember(obj.trialNames,trialNameStrOut);
+                obj.trialNames   = obj.trialNames(ind);
+                obj.dataPath     = obj.dataPath(ind);
+                obj.dataPathSort = obj.dataPathSort(ind);
             end
             
         end

@@ -72,10 +72,14 @@ obj.trialMetaData(trialIterator).nChanTot  = 385;
 
 if isempty(obj.dataSetName)
     if ischar(metaXMLFile.animal)
-        obj.dataSetName = [metaXMLFile.animal '_' num2str(metaXMLFile.date)];
+        ratIDStr    = metaXMLFile.animal;
     else
-        obj.dataSetName = ['r' num2str(metaXMLFile.animal) '_' num2str(metaXMLFile.date)];
+        ratIDStr    = ['r' num2str(metaXMLFile.animal)];
     end
+    %
+    anFolderInd     = regexp(obj.dataPath{1},ratIDStr,'once');
+    dateStr         = regexp(obj.dataPath{1}(anFolderInd+length(ratIDStr):end),'(?<=(/|\\))\d+(_\d)?(?=(/|\\))','match','once');
+    obj.dataSetName = [ratIDStr '_' dateStr];
 end
 
 % load sync data

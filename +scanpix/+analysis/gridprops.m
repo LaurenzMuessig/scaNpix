@@ -258,7 +258,7 @@ failFlag      = false;
  distFromCentre         = sum(xyCoordMaxBinCentral.^2,2).^0.5; 
  % exit gracefully
  if ~any(peaksAutoCorr(:))
-     if ~centrPeakOnlyFlag
+     if ~centrPeakOnlyFlag 
          failFlag = true;
      end
      return
