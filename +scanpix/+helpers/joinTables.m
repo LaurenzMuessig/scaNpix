@@ -1,4 +1,4 @@
-function ResOut = joinTables(ResT1,ResT2,varargin)
+function ResOut = joinTables(ResT1,ResT2,options)
 % joinTables - wrapper for 'innerjoin'. Add data from 'ResT2' to 'ResT1' 
 % package: scanpix.helpers
 %
@@ -17,24 +17,24 @@ function ResOut = joinTables(ResT1,ResT2,varargin)
 %
 % LM 2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Params
-keys  = {'dataset','cellID'};
-rVars = {};
-%
-p = inputParser;
-addParameter(p,'keys',  keys, ( @(x) iscell(x) || ischar(x) ));
-addParameter(p,'rvars', rVars,( @(x) iscell(x) || ischar(x) ));
-%
-parse(p,varargin{:});
 
-if isempty(p.Results.rvars)
+%% arguments
+arguments
+  ResT1 {mustBeA(ResT1,'table')}
+  ResT2 {mustBeA(ResT2,'table')}
+  options.keys (1,:) {mustBeA(options.keys,'cell')}    = {'dataset','cellID'};
+  options.rvars (1,:) {mustBeA(options.rvars,'cell')}  = {};
+end
+%
+if isempty(options.rvars)
     rightVars = ResT2.Properties.VariableNames;
 else
-    rightVars = p.Results.rvars;
+    rightVars = options.rvars;
 end
 
 %%
-ResOut = innerjoin(ResT1,ResT2,'keys',p.Results.keys,'RightVariables',rightVars);
-
+ResOut = innerjoin(ResT1,ResT2,'keys',options.keys,'RightVariables',rightVars);
+%
+ResOut = sortrows(ResOut,{'rat','age'});
 
 end

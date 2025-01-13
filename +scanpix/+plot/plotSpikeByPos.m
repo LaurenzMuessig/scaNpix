@@ -1,4 +1,4 @@
-function plotSpikeByPos(xy,spikeT, varargin)
+function plotSpikeByPos(xy,spikeT,ax, options)
 % plotSpikeByPos - plot location of spikes of a given cell on top of path
 % of animal during trial
 % package: scanpix.plot
@@ -25,41 +25,37 @@ function plotSpikeByPos(xy,spikeT, varargin)
 % input?
 
 %% parse input
-defaultPosSR    = 50;
-defaulthAx      = [];
-defaultMarkerSz = 2.5;   % marker size'
-axisVisible     = false; % axis on/off
-% 
-p = inputParser;
-checkAx = @(x) ishghandle(x, 'axes') || @isempty;
-addOptional(p,'ax',defaulthAx, checkAx);
-addParameter(p,'srate',defaultPosSR,@isscalar);
-addParameter(p,'msize',defaultMarkerSz,@isscalar);
-addParameter(p,'axvis',axisVisible,@islogical);
-parse(p,varargin{:});
-% 
-if isempty(p.Results.ax)
-    hAx = axes;
-else
-    hAx = p.Results.ax;
+arguments
+    xy {mustBeNumeric}
+    spikeT {mustBeNumeric}
+    ax  {ishghandle(ax, 'axes')} = axes;
+    options.srate (1,1) {mustBeNumeric} = 50 ;
+    options.msize (1,1) {mustBeNumeric} = 2.5;
+    options.mcol   = 'r';
+    options.axvis (1,1) {mustBeNumericOrLogical} = false;
 end
+
+tf = ishold(ax);
 
 %% plot
-spikeInd = ceil(spikeT .* p.Results.srate); % bin spikes
+spikeInd = ceil(spikeT .* options.srate); % bin spikes
 
 % plot
-plot(hAx,xy(:,1),xy(:,2),'k-',xy(spikeInd,1),xy(spikeInd,2),'rs')
-if isempty(spikeInd)
-    hAx.Children(1).LineWidth = 0.5;
-else
-    hAx.Children(1).LineStyle = 'none'; hAx.Children(1).MarkerFaceColor = 'r'; hAx.Children(1).MarkerEdgeColor = 'none'; hAx.Children(1).MarkerSize = p.Results.msize; % spike pos  
-    hAx.Children(2).LineWidth = 0.5; % path
+% plot(ax,xy(:,1),xy(:,2),'k-',xy(spikeInd,1),xy(spikeInd,2),'s');
+% if isempty(spikeInd)
+%     ax.Children(1).LineWidth = 0.5;
+% else
+%     ax.Children(1).LineStyle = 'none'; ax.Children(1).MarkerFaceColor = options.mcol; ax.Children(1).MarkerEdgeColor = 'none'; ax.Children(1).MarkerSize = options.msize; % spike pos  
+%     ax.Children(2).LineWidth = 0.5; % path
+% end
+
+plot(ax,xy(:,1),xy(:,2),'k-','linewidth',0.5);
+if ~isempty(spikeInd)
+    if ~tf; hold(ax, 'on'); end
+    plot(ax,xy(spikeInd,1),xy(spikeInd,2),'s','LineStyle','none','MarkerFaceColor',options.mcol,'MarkerEdgeColor','none','MarkerSize',options.msize);
+    if ~tf; hold(ax, 'off'); end
 end
-% 'linewidth',0.5);
-% plot(hAx,xy(:,1),xy(:,2),'k-','linewidth',0.5);
-% hold(hAx, 'on');
-% plot(hAx,xy(spikeInd,1),xy(spikeInd,2),'rs','LineStyle','none','MarkerFaceColor','r','MarkerEdgeColor','none','MarkerSize',p.Results.msize);
-% hold(hAx, 'off');
-if ~p.Results.axvis; axis(hAx, 'off'); end
+
+if ~options.axvis; axis(ax, 'off'); end
 end
 

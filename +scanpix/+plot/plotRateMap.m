@@ -1,4 +1,4 @@
-function plotRateMap(map,varargin)
+function plotRateMap(map,ax,options)
 % plotRateMap - plot a standard rate map
 % package: scanpix.plot
 %
@@ -17,53 +17,41 @@ function plotRateMap(map,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% parse input
-defaultColMap   = 'jet';
-defaultNSteps   = 11;
-defaulthAx      = 'none';
-interpolate     = false;
-defaultCMapEdge = [];
-
-p = inputParser;
-addOptional(p,'ax',       defaulthAx,     ( @(x) ishghandle(x, 'axes') || mustBeMember(x,{'none'})));
-addParameter(p,'colmap',  defaultColMap,  @ischar);
-addParameter(p,'nsteps',  defaultNSteps,  @isscalar);
-addParameter(p,'interp',  interpolate,    @islogical);
-addParameter(p,'cmapEdge',defaultCMapEdge);
-parse(p,varargin{:});
-
-if strcmp(p.Results.ax,'none')
-    hAx = axes;
-else
-    hAx = p.Results.ax;
+arguments
+    map {mustBeNumeric}
+    ax  {ishghandle(ax, 'axes')} = axes;
+    options.colmap = 'jet' ;
+    options.nsteps (1,1) {mustBeNumeric} = 11;
+    options.interp (1,1) {mustBeNumericOrLogical} = false;
+    options.cmapEdge (1,2) {mustBeNumeric} = [0 max(map(:),[],'omitnan')];
 end
 
+%%
 if isempty(map);  return; end
 
-% if strcmpi(p.Results.colmap,'poulter')
-%     nSteps = 8;  % Steve's map has 8 fixed steps, so should ignore any dynamic setting here
-% else
-%     nSteps = p.Results.nsteps;
-% end
-
 %% plot
-if isempty(p.Results.cmapEdge)
-    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, 'colmap',p.Results.colmap, 'nsteps', p.Results.nsteps); % bin rate map
-else
-    [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, 'colmap',p.Results.colmap, 'nsteps', p.Results.nsteps, 'cmapEdge', p.Results.cmapEdge); % bin rate map
-end
+% bin rate map
+[rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, 'colmap',options.colmap, 'nsteps', options.nsteps, 'cmapEdge', options.cmapEdge); % bin rate map
 %
-if p.Results.interp
+if options.interp
     rMapBinned = scanpix.maps.interpMap(rMapBinned); 
 end
 
 % plot heat map
-imagesc(hAx,'CData',rMapBinned,[0 size(cMapBinned,1)]);
-colormap(hAx, cMapBinned);
-axis(hAx,'off');
-
-% imagesc(hAx, rMapBinned);
-% caxis(hAx, [0 p.Results.nsteps+1]);
-% colormap(hAx, cMapBinned);
+imagesc(ax,'CData',rMapBinned,[0 size(cMapBinned,1)]);
+colormap(ax, cMapBinned);
+axis(ax,'off');
+%
+mapSz = size(map);
+set(ax,'ydir','normal','xlim',[0.5 mapSz(2)+0.5],'ylim',[0.5 mapSz(1)+0.5]);
+xLabelStruct = get(ax,'xlabel');
+xLabelStruct.VerticalAlignment = 'bottom'; 
+xLabelStruct.String = ['peakFR=' num2str(max(map(:),[],'omitnan'),'%.1f')];
+xLabelStruct.Visible = 'On';
+%
+if mapSz(1) == mapSz(2)
+    axis(ax,'square');
+end
 
 end
 

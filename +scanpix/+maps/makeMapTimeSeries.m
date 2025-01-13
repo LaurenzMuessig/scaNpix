@@ -44,8 +44,8 @@ end
 mapSeries = cell(1,size(timeInt,1));
 for i = 1:size(timeInt,1)
     keepInd                  = false(size(obj.posData.XY{trialInd},1),1);
-    startInd                 = max([1,obj.params('posFs') * timeInt(i,1)]);
-    endInd                   = obj.params('posFs') * timeInt(i,2);
+    startInd                 = max([1,prms.posFs  * timeInt(i,1)]);
+    endInd                   = prms.posFs * timeInt(i,2);
     keepInd(startInd:endInd) = true;
     tempSpeed                = obj.posData.speed{trialInd};
     tempSpeed(~keepInd,:)    = NaN;

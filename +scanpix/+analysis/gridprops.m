@@ -126,7 +126,8 @@ if isempty(peakStats)
     return;
 end
 % make central peak mask
-[colsIm, rowsIm]                            = meshgrid(1:length(autoCorr), 1:length(autoCorr));
+% [colsIm, rowsIm]                            = meshgrid(1:length(autoCorr), 1:length(autoCorr));
+[colsIm, rowsIm]                            = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
 distMap                                     = sqrt((rowsIm-centralPoint(1)).^2 + (colsIm-centralPoint(2)).^2);
 centrPeakMask                               = distMap < peakStats.EquivDiameter;
 % sanity checks for central peak
@@ -841,7 +842,12 @@ regSac=interp2(regSac, linspace(xStart,xEnd, sacSize(2)), linspace(yStart, yEnd,
 %4) Rotate back to original orientation
 % regSac=imrotate(regSac, orient, 'bilinear','crop');
 % LM edit - crop to keep size == odd
-regSac=imrotate(regSac, orient, 'bilinear','crop');
+if size(tmpSAC,1) == size(tmpSAC,2)
+    regSac=imrotate(regSac, orient, 'bilinear','crop');
+else
+    % in case ac isn't square we can't use crop
+    regSac=imrotate(regSac, orient, 'bilinear');
+end
 
 %5) Finally keep only the central portion of the sac so that it matches
 %the original size

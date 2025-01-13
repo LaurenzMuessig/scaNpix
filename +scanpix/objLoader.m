@@ -1,4 +1,4 @@
-function obj = objLoader(objType,dataPath, varargin )
+function obj = objLoader(objType,dataPath, addMeta, options )
 % obj - Load neuropixel or DACQ data from raw into a class object. 
 % If you do not want to use defaults you need to generate your own param
 % containers (obj params) or struct (map params).
@@ -27,64 +27,27 @@ function obj = objLoader(objType,dataPath, varargin )
 %% TO-DO
 
 
-%% PARAMS
-metaData         = {};
-defaultObjParams = [];
-defaultMapParams = [];
-loadPos          = true;  % load position data y/n
-loadSpikes       = true;  % load neural data y/n
-loadLFP          = false; % load lfp data y/n
+%% Args
+arguments
+  objType (1,:) {mustBeMember(objType,{'npix','dacq','bhave'})}
+  dataPath (1,:) {mustBeA(dataPath,'cell')}
+  addMeta (:,2) {mustBeA(addMeta,'cell')} = {}
+  options.paramsobj (1,:) {mustBeA(options.paramsobj,'containers.Map')} = scanpix.helpers.defaultParamsContainer(objType)
+  options.paramsmap (1,:) {mustBeA(options.paramsmap,'struct')} = scanpix.maps.defaultParamsRateMaps
+  options.loadpos (1,1) {mustBeNumericOrLogical} = true;
+  options.loadspikes (1,1) {mustBeNumericOrLogical} = true;
+  options.loadlfp (1,1) {mustBeNumericOrLogical} = false;
+end
 
-p = inputParser;
-%
-addOptional(p, 'addMeta',metaData,@iscell);
-addParameter(p,'objParams',defaultObjParams, @(x) isa(x,'containers.Map') || ischar(x) || isempty(x));
-addParameter(p,'mapParams',defaultMapParams, @(x) isstruct(x) || ischar(x) || isempty(x));
-addParameter(p,'pos',loadPos, @islogical);
-addParameter(p,'spikes',loadSpikes, @islogical);
-addParameter(p,'lfp',loadLFP, @islogical);
-
-%
-parse(p,varargin{:});
-
+%%
 loadStr = {'pos','spikes','lfp'};
-
-classFolder = what('+scanpix');
-
+%
+% classFolder = what('+scanpix');
 %% Load Data (create class object)
-obj = scanpix.ephys(objType,'default',false); % assume default params
-
-% change params if desired
-if ~isempty(p.Results.objParams)
-    if ischar(p.Results.objParams) 
-        if exist(fullfile(classFolder.path,'files',[p.Results.objParams '.mat']),'file') == 2
-            obj.changeParams('file', fullfile(classFolder.path,'files',[p.Results.objParams '.mat']) );
-        else
-            error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.objParams '.mat']));
-        end
-    else
-        obj.params = p.Results.objParams;
-    end
-end
-% change map params if desired
-if ~isempty(p.Results.mapParams)
-    if ischar(p.Results.mapParams)
-        if exist(fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']),'file') == 2
-            tmp = load(fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']));
-            f = fieldnames(tmp);
-            obj.mapParams = tmp.(f{1});
-        else
-            error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']));
-        end
-    else
-        obj.mapParams = p.Results.mapParams;
-    end
-end
-
+obj           = scanpix.ephys(objType,'default',false); % assume default params
+obj.params    = options.paramsobj;
+obj.mapParams = options.paramsmap;
 % 
-if ischar(dataPath)
-    dataPath = {dataPath};
-end
 % parse directories and trialnames
 [filepath,name,ext] = cellfun(@fileparts,dataPath,'uni',0);
 obj.dataPath        = cellfun(@(x) [x filesep],filepath,'uni',0);
@@ -102,13 +65,13 @@ end
 obj.trialNames = trialNames;
 
 % load
-loadStr = loadStr( [p.Results.pos p.Results.spikes p.Results.lfp] );
+loadStr = loadStr( [options.loadpos options.loadspikes options.loadlfp] );
 obj.load(loadStr);
 
 % add meta data (optional)
-if ~isempty(p.Results.addMeta)
-    for i = 1:size(p.Results.addMeta,1)
-        obj.addMetaData(p.Results.addMeta{i,1},p.Results.addMeta{i,2});
+if ~isempty(addMeta)
+    for i = 1:size(addMeta,1)
+        obj.addMetaData(addMeta{i,1},addMeta{i,2});
     end
 end
 
@@ -117,6 +80,32 @@ end
 end
 
 
+% change params if desired
+% if isfield(options,'paramsobj')
+    % if ischar(p.Results.objParams) 
+    %     if exist(fullfile(classFolder.path,'files',[p.Results.objParams '.mat']),'file') == 2
+    %         obj.changeParams('file', fullfile(classFolder.path,'files',[p.Results.objParams '.mat']) );
+    %     else
+    %         error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.objParams '.mat']));
+    %     end
+    % else
+        % obj.params = options.paramsobj;
+    % end
+% end
+% change map params if desired
+% if isfield(options,'paramsmap')
+    % if ischar(p.Results.paramsmap)
+    %     if exist(fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']),'file') == 2
+    %         tmp = load(fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']));
+    %         f = fieldnames(tmp);
+    %         obj.mapParams = tmp.(f{1});
+    %     else
+    %         error('scaNpix::objLoader: Can''t find %s .',fullfile(classFolder.path,'files',[p.Results.mapParams '.mat']));
+    %     end
+    % else
+        % obj.mapParams = options.paramsmap;
+    % end
+% end
 
 
 

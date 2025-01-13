@@ -42,7 +42,8 @@ prms.binSizeSpat          = 2.5; % in cm^2
 prms.posFs                = 50;
 prms.alpha                = 200;
 prms.speedFilterFlagRMaps = 0;  % y/n
-prms.speedFilterLimits    = [2.5 400];
+prms.speedFilterLimitLow  = 2.5;
+prms.speedFilterLimitHigh = 400;
 prms.showWaitBar          = false;
 prms.envSize              = [];
 prms.trimNaNs             = false;
@@ -70,7 +71,7 @@ kernel = ones(prms.smoothKernel);
 
 %% speed filter
 if nargin > 4 && prms.speedFilterFlagRMaps && ~isempty(speed)
-    speedFilter = speed <= prms.speedFilterLimits(1) | speed > prms.speedFilterLimits(2);
+    speedFilter = speed <= prms.speedFilterLimitLow  | speed > prms.speedFilterLimitHigh;
 else
     speedFilter = false(length(positions),1); 
 end

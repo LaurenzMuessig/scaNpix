@@ -88,23 +88,24 @@ end
 
 function [XYScaled, lowerEdge] = scaleRectEnvs(obj,trialIndex,minOccForEdge,envSzPix)
 % scale path
-XYScaled = nan((size(obj.posData.XY{trialIndex})));  % don't use raw pos??
+XYScaled  = nan(size(obj.posData.XY{trialIndex}));  % 
 lowerEdge = nan(1,2);
 
 for j = 1:2
 
     tempPos = obj.posData.XY{trialIndex}(:,j);
+    pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % using the max(pos) should make it unviversal between npix and dacq.
 
     if isempty(obj.trialMetaData(trialIndex).envBorderCoords)
-        pathHist = histcounts( tempPos, 0.5:1:round(max(obj.posData.XY{trialIndex}(:))*1.1)  );    % using the max(pos) should make it unviversal between npix and dacq.
-
         lowerEdge(j) = find(pathHist >= minOccForEdge, 1, 'first');
         upperEdge    = find(pathHist >= minOccForEdge, 1, 'last');
     else
-        lowerEdge(j) = min(obj.trialMetaData(trialIndex).envBorderCoords(j,:));
-        upperEdge    = max(obj.trialMetaData(trialIndex).envBorderCoords(j,:)); %
+        % in case we have the edges recorded as well we take those into
+        % account as well
+        lowerEdge(j) = min([obj.trialMetaData(trialIndex).envBorderCoords(j,:),find(pathHist >= minOccForEdge, 1, 'first')]);
+        upperEdge    = max([obj.trialMetaData(trialIndex).envBorderCoords(j,:),find(pathHist >= minOccForEdge, 1, 'last')]); %
     end
-
+    %
     tempPos( tempPos > upperEdge )     = NaN;
     tempPos( tempPos <= lowerEdge(j) ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
     tempPos                            = tempPos - lowerEdge(j);
@@ -112,7 +113,7 @@ for j = 1:2
     %
     tempPos(tempPos > envSzPix(j))     = envSzPix(j);
     %
-    XYScaled(:,j) = tempPos;
+    XYScaled(:,j)                      = tempPos;
 
 end
 

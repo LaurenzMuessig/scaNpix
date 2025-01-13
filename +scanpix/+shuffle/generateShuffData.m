@@ -22,6 +22,8 @@ function ResShuf = generateShuffData(objData,varargin)
 % LM 2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+matchflag = false;
+
 %%
 mode            = 'cell';
 nShuffles       = 10000;  % this many shuffles - only relevant for population shuffle
@@ -30,8 +32,8 @@ minTrialDur     = 600;    %
 minNspikes      = [];
 ageBins         = [20 25; 26 40];
 scores          = {'SI','RV','gridness','borderScore'};
-trialSelectMode = 'fam';
-trialType       = 1:2;
+trialSelectMode = 'all';
+trialType       = 'fam';
 
 %
 p = inputParser;
@@ -42,21 +44,23 @@ addParameter(p,'mindur'   ,minTrialDur,    @isscalar);
 addParameter(p,'minspikes',minNspikes,     @isscalar);
 addParameter(p,'age'      ,ageBins                  );
 addParameter(p,'scores'   ,scores,         @iscell  );
-addParameter(p,'trialsel' ,trialSelectMode,(@(x) strcmp(x,'all') || strcmp(x,'rand') ) );
+addParameter(p,'trialsel' ,trialSelectMode,(@(x) mustBeMember(x,{'all','type','rand','pattern'}) ) );
 addParameter(p,'trialtype',trialType,      (@(x) ischar(x) || iscell(x) ) );
 
 parse(p,varargin{:});
 %
 if ~iscell(objData); objData = {objData}; end
 
-% figure out the max trials in the overall datase that will be shuffled so
+% figure out the max trials in the overall data that will be shuffled so
 % data all has the same format
 if strcmp(p.Results.trialsel,'all')
-    allTrials  = cellfun(@(x) {x.trialMetaData.trialType}, objData, 'UniformOutput',0);
-    maxNtrials = max(cellfun(@(x) sum(x), cellfun(@(x) ismember(x,trialType), allTrials,'UniformOutput',0)));
+    maxNtrials  = max(cellfun(@(x) length(x.trialNames), objData));
 elseif strcmp(p.Results.trialsel,'rand')
     maxNtrials = 1;
-elseif isnumeric(p.Results.trialtype)
+elseif strcmp(p.Results.trialsel,'type')
+    allTrials  = cellfun(@(x) {x.trialMetaData.trialType}, objData, 'UniformOutput',0);
+    maxNtrials = max(cellfun(@(x) sum(x), cellfun(@(x) ismember(x,p.Results.trialType), allTrials,'UniformOutput',0)));
+elseif strcmp(p.Results.trialsel,'pattern')
     maxNtrials = length(p.Results.trialtype);
 end
 
@@ -97,29 +101,33 @@ parfor j = 1:length(objData)
         nShiftCells = nStep;
     end
     % select trials for the shuffling
-    if strcmp(p.Results.trialsel,'all')
-        selInd = ismember({copyObj.trialMetaData.trialType},p.Results.trialtype);
-        if ~all(selInd)
-            copyObj.deleteData('trials',copyObj.trialNames(~selInd));
+    if strcmp(p.Results.trialsel,'rand')
+%         ind = ismember({copyObj.trialMetaData.trialType},p.Results.trialtype);
+%         numInd = find(ind);
+%         selTrial = numInd(randperm(length(numInd),1));
+        selTrial         = randi(length(copyObj.trialNames),1);
+        delInd           = true(size(ind));
+        delInd(selTrial) = false;
+        if ~all(delInd)
+            copyObj.deleteData('trials',copyObj.trialNames(delInd));
         end
-    elseif strcmp(p.Results.trialsel,'rand')
-        ind = ismember({copyObj.trialMetaData.trialType},p.Results.trialtype);
-        numInd = find(ind);
-        selTrial = numInd(randperm(length(numInd),1));
-        selInd = false(size(ind));
-        selInd(selTrial) = true;
-        if ~all(selInd)
-            copyObj.deleteData('trials',copyObj.trialNames(~selInd));
+    elseif strcmp(p.Results.trialsel,'type')
+        ind         = find(ismember({copyObj.trialMetaData.trialType},p.Results.trialtype));
+%         selTrial = ind(min(min(p.Results.trialtype),length(ind)):min(max(p.Results.trialtype),length(ind)));
+        delInd      = true(size(ind));
+        delInd(ind) = false;
+        if ~all(delInd)
+            copyObj.deleteData('trials',copyObj.trialNames(delInd));
         end
-    elseif isnumeric(p.Results.trialtype)
-        ind      = find(ismember({copyObj.trialMetaData.trialType},p.Results.trialsel));
-        selTrial = ind(min(min(p.Results.trialtype),length(ind)):min(max(p.Results.trialtype),length(ind)));
-        selInd   = false(size(ind));
-        selInd(selTrial) = true;
-        if ~all(selInd)
-            copyObj.deleteData('trials',copyObj.trialNames(~selInd));
+    elseif strcmp(p.Results.trialsel,'pattern')
+        [dataInd, missTrials] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},p.Results.trialtype,'exact',matchflag);
+        missTrials(missTrials > length(copyObj.trialNames)) = [];
+        if ~isempty(missTrials)
+            copyObj.deleteData('trials',copyObj.trialNames(missTrials));
         end
+        copyObj.reorderData(dataInd); 
     end
+    
     % remove low spike n cells if desired
     if ~isempty(p.Results.minspikes)
         nSpikes = cell2mat(cellfun(@(y) cell2mat(cellfun(@(x) length(x),y,'UniformOutput',0)),copyObj.spikeData.spk_Times,'UniformOutput',0));

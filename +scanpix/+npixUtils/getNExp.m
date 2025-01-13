@@ -15,18 +15,27 @@ nPre      = 0;
 
 p = inputParser;
 addOptional(p,'dirparent',dirParent,@ischar);
-addParameter(p,'trialtype',trialType,@ischar);
-addParameter(p,'npre',nPre,@isscalar);
+addParameter(p,'trialtype',trialType, (@(x) ischar(x) || iscell(x)) );
+addParameter(p,'npre',nPre);
 parse(p,varargin{:});
 
+if length(p.Results.npre) ~= length(p.Results.trialtype)
+    error('scaNpix::npixUtils::getNExp: You need to have matching inputs for trialtype and n pre-exposure. Pretty clear that actually');
+end
+
+if ischar(p.Results.trialtype)
+    trialType = {p.Results.trialtype};
+else
+    trialType = p.Results.trialtype;
+end
 
 %% 
 dirIn        = fullfile(p.Results.dirparent, ratStr);
 FolderStruct = dir(dirIn);
-dataOut      = cell(0,3);
+dataOut      = cell(0,4);
 
 if isempty(FolderStruct)
-    warning('scaNpix::npixUtils::getNExp:: Can''t find a folder called ''%s'' in ''%s''.',ratStr,p.Results.dirparent);
+    warning('scaNpix::npixUtils::getNExp: Can''t find a folder called ''%s'' in ''%s''.',ratStr,p.Results.dirparent);
     return
 end
 
@@ -49,9 +58,10 @@ for i = 1:length(FolderStruct)
         
         tmpXML = scanpix.fxchange.xml_read(fullfile(pathXMLFiles(j).folder,pathXMLFiles(j).name));
         
-        if strcmp(tmpXML.trialType,p.Results.trialtype)
+        if any(strcmp(tmpXML.trialType,trialType))
             dataOut{c,1} = pathBinFiles(j).name;
             dataOut{c,2} = pathBinFiles(j).date;
+            dataOut{c,3} = tmpXML.trialType;
             c = c + 1;
         end
     end
@@ -61,6 +71,9 @@ indEmpty     = cellfun('isempty',dataOut(:,1));
 dataOut      = dataOut(~indEmpty,:);
 [~,sortInd]  = sort(datetime(dataOut(~indEmpty,2)));
 dataOut      = dataOut(sortInd,:);
-dataOut(:,3) = num2cell(1+p.Results.npre:size(dataOut,1)+p.Results.npre,1);
+for i = 1:length(trialType)
+    idx = strcmp(trialType{i},dataOut(:,3));
+    dataOut(idx,4) = num2cell(1+p.Results.npre(i):sum(idx)+p.Results.npre(i),1);
+end
 end
 

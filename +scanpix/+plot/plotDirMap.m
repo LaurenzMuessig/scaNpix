@@ -1,4 +1,4 @@
-function plotDirMap(dirMap,hAx)
+function plotDirMap(dirMap,ax)
 % plotDirMap - plot a directional rate map as a standard polar plot
 % package: scanpix.plot
 %
@@ -7,31 +7,37 @@ function plotDirMap(dirMap,hAx)
 %
 %  Inputs:  
 %           dirMap - directional rate map
-%           hAx    - axis handle (optional)
+%           ax     - axis handle (optional)
 %
 %
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if nargin == 1
-    hAx = axes;
+%%
+arguments
+    dirMap {mustBeNumeric}
+    ax     {ishghandle(ax, 'axes')} = axes;
 end
 
-%
+%%
 [meanR,meanDir,thetas,rhos] = scanpix.analysis.rayleighVect(dirMap);
 
+%% plot
 % plot as line rather than 'polarplot' as I don't like the circle outline
 % of the polarplots in Matlab
-plot(hAx,[-1 1; 0 0]',[0 0; -1 1]','k-','linewidth',1.5); % axis
-hold(hAx,'on');
+plot(ax,[-1 1; 0 0]',[0 0; -1 1]','k-','linewidth',1.5); % axis
+hold(ax,'on');
 [x,y] = pol2cart(thetas, rhos);
-plot(hAx, [x; x(1)], [y; y(1)],'k','linewidth',2);
+plot(ax, [x; x(1)], [y; y(1)],'k','linewidth',2);
 % plot mean vector 
 [x,y] = pol2cart(meanDir,meanR);
-plot(hAx,[0 x],[0 y],'r-','linewidth',2);
+plot(ax,[0 x],[0 y],'r-','linewidth',2);
 % format axis
-hold(hAx,'off');
-axis(hAx,'square','off');
-% axis(hAx,'off');
+hold(ax,'off');
+axis(ax,'square','off');
+xLabelStruct = get(ax,'xlabel');
+xLabelStruct.VerticalAlignment = 'bottom'; 
+xLabelStruct.String = ['peakFR=' num2str(max(dirMap,[],'omitnan'),'%.1f')];
+xLabelStruct.Visible = 'On';
 end
 

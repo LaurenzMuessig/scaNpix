@@ -1,4 +1,4 @@
-function trialData = getTrialSequence(trialTypes,dataDir)
+function trialData = getTrialSequence(method,dataDir,trialTypes,options)
 % getTrialSequence - extract a trial sequence from a raw data directory
 % The idea is that you give a parent directory that contains subfolders
 % with the raw data fpr an experimental session. From the xml files we will
@@ -18,17 +18,33 @@ function trialData = getTrialSequence(trialTypes,dataDir)
 %
 % LM 2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+%%
+arguments
+  method (1,:) {mustBeMember(method,{'all','any','seq'})} = 'any';
+  dataDir (1,:) {mustBeFolder(dataDir)} = 'S:\1postDoc\Neuropixels\rawData\';
+  trialTypes (1,:) {mustBeA(trialTypes,'cell')} = {};
+  options.exactflag (1,1) {mustBeNumericOrLogical} = true;
+  options.excludeflag (1,1) {mustBeNumericOrLogical} = false;
+  options.mode (1,:)  {mustBeMember(options.mode,{'pattern','exact'})} = 'pattern';
+  options.bslKey (1,:) {mustBeA(options.bslKey,'cell')} = {'fam'};
+  options.ignKey (1,:) {mustBeA(options.ignKey,'cell')} = {'sleep'};
+  options.getFlankBSL (1,1) {mustBeNumericOrLogical} = true;
+end
 
-%%  
+%%
 pathBinFiles = dir(fullfile(dataDir,'**','*.ap.bin'));
 pathXMLFiles = dir(fullfile(dataDir,'**','metaData.xml'));
 pathXMLFiles = pathXMLFiles(ismember({pathXMLFiles(:).folder},{pathBinFiles(:).folder})); % ignore xml files in session kilosort result folders
 
-if isempty(pathBinFiles)
+if isempty(pathBinFiles) || isempty(pathXMLFiles)
     warning('No raw data found in %s', dataDir);
-    trialData = cell(0,3);
+    trialData = cell(0,4);
     return
 end
+[~,sortInd]  = sort(datetime({pathBinFiles.date}));
+pathXMLFiles = pathXMLFiles(sortInd);
+pathBinFiles = pathBinFiles(sortInd);
 %%
 % need to loop over xml files to get all trial types
 currTrialTypes = cell(length(pathXMLFiles),1);
@@ -39,18 +55,35 @@ end
 
 %%
 % check if current dataset contains trial sequence
-if ~all(ismember(trialTypes,currTrialTypes))
-    trialData = cell(0,3);
-else
-    % select relevant trials and sort by date
-    trialInd       = ismember(currTrialTypes, trialTypes);
-    pathBinFiles   = pathBinFiles(trialInd);
-    currTrialTypes = currTrialTypes(trialInd);
-    [~,sortInd]    = sort(datetime({pathBinFiles.date}));
-    % generate outut data
-    trialData      = strcat({pathBinFiles(sortInd).folder}, filesep)'; %
-    trialData(:,2) = {pathBinFiles(sortInd).name};                     %
-    trialData(:,3) = currTrialTypes(sortInd);
+if strcmp(method,'all')
+    trialTypes = currTrialTypes;
+end
+%    
+switch method
+    case {'any','all'}
+        trialInd       = ismember(currTrialTypes, trialTypes);
+        if options.excludeflag
+            trialInd   = ~trialInd;
+            if sum(trialInd) == 0
+                trialData = cell(0,4);
+                return;
+            end
+        end
+    case 'seq'
+        trialInd = scanpix.helpers.matchTrialSeq2Pattern(currTrialTypes,trialTypes,'exactflag',options.exactflag,'bslkey',options.bslKey,'ignKey',options.ignKey,'mode',options.mode,'getFlankBSL',options.getFlankBSL);
+        if isempty(trialInd); trialData = cell(0,4); return; end
 end
 
+% select relevant trials and sort by date
+pathBinFiles   = pathBinFiles(trialInd(1,:));
+currTrialTypes = currTrialTypes(trialInd(1,:));
+% [~,sortInd]    = sort(datetime({pathBinFiles.date}));
+% generate outut data
+trialData      = strcat({pathBinFiles(:).folder}, filesep)'; %
+trialData(:,2) = {pathBinFiles(:).name};                     %
+trialData(:,3) = currTrialTypes;
+trialData(:,4) = num2cell(logical(trialInd(2,:)),1);
+
+
 end
+

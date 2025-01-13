@@ -1,4 +1,4 @@
-function [rMapBinned, cMapBinned] = binAnyRMap(rMap,varargin)
+function [rMapBinned, cMapBinned] = binAnyRMap(rMap,options)
 % bin any rate map for plotting and create a corresponding colormap using
 % Matlab's in-built colormaps. In particular we want to control the range
 % across which we bin, as well as including a color for nan's which are
@@ -26,17 +26,13 @@ function [rMapBinned, cMapBinned] = binAnyRMap(rMap,varargin)
 % LM 2020
 
 %%
-defaultColMap    = 'jet';
-defaultNSteps    = 11;
-defaultRGB4nans  = [1 1 1]; % unvisited bins = white
-defaultCMapEdge  = [];
-
-p = inputParser;
-addParameter(p,'colmap',defaultColMap,@ischar);
-addParameter(p,'nsteps',defaultNSteps,@isscalar); 
-addParameter(p,'rgb4nans',defaultRGB4nans);
-addParameter(p,'cmapEdge',defaultCMapEdge);
-parse(p,varargin{:});
+arguments
+    rMap {mustBeNumeric}
+    options.colmap = 'jet' ;
+    options.nsteps (1,1) {mustBeNumeric} = 11;
+    options.rgb4nans (1,3) {mustBeNumeric} = [1 1 1];
+    options.cmapEdge (1,2) {mustBeNumeric} = [0 max(rMap(:),[],'omitnan')];
+end
 
 %%
 if isempty(rMap)
@@ -44,42 +40,36 @@ if isempty(rMap)
     return
 end
 
-% make colormap
-switch lower(p.Results.colmap)
+%% make colormap
+switch lower(options.colmap)
     case 'hcg' 
         temp   = scanpix.maps.highContGrayColMap;
         ind    = round(linspace(1,length(temp),p.Results.nsteps));
         cMap   = temp(ind,:);   
-        nSteps = p.Results.nsteps;
+        nSteps = options.nsteps;
     case 'poulter'
         cMap   = scanpix.maps.cm_Poulter;
         nSteps = size(cMap,1);
     otherwise
         try
-            cMap   = feval( str2func(p.Results.colmap), p.Results.nsteps );
-            nSteps = p.Results.nsteps;
+            cMap   = feval( str2func(options.colmap), options.nsteps );
+            nSteps = options.nsteps;
         catch
-            error(['''' p.Results.colmap ''' not yet supported as colormap. Why don''t you add it yourself?']);
+            error(['''' options.colmap ''' not yet supported as colormap. Why don''t you add it yourself?']);
         end
 end
 
-% bin rMap
-if isempty(p.Results.cmapEdge)
-    rMapBinned                  = discretize(rMap,linspace(0,nanmax(rMap(:)),nSteps+1));
-else
-    [rMapBinned,edges]          = discretize(rMap,linspace(p.Results.cmapEdge(1),p.Results.cmapEdge(2),nSteps+1));
-    rMapBinned(rMap<edges(1))   = 1;
-    rMapBinned(rMap>edges(end)) = nanmax(rMapBinned(:));
-end
+%% bin rMap
+[rMapBinned,edges]          = discretize(rMap,linspace(options.cmapEdge(1),options.cmapEdge(2),nSteps+1));
+rMapBinned(rMap<edges(1))   = 1;
+rMapBinned(rMap>edges(end)) = max(rMapBinned(:),[],'omitnan');
 %
-rMapBinned(isnan(rMap)) = 0;
+rMapBinned(isnan(rMap))     = 0;
 
-% color map
+%% color map
 cMapBinned              = nan(size(cMap,1)+1,size(cMap,2));
-cMapBinned(1,:)         = p.Results.rgb4nans;
+cMapBinned(1,:)         = options.rgb4nans;
 cMapBinned(2:end,:)     = cMap;
-
-
 
 end
 

@@ -38,7 +38,8 @@ function [dirMaps, dirPosMap] = makeDirMaps(spkTimes, HDirections, sampleTimes, 
 prms.dirSmoothKern        = 5;         % in bins
 prms.binSizeDir           = 6;         % in degrees
 prms.speedFilterFlagDMaps = 0;  % y/n
-prms.speedFilterLimits    = [2.5 400]; % in cm/s
+prms.speedFilterLimitLow  = 2.5;
+prms.speedFilterLimitHigh = 400;
 prms.posFs                = 50;        % in Hz
 prms.showWaitBar          = false;
 
@@ -71,7 +72,7 @@ end
 
 %% speed filter
 if nargin > 3 && prms.speedFilterFlagDMaps && ~isempty(speed)
-    speedFilter            = speed <= prms.speedFilterLimits(1) | speed > prms.speedFilterLimits(2);
+    speedFilter            = speed <= prms.speedFilterLimitLow | speed > prms.speedFilterLimitHigh;
 else
     speedFilter            = false(length(HDirections),1); 
 end

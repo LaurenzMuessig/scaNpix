@@ -1,4 +1,4 @@
-function ResT = obj2table(obj,varargin)
+function ResT = obj2table(obj,rowFormat,options)
 % obj2table - convert a scanpix.ephys object to a table 
 % package: scanpix.analysis
 %
@@ -18,71 +18,57 @@ function ResT = obj2table(obj,varargin)
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
-scores = {'SI','RV','gridness','borderScore','intraStab'};
+arguments
+    obj (1,:) {mustBeA(obj,'scanpix.ephys')}
+    rowFormat (1,:) {mustBeMember(rowFormat,{'cell','dataset'})} = 'cell';
+    options.maxn (1,1) {mustBeNumeric};
+    options.minspikes (1,1) {mustBeNumeric};
+    options.trialPattern (1,:) {mustBeA(options.trialPattern,'cell')} = {};
+    options.scores (1,:) {mustBeA(options.scores,'cell')} = {};
+    options.mode (1,:)  {mustBeMember(options.mode,{'pattern','exact'})} = 'exact';
+    options.bslKey (1,:) {mustBeA(options.bslKey,'cell')} = {'fam'};
+    options.ignKey (1,:) {mustBeA(options.ignKey,'cell')} = {'sleep'};
+    options.getFlankBSL (1,1) {mustBeNumericOrLogical} = true;
+    options.exactflag (1,1) {mustBeNumericOrLogical} = false;
+    options.addmaps (1,1) {mustBeNumericOrLogical} = true;
+    options.addgridprops (1,1) {mustBeNumericOrLogical} = true;
+    options.addwfprops (1,1) {mustBeNumericOrLogical} = false;
+    options.addlfp (1,1) {mustBeNumericOrLogical} = false;
+end
 
-%% Params
-rowFormat    = 'cell';
-maxNTrial    = [];
-minNSpikes   = [];
-trialIndex   = [];
-ignoreOrder  = false;
-addMaps      = true;
-addScores    = true(1,length(scores));
-addGridprops = false;
-addWFprops   = false;
-addLFP       = false;
-
+%%
+scores   = {'SI','RV','gridness','borderScore','intraStab'};
+scoreInd = ismember(scores, options.scores);
 %
-p = inputParser;
-addOptional(p, 'rowformat', rowFormat,    ( @(x) mustBeMember(x,{'cell','dataset'}) ));
-addParameter(p,'maxn',      maxNTrial,    ( @(x) isscalar(x) || isempty(x) ) );
-addParameter(p,'minspikes', minNSpikes,   ( @(x) isscalar(x) || isempty(x) ) );
-addParameter(p,'tindex',    trialIndex,   ( @(x) isempty(x) || ischar(x) || isstring(x) || iscell(x)) );
-addParameter(p,'ignoreTOrd',ignoreOrder,  @islogical );
-addParameter(p,'addmaps',   addMaps,      @islogical );
-addParameter(p,'scores',    addScores,    ( @(x) islogical(x) || iscell(x) ) );
-addParameter(p,'addGCprops',addGridprops, @islogical );
-addParameter(p,'addWFprops',addWFprops,   @islogical );
-addParameter(p,'addlfp'    ,addLFP,       @islogical );
-%
-parse(p,varargin{:});
-
-%
-if isempty(p.Results.maxn)
+if ~isfield(options,'maxn')
     maxNCol = length(obj.trialNames);
 else
-    maxNCol = p.Results.maxn;
+    maxNCol = options.maxn;
 end
-
-if iscell(p.Results.scores)
-    scoreInd = ismember(scores, p.Results.scores);
-else
-    scoreInd = p.Results.scores;
-end
-
-if p.Results.addlfp && strcmp(p.Results.rowformat,'dataset')
+%  
+if options.addlfp && strcmp(rowFormat,'dataset')
     addlfp = true;
 else
     addlfp = false;
 end
-
+%
 
 %%
 copyObj = obj.deepCopy;
 
 %% prefiltering
 ind = false(size(copyObj.cell_ID,1),1);
-if ~isempty(p.Results.minspikes)
+if isfield(options,'minspikes')
     tmp                                       = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times,'uni',0);
     nSpikes                                   = cell2mat(horzcat(tmp{:}));
-    ind(all(nSpikes < p.Results.minspikes,2)) = true;
+    ind(all(nSpikes < options.minspikes,2)) = true;
 end
 
 % apply filter
 copyObj.deleteData('cells',ind);
 
 %% Set up results table %
-if strcmp(p.Results.rowformat,'dataset')
+if strcmp(rowFormat,'dataset')
     scoreDum  = cell(1,maxNCol);
 else
     scoreDum  = nan(1,maxNCol);
@@ -95,6 +81,7 @@ varList   =   {
                 %'trialInd',    scoreDum; ...
                 'envType',      cell(size(scoreDum)); ...
                 'nExp',         nan(1,maxNCol); ...
+                'isPreProbe',   scoreDum; ...
                 
                 'posData',      cell(size(scoreDum)); ...
                 'dirData',      cell(size(scoreDum)); ...
@@ -124,6 +111,9 @@ varList   =   {
                 'intraStab',    scoreDum; ...
                 % 'interStab',   nan; ...        % 
                 'borderScore',  scoreDum; ...
+
+                %
+                'objectPos',    cell(size(scoreDum)); ...
                 %
                 'waveForms',    cell(size(scoreDum)); ...
                 'spikeWidth',   scoreDum; ...
@@ -135,7 +125,7 @@ varList   =   {
       };
 varList = varList';
 %
-if strcmp(p.Results.rowformat,'cell')
+if strcmp(rowFormat,'cell')
     nCells                    = size(copyObj.cell_ID,1);
 else
     nCells = 1;
@@ -144,15 +134,11 @@ ResT                          = repmat(cell2table(varList(2,:)),nCells,1); % rep
 ResT.Properties.VariableNames = varList(1,:);
 
 %% assigning index
-if ~isempty(p.Results.tindex)
-    [dataInd, missTrials] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},p.Results.tindex,'ignoreTOrder',p.Results.ignoreTOrd);
-    tabInd = 1:length(p.Results.tindex);
-    tabInd(missTrials) = [];
-    % ind = 1:length(copyObj.trialNames);
-    % ind(dataInd) = [];
-    % if ~isempty(dataInd)
-    %     copyObj.deleteData('trials',copyObj.trialNames(ind));
-    % end
+if ~isempty(options.trialPattern)
+    [dataInd, missTrials] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},options.trialPattern,'bslKey',options.bslKey,'exactflag',options.exactflag,'ignKey',options.ignKey,'getFlankBSL', options.getFlankBSL,'mode',options.mode);
+    dataInd               = dataInd(1,:);
+    tabInd                = 1:length(dataInd)+length(missTrials);
+    tabInd(missTrials)    = [];
 else
     [dataInd, tabInd] = deal(1:length(copyObj.trialNames));
 end
@@ -177,11 +163,18 @@ if ~all(cellfun('isempty',{copyObj.trialMetaData(dataInd).trialType}))
 else
     ResT                   = removevars(ResT,'envType');
 end
+
+if isfield(copyObj.trialMetaData,'is_preprobe')
+    ResT.isPreProbe(:,tabInd)     = [copyObj.trialMetaData(dataInd).is_preprobe] .* ones(nCells,1);
+else
+    ResT                   = removevars(ResT,'isPreProbe');
+end
 if isfield(copyObj.trialMetaData,'nExp')
     ResT.nExp(:,tabInd)    = [copyObj.trialMetaData(dataInd).nExp] .* ones(nCells,1);
 else
     ResT                   = removevars(ResT,'nExp');
 end
+
 %
 % TODO: case when there is no high sample rate lfp for dacq data
 if addlfp
@@ -197,7 +190,7 @@ else
 end
 
 %%
-switch p.Results.rowformat
+switch rowFormat
     case 'cell'
 
         ResT                    = removevars(ResT,{'posData','dirData','speed'});
@@ -209,7 +202,7 @@ switch p.Results.rowformat
         %
         ResT.spkTimes(:,tabInd) = horzcat(copyObj.spikeData.spk_Times{dataInd});
         %
-        if p.Results.addmaps
+        if options.addmaps
             if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
                 copyObj.addMaps('rate',dataInd);
             end
@@ -271,7 +264,7 @@ switch p.Results.rowformat
                 tmpGridProps                   = copyObj.getSpatialProps('gridprops', i);
                 ResT.gridness(:,tabInd(c))     = tmpGridProps(:,1);
                 ResT.gridness_ell(:,tabInd(c)) = tmpGridProps(:,2);
-                if p.Results.addGCprops
+                if options.addgridprops
                     ResT.gridScale(:,tabInd(c))     = tmpGridProps(:,3);
                     ResT.gridOr(:,tabInd(c))        = tmpGridProps(:,5);
                     ResT.gridScale_ell(:,tabInd(c)) = tmpGridProps(:,4);
@@ -289,10 +282,28 @@ switch p.Results.rowformat
                 mapSeries                      = scanpix.maps.makeMapTimeSeries(copyObj,[0 copyObj.trialMetaData(i).duration/2],i,'prms',prmsRate);
                 ResT.intraStab(:,tabInd(c))    = scanpix.analysis.spatialCorrelation(mapSeries{1},mapSeries{2});
             end
+
+            if isfield(copyObj.trialMetaData,'objectPos') && ~isempty(copyObj.trialMetaData(i).objectPos)
+                if copyObj.trialMetaData(i).PosIsScaled
+                    copyObj.trialMetaData(i).objectPos = copyObj.trialMetaData(i).objectPos .* (copyObj.trialMetaData(i).ppm/copyObj.trialMetaData(i).ppm_org);
+                end
+                
+                if copyObj.trialMetaData(i).PosIsFitToEnv{1,1}
+                    tempObjPos = reshape(copyObj.trialMetaData(i).objectPos,[2 size(copyObj.trialMetaData(i).objectPos,2)/2]);
+                    tempObjPos = tempObjPos - [copyObj.trialMetaData(i).PosIsFitToEnv{1,2}(1); copyObj.trialMetaData(i).PosIsFitToEnv{1,2}(2)];
+                else
+                    tempObjPos = copyObj.trialMetaData(i).objectPos';
+                end
+                ResT.objectPos(:,tabInd(c)) = {tempObjPos(:)'};
+            end
             c = c + 1;
         end
-
-        if p.Results.addWFprops
+        %
+        if all(cellfun('isempty',ResT.objectPos(:)))
+            ResT                      = removevars(ResT,{'objectPos'});
+        end
+        %
+        if options.addwfprops
             % spikeProps                = scanpix.analysis.getWaveFormProps(copyObj);
             % ResT.waveForms(1,tabInd)  = copyObj.spikeData.spk_waveforms(dataInd);
             % ResT.spikeWidth(1,tabInd) = num2cell(squeeze(spikeProps(:,3,dataInd)),1);
@@ -315,7 +326,7 @@ switch p.Results.rowformat
         %
         ResT.spkTimes(1,tabInd)     = copyObj.spikeData.spk_Times(dataInd);
         %
-        if p.Results.addmaps
+        if options.addmaps
             if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
                 copyObj.addMaps('rate',dataInd);
             end
@@ -364,7 +375,7 @@ switch p.Results.rowformat
                 % ResT.gridness_ell(1,tabInd) = cellfun(@(x) x(:,2),tmp,'uni',0);
                 ResT.gridness(1,tabInd)     = num2cell(squeeze(tmp(:,1,:)),1);
                 ResT.gridness_ell(1,tabInd) = num2cell(squeeze(tmp(:,2,:)),1);
-                if p.Results.addGCprops
+                if options.addgridprops
                     ResT.gridScale(1,tabInd)     = num2cell(squeeze(tmp(:,3,:)),1);
                     ResT.gridOr(1,tabInd)        = num2cell(squeeze(tmp(:,5,:)),1);
                     ResT.gridScale_ell(1,tabInd) = num2cell(squeeze(tmp(:,4,:)),1);
@@ -391,7 +402,7 @@ switch p.Results.rowformat
 
         end
         
-        if p.Results.addWFprops
+        if options.addwfprops
             spikeProps                = scanpix.analysis.getWaveFormProps(copyObj);
             ResT.waveForms(1,tabInd)  = copyObj.spikeData.spk_waveforms(dataInd);
             ResT.spikeWidth(1,tabInd) = num2cell(squeeze(spikeProps(:,3,dataInd)),1);
@@ -402,10 +413,9 @@ switch p.Results.rowformat
 end
 
 %%
-if ~p.Results.addGCprops || ~ismember('gridness', ResT.Properties.VariableNames)
+if ~options.addgridprops || ~ismember('gridness', ResT.Properties.VariableNames)
     ResT = removevars(ResT,{'gridScale','gridScale_ell','gridOr','gridOr_ell'});
 end
-
 
 ResT = removevars(ResT,scores(~scoreInd));
 if ~ismember('gridness', ResT.Properties.VariableNames)

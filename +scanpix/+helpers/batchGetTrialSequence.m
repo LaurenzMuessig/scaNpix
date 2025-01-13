@@ -1,4 +1,4 @@
-function trialData = batchGetTrialSequence(trialTypes,dirParent)
+function trialData = batchGetTrialSequence(trialTypes,dirParent,options)
 % batchGetTrialSequence - extract a trial sequence from a raw data directory
 % This is a batch wrapper for scanpix.helpers.getTrialSequence. 'dirParent'
 % should be a parent directory that contains folders for individual
@@ -22,13 +22,23 @@ function trialData = batchGetTrialSequence(trialTypes,dirParent)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% TO DO 
 
+%%
+arguments
+  trialTypes (1,:) {mustBeA(trialTypes,'cell')} = {};
+  dirParent (1,:) {mustBeFolder} = 'S:\1postDoc\Neuropixels\rawData\';
+  options.method (1,:) {mustBeMember(options.method,{'all','any','seq'})} = 'any';
+  options.exactflag (1,1) {mustBeNumericOrLogical} = true;
+  options.excludeflag (1,1) {mustBeNumericOrLogical} = false;
+  options.mode (1,:)  {mustBeMember(options.mode,{'pattern','exact'})} = 'pattern';
+  options.bslKey (1,:) {mustBeA(options.bslKey,'cell')} = {'fam'};
+  options.ignKey (1,:) {mustBeA(options.ignKey,'cell')} = {'sleep'}; %,'cheeseboard_mem','cheeseboard_of','cheeseboard_task','sqtrack'};
+  options.getFlankBSL (1,1) {mustBeNumericOrLogical} = false;
+end
 
-%% 
-if nargin == 1; dirParent = 'S:\1postDoc\Neuropixels\rawData\'; end
 
 %% 
 FolderStruct = dir(dirParent);
-trialData    = cell(0,5);
+trialData    = cell(0,6);
 
 % loop over animal folders
 for i = 1:length(FolderStruct)
@@ -45,9 +55,10 @@ for i = 1:length(FolderStruct)
 
         if  ~isfolder(fullfile(animalFolderStruct(j).folder,animalFolderStruct(j).name)) || ~isempty(regexp(animalFolderStruct(j).name,'[.]*','once')); continue; end
 
-        tmpData      = getTrialSequence(trialTypes,fullfile(animalFolderStruct(j).folder,animalFolderStruct(j).name));
-        tmpData(:,4) = repmat({FolderStruct(i).name},size(tmpData,1),1);   %
-        tmpData(:,5) = num2cell(ones(size(tmpData,1),1) .* expCounter,2);  %
+        % tmpData      = scanpix.helpers.getTrialSequence(p.Results.mode,fullfile(animalFolderStruct(j).folder,animalFolderStruct(j).name),trialTypes,'excludeflag',options.excludeflag,'ignoreOrder',options.ignoreOrder,'matchflag',options.matchflag);
+        tmpData      = scanpix.helpers.getTrialSequence(options.method,fullfile(animalFolderStruct(j).folder,animalFolderStruct(j).name),trialTypes,'excludeflag',options.excludeflag,'exactflag',options.exactflag,'bslkey',options.bslKey,'ignKey',options.ignKey,'mode',options.mode,'getFlankBSL', options.getFlankBSL);
+        tmpData(:,5) = repmat({FolderStruct(i).name},size(tmpData,1),1);   %
+        tmpData(:,6) = num2cell(ones(size(tmpData,1),1) .* expCounter,2);  %
         % output
         trialData    = vertcat(trialData,tmpData);
         expCounter   = expCounter + 1; % bump

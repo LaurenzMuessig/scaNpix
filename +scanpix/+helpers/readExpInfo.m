@@ -1,4 +1,4 @@
-function [ expInfo, maxNTrial ] = readExpInfo( cribSheetPath, varargin )
+function [ expInfo, maxNTrial ] = readExpInfo( cribSheetPath, method, options  )
 % readExpInfo - Read in trial meta data from a crib sheet to be able to e.g. load data in big analysis loop or load specific data into Matlab. 
 % We assume the following:
 %   - the sheet is an excel file and it needs to have the following format 
@@ -32,32 +32,21 @@ function [ expInfo, maxNTrial ] = readExpInfo( cribSheetPath, varargin )
 % LM 2020 / 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% Args
+arguments
+  cribSheetPath (1,:) {mustBeFile} = 'S:\1postDoc\Neuropixels\rawData\masterSheetNpixData.xlsx';
+  method (1,:) {mustBeMember(method,{'single','singletrial','exp','singleexp'})} = 'exp';
+  options.sheetn (1,1) {mustBeNumeric} = 1;
+  options.animaln (1,1) {mustBeNumeric};
+  options.expn (1,1) {mustBeNumeric};
+  options.trialname (1,:) {mustBeA(options.trialname,'cell')} = {};
+  options.keepsep (1,1) {mustBeNumericOrLogical} = false;
+end
 
 %%% machine/format specific fields %%%
 defaultSheetPath   = 'S:\1postDoc\Neuropixels\rawData\masterSheetNpixData.xlsx';
 %%%
-
 standardFieldNames = {'filePath','animal','trialName','experiment_ID'}; % these fields are standard and need to be included on sheet (except for 'notes')
-
-%% params
-defaultMethod       = 'single';
-defaultSheet        = 1; 
-defaultAnimalID     = ''; 
-defaultExperimentID = [];
-defaultTrialName    = '';
-keepSheetFilesep    = false;
-
-p = inputParser;
-validMethodInput = @(x) any(strcmp(x,{'single','singletrial','exp','singleexp'}));
-addOptional(p,'method', defaultMethod, validMethodInput);
-addParameter(p,'sheetN', defaultSheet);
-addParameter(p,'animal', defaultAnimalID, @ischar);
-addParameter(p,'experiment', defaultExperimentID);
-addParameter(p,'trialname', defaultTrialName, @ischar);
-addParameter(p,'keepsep', keepSheetFilesep, @islogical);
-
-parse(p,varargin{:});
-
 
 %% parse input
 if nargin == 0
@@ -76,16 +65,17 @@ if nargin == 0
     expID         = str2double(uiAnswer{4});
     animal        = str2double(uiAnswer{5});
 else
-    method        = p.Results.method;
-    sheetN        = p.Results.sheetN;
-    expID         = p.Results.experiment;
-    animal        = p.Results.animal;
+    sheetN        = options.sheetn;
+    if strcmp(method,'singleexp')
+        expID     = options.expn;
+        animal    = options.animaln;
+    end
 end
 
 % sanity check
-if exist(cribSheetPath,'file') ~= 2
-    error(['Can''t find crib sheet for metadata in ''' cribSheetPath '''. You have to do better than that.']);
-end
+% if exist(cribSheetPath,'file') ~= 2
+%     error(['Can''t find crib sheet for metadata in ''' cribSheetPath '''. You have to do better than that.']);
+% end
 
 %% read in data
 cribSheet = readtable( cribSheetPath,'Sheet', sheetN ); % read cribsheet
@@ -100,14 +90,14 @@ addFieldNames = cribSheet.Properties.VariableNames( ~ismember(lower(cribSheet.Pr
 
 anNum = sscanf([cribSheet.animal{:}],'%*c%d');  % a numerical animal identifier is also helpful - need to remove the 'r' or 'm'. 
 
-switch lower(method)
+switch method
     
     case 'single'
         % read every trial in sheet seperately
         expInfo.animal       = cribSheet.animal;
         expInfo.anNum        = anNum;
         expInfo.Tnames       = cribSheet.trialName;
-        if p.Results.keepsep
+        if options.keepsep
             expInfo.fullPath = strcat(cribSheet.filePath,cribSheet.trialName);
         else
             expInfo.fullPath = fullfile(cribSheet.filePath,cribSheet.trialName);
@@ -131,7 +121,7 @@ switch lower(method)
         expInfo.animal       = cribSheet.animal(ind4trial);
         expInfo.anNum        = anNum(ind4trial);
         expInfo.Tnames       = cribSheet.trialName(ind4trial);
-        if p.Results.keepsep
+        if options.keepsep
             expInfo.fullPath = strcat(cribSheet.filePath(ind4trial),cribSheet.trialName(ind4trial));
         else
             expInfo.fullPath = fullfile(cribSheet.filePath(ind4trial),cribSheet.trialName(ind4trial));
@@ -155,7 +145,7 @@ switch lower(method)
             expInfo.animal{i,1}        = cribSheet.animal{trialIndForExp(1)};
             expInfo.anNum{i,1}         = anNum(trialIndForExp);
             expInfo.Tnames{i,1}        = cribSheet.trialName( trialIndForExp );  
-            if p.Results.keepsep
+            if options.keepsep
                 expInfo.fullPath{i,1}  = strcat(cribSheet.filePath(trialIndForExp),cribSheet.trialName(trialIndForExp));
             else
                 expInfo.fullPath{i,1}  = fullfile(cribSheet.filePath(trialIndForExp),cribSheet.trialName(trialIndForExp)); %%%%%%%
@@ -178,7 +168,7 @@ switch lower(method)
         expInfo.animal       = cribSheet.animal{ind4Exp(1)};
         expInfo.anNum        = anNum(ind4Exp(1));
         expInfo.Tnames       = cribSheet.trialName(ind4Exp);
-        if p.Results.keepsep
+        if options.keepsep
             expInfo.fullPath = strcat(cribSheet.filePath(ind4Exp),cribSheet.trialName(ind4Exp));
         else
             expInfo.fullPath = fullfile(cribSheet.filePath(ind4Exp),cribSheet.trialName(ind4Exp));
@@ -192,8 +182,8 @@ switch lower(method)
         
         maxNTrial = length(ind4Exp);
 
-    otherwise
-        error(['"' method '" is no valid method to read in data. Come on man.' ]);
+    % otherwise
+        % error(['"' method '" is no valid method to read in data. Come on man.' ]);
 end
 
 end
