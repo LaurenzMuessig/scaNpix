@@ -17,7 +17,7 @@ function loadMeta(obj, trialIterator, noSyncFlag)
 %
 obj.trialMetaData(trialIterator).log.missingSyncsAPStream        = 0;
 obj.trialMetaData(trialIterator).log.missingFramesPosStream      = 0;
-obj.trialMetaData(trialIterator).log.PosLoadingStats             = ones(3,2);
+obj.trialMetaData(trialIterator).log.PosLoadingStats             = NaN(3,2);
 obj.trialMetaData(trialIterator).log.frameCountCorruptFromSample = NaN;
 obj.trialMetaData(trialIterator).log.nInterpSamplesCorruptFrames = NaN;
 obj.trialMetaData(trialIterator).log.SyncMismatchPosAP           = 0;

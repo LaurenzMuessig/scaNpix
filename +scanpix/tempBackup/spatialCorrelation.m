@@ -30,27 +30,21 @@ function r = spatialCorrelation(mapsA,mapsB)
 % LM 2020
 
 
-%% arguments
-arguments
-    mapsA {mustBeA(mapsA,'cell')}
-    mapsB {mustBeA(mapsB,'cell')} = {};
+%% some input checks
+if ~iscell(mapsA) || (nargin == 2 && ~iscell(mapsB))
+   error('Gimme some cell array(s) of maps as input please, will ya?'); 
 end
 
-% if ~iscell(mapsA) || (nargin == 2 && ~iscell(mapsB))
-%    error('Gimme some cell array(s) of maps as input please, will ya?'); 
-% end
-% 
-% if isempty(mapsA) || (nargin == 2  && isempty(mapsB))
-%    error('How would I get the correlations for an empty array of maps? Doesn''t work or does it?'); 
-% end
+if isempty(mapsA) || (nargin == 2  && isempty(mapsB))
+   error('How would I get the correlations for an empty array of maps? Doesn''t work or does it?'); 
+end
 
-%%
-if ~isempty(mapsB)
+if nargin == 2
    
     sizeA = length(mapsA);
     sizeB = length(mapsB);
     if ~any(sizeA==1 | sizeB==1) && sizeA ~= sizeB
-        error('scanpix.analysis.spatialCorrelation::Dimensions of map arrays are wrong. You can either have a 1x1 map array vs. nx1 map array or an nx1 map array vs. nx1 map array! Now go back and try harder.')
+        error('Dimensions of map arrays are wrong. You can either have a 1x1 map array vs. nx1 map array or an nx1 map array vs. nx1 map array! Now go back and try harder.')
     end
     
     % interpolate maps to common size in case dimensions differ - this is
@@ -69,19 +63,19 @@ end
 
 %% get the correlations
 
-if ~isempty(mapsB)
+if nargin == 2
     % Here we run A v B pairwise correlations
     unVisInd  = isnan(mapsA{1}) | isnan(mapsB{1});
-    unVisIndA = logical(unVisInd(:) * ones(1,sizeA)); % get into correct format;
-    unVisIndB = logical(unVisInd(:) * ones(1,sizeB)); % get into correct format;
+    unVisIndA = repmat(unVisInd, 1,1, sizeA); % get into correct format;
+    unVisIndB = repmat(unVisInd, 1,1, sizeB); % get into correct format;
     % 
-    rMapArrayA            = reshape(horzcat(mapsA{:}), numel(mapsA{1}), sizeA);
+    rMapArrayA            = cat(3,mapsA{:});
     rMapArrayA(unVisIndA) = NaN;
-    A                     = reshape(bsxfun(@minus, rMapArrayA, mean(rMapArrayA, 1, 'omitnan') ),size(mapsA{1},1),size(mapsA{1},2),[]); % subtract mean/cell 
+    A                     = bsxfun(@minus, rMapArrayA, mean(reshape(rMapArrayA, [], size(rMapArrayA,3)),'omitnan') );
     %
-    rMapArrayB            = reshape(horzcat(mapsB{:}), numel(mapsB{1}), sizeB);
+    rMapArrayB            = cat(3,mapsB{:});
     rMapArrayB(unVisIndB) = NaN;
-    B                     = reshape(bsxfun(@minus, rMapArrayB, mean(rMapArrayB, 1, 'omitnan') ),size(mapsB{1},1),size(mapsB{1},2),[]); % subtract mean/cell
+    B                     = bsxfun(@minus, rMapArrayB, mean(reshape(rMapArrayB, [], size(rMapArrayB,3)),'omitnan') );
     %
     AB    = bsxfun(@times, A, B);
     sumAB = sum(sum(AB,1, 'omitnan'),2, 'omitnan');                  %

@@ -14,7 +14,6 @@ function prms = defaultParamsRateMaps
 %% params for maps
 
 %% general
-% prms.gen.posFs                 = 50;    % sample rate
 speedFilterLimitLow              = 2.5;
 speedFilterLimitHigh             = 400;
 showWaitBar                      = false;
@@ -30,6 +29,7 @@ prms.rate.alpha                  = 200;  % alpha parameter - don't change
 prms.rate.envSize                = [];
 prms.rate.trimNaNs               = false;
 prms.rate.posOnly                = false;
+prms.rate.posIsFit2Env           = true;
 prms.rate.showWaitBar            = showWaitBar;
 
 %% dir maps
@@ -73,7 +73,6 @@ prms.objVect.smSigma_OV          = 2;
 prms.objVect.showWaitBar         = showWaitBar;
 
 %% speed maps
-% prms.speed.posRate             = 50;    % Hz (50)
 prms.speed.minBinProp            = 0.005; % valid speed bins need to contain > prctg of samples of population (0.5%)
 prms.speed.speedBinSz            = 2;     % cm/s (2 cm/s)
 prms.speed.maxSpeed              = 40;    % cm/s (40 cm/s)
@@ -97,7 +96,7 @@ prms.gridProps.zscorethr         = 1;            %
 prms.gridProps.getprops          = true;  
 prms.gridProps.getellgridness    = true;  
 
-prms.gridProps.plot              = false;         % Display figure with 'doughnut' of autocorr bins that are rotated and correlated to form grid score.
+prms.gridProps.plot              = false;         % Display figure with 'donut' of autocorr bins that are rotated and correlated to form grid score.
 prms.gridProps.ax                = {}; 
 prms.gridProps.verbose           = false; 
 end

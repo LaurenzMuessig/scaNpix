@@ -33,6 +33,7 @@ plot(ax, [x; x(1)], [y; y(1)],'k','linewidth',2);
 [x,y] = pol2cart(meanDir,meanR);
 plot(ax,[0 x],[0 y],'r-','linewidth',2);
 % format axis
+set(ax,'ydir','reverse');
 hold(ax,'off');
 axis(ax,'square','off');
 xLabelStruct = get(ax,'xlabel');

@@ -74,7 +74,7 @@ for n = 1:nFigs
     % mapIndex  = mapIndex(end)+1:mapIndex(end)+nRows;
 
     
-    [axArray, hScroll] = scanpix.plot.multPlot([nRows nCols],'offsetbase',p.Results.offsetbase,'plotsep',p.Results.plotsep,'plotsize',p.Results.plotsize,'figname',p.Results.figname);
+    [axArray, hScroll] = scanpix.plot.multPlot([nRows nCols],'offset',p.Results.offsetbase,'plotsep',p.Results.plotsep,'plotsize',p.Results.plotsize,'figname',p.Results.figname);
     hScroll.hFig.Visible = 'off';
     axCol = 1;
     axRow = 1;
@@ -91,7 +91,7 @@ for n = 1:nFigs
                 if ~isempty(data{1,k,j}{i})
                     
                     
-                    plotPeakRateFlag = false;
+                    % plotPeakRateFlag = false;
                     % plot
                     hAx = axArray{axRow,axCol};
                     
@@ -102,15 +102,15 @@ for n = 1:nFigs
                         if i == mapIndex(1)
                             axLims = max(cell2mat(cellfun(@size,vertcat(data{1,:,j}),'UniformOutput',false)),2);
                         end
-                        set(hAx,'ydir','reverse','xlim',[0 axLims(2)],'ylim',[0 axLims(1)]);
-                        plotPeakRateFlag = true;
+                        set(hAx,'ydir','normal','xlim',[0 axLims(2)],'ylim',[0 axLims(1)]);
+                        % plotPeakRateFlag = true;
                     elseif  strcmp(type{j},'dir')
                         scanpix.plot.plotDirMap(data{1,k,j}{i},hAx);
-                        plotPeakRateFlag = true;
+                        % plotPeakRateFlag = true;
                     elseif  strcmp(type{j},'lin')
                         scanpix.plot.plotLinMaps( data{1,k,j}{i}, hAx);
                     elseif  strcmpi(type{j},'sacs')
-                        plotPeakRateFlag = true;
+                        % plotPeakRateFlag = true;
                         mapSz = max(cell2mat(cellfun(@(x) size(x),data{1,k,j},'uni',0)));
                         imagesc(hAx,'CData',data{1,k,j}{i}); colormap(hAx,jet);
                         %                 axis(hAx,'square');
@@ -124,10 +124,10 @@ for n = 1:nFigs
                     end
                     
                     % plot peak rate
-                    if plotPeakRateFlag
-                        t = text(hAx);
-                        set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',max(data{1,k,j}{i}(:),[],'omitnan') ),'FontSize',8 ); % harcoded text pos
-                    end
+                    % if plotPeakRateFlag
+                    %     t = text(hAx);
+                    %     set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',max(data{1,k,j}{i}(:),[],'omitnan') ),'FontSize',8 ); % harcoded text pos
+                    % end
                     % plot cell ID string
                     if j == 1 && k == 1
                         t = text(hAx);

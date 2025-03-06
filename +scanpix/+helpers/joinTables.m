@@ -33,8 +33,9 @@ else
 end
 
 %%
-ResOut = innerjoin(ResT1,ResT2,'keys',options.keys,'RightVariables',rightVars);
-%
-ResOut = sortrows(ResOut,{'rat','age'});
+[ResOut,iLeft] = innerjoin(ResT1,ResT2,'keys',options.keys,'RightVariables',rightVars);
+% keep output in order of left table
+[~, sortinds]  = sort(iLeft);
+ResOut         = ResOut(sortinds,:);
 
 end

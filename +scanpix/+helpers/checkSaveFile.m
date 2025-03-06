@@ -1,13 +1,13 @@
 function filenameOut = checkSaveFile(filenameIn)
-% checkSaveFile - check if a file already exists before saving and generate
+% checkSaveFile - check if a file or folder already exists before saving and generate
 % an alternative filename in case it does
 % package: scanpix.helpers
 %
 % Syntax:
-%       scanpix.helpers.checkSaveFile(filenameIn)
+%       filenameOut = scanpix.helpers.checkSaveFile(filenameIn)
 %
 % Inputs:
-%       filenameIn - 'path/filename.ext'; file to be saved to disk
+%       filenameIn - 'path/filename.ext'; file/folder to be saved to disk
 %
 %
 % Outputs:
@@ -21,10 +21,10 @@ function filenameOut = checkSaveFile(filenameIn)
 
 %% check if file exist and generate unique filename if necessary
 if isfolder(filenameIn)
-    filenameOut = [path '_1'];
-    c = 2;
+    filenameOut = filenameIn;
+    c = 1;
     while isfolder(filenameOut)
-        filenameOut = [path '_' num2str(c)];
+        filenameOut = [filenameIn '_' num2str(c) filesep];
         c = c+1;
     end   
     

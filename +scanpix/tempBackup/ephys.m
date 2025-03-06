@@ -12,7 +12,7 @@ classdef ephys < handle
     %       obj = scanpix.ephys(type,prmsMode,setDirFlag);
     %
     % Inputs:
-    %       type:       data type ('dacq', 'npix', 'nexus'. 'bhave')
+    %       type:       data type ('dacq', 'npix', 'nexus')
     %
     %       prmsMode:   'default' - uses default parameter (default)
     %                   'ui'      - opens UI dialogue
@@ -46,7 +46,6 @@ classdef ephys < handle
         posData               struct  = struct('XYraw',[],'XY',[],'direction',[],'speed',[],'linXY',[],'sampleT',[]);
         spikeData             struct  = struct('spk_Times',[],'spk_waveforms',[],'sampleT',[]); 
         lfpData               struct  = struct('lfp',[]);
-        bhaveData             struct  = struct('data',[]);
     end
     
     properties % maps %
@@ -60,7 +59,7 @@ classdef ephys < handle
         fields2spare          cell    = {'params','dataSetName','cell_ID','cell_Label'}; % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
         mapParams             struct  = scanpix.maps.defaultParamsRateMaps;
         loadFlag              logical = false;                                         % flag so we know something has been loaded into object
-        isConcat              logical = false;
+        badChans
     end
     
     %% METHODS
@@ -80,7 +79,7 @@ classdef ephys < handle
             %                  'ui'      - opens UI dialogue
             %                  'file'    - load params from file
             %    setDirFlag  - true (default)/false - skip UI set file
-            %                  selection dialogue if false
+            %                selection dialogue if false
             %
             % Outputs:
             %    obj      - ephys object
@@ -114,7 +113,7 @@ classdef ephys < handle
             %
             if nargin <= 1
                 obj.getParams('default');
-                warning('scanNpix::ephys:No params selected. Using defaults.');
+                warning('scanNpix: No params selected. Using defaults.');
             else
                 obj.getParams(prmsMode); 
             end
@@ -201,11 +200,11 @@ classdef ephys < handle
             
             switch lower(type)
                 case 'container'
-                    prmsMap = obj.params; %#ok<SAGROW>
+                    prmsMap = obj.params; %#okagrow
                     outStr  = 'prmsMap';
                     suggest = 'MyParams';
                 case 'maps'
-                    prms    = obj.mapParams; %#ok<SAGROW>
+                    prms    = obj.mapParams; %#okagrow
                     outStr  = 'prms';
                     suggest = 'MyRateMapParams';
                 otherwise
@@ -233,7 +232,7 @@ classdef ephys < handle
         end
         
         %%
-        function addMetaData(obj, name, values, trialInd)
+        function addMetaData(obj,name,values)
             % addMetaData - add meta data tags to object. These will be added to obj.trialMetaData.(name)
             %
             % Syntax:
@@ -261,34 +260,28 @@ classdef ephys < handle
                 % convert numeric input to numbers
                 for i = 1:length(values)
                     if any(ismember(values{i}, '0123456789+-.eEdD'))
-                        values{i} = str2num(values{i}); % #OKAGROW
+                        values{i} = str2num(values{i}); %#okAgrow
                     end
                 end
-            end
-
-            if nargin < 4
-                trialInd = 1:length(obj.trialNames);
             end
             
             if nargin == 2
                 % initialise empty field
                 values = repmat({[]},1,length(obj.trialNames));
             end
-
+            
             if ~iscell(values)
-                values = num2cell(values);
+                values = {values};
             end
-
-            % if length(values) < length(obj.trialNames)
-            %     values = repmat(values,1,length(obj.trialNames)); % expand
-            % end
-            if length(values) < length(trialInd)
+            
+            if length(values) < length(obj.trialNames)
                 values = repmat(values,1,length(obj.trialNames)); % expand
             end
             
             % add metadata
-            [obj.trialMetaData(trialInd).(name)] = values{:};
-
+            for i = 1:length(obj.trialNames)
+                obj.trialMetaData(i).(name) = values{i};
+            end
         end
         
         %%
@@ -392,7 +385,7 @@ classdef ephys < handle
                 str = {'trials','cells'};
                 [select, loadCheck] = listdlg('PromptString','Select what data you hate:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
                 if ~loadCheck
-                    warning('scaNpix::ephys::deleteData:Agreed. Best to keep your data where it is.');
+                    warning('scaNpix::ephys::deleteData: Agreed. Best to keep your data where it is.');
                     return;
                 else
                     type = str{select};
@@ -405,7 +398,7 @@ classdef ephys < handle
                     if nargin < 3
                         [select, loadCheck] = listdlg('PromptString','Select what data to delete:','ListString',obj.trialNames,'ListSize',[160 100]);
                         if ~loadCheck
-                            warning('scaNpix::ephys::deleteData:Deleting data aborted. More data is better anyway.');
+                            warning('scaNpix::ephys::deleteData: Deleting data aborted. More data is better anyway.');
                             return;
                         end
                         trialStr = obj.trialNames(select);
@@ -444,6 +437,7 @@ classdef ephys < handle
                             end
                         end
                     end
+                    
                     % remove the last bits if object is now empty
                     if isempty(obj.trialNames)
                         for i = 1:length(obj.fields2spare)
@@ -454,7 +448,7 @@ classdef ephys < handle
                         obj.loadFlag  = false;
                         obj.changeParams('default'); % reset defaults
                         obj.mapParams = scanpix.maps.defaultParamsRateMaps(class(obj)); % reset defaults
-                        warning('scaNpix::ephys::deleteData:Back to square one...');
+                        warning('scaNpix::ephys::deleteData: Back to square one...');
                     end
                     
                 case 'cells'
@@ -513,7 +507,7 @@ classdef ephys < handle
             if nargin < 2
                 uiInput = inputdlg({obj.trialNames{:}},'Please indicate new index for each trial');
                 if isempty(uiInput)
-                    warning('scaNpix::ephys::reorderData:Reordering of trials aborted. Just ask yourself why you started it then...');
+                    warning('scaNpix::ephys::reorderData: Reordering of trials aborted. Just ask yourself why you started it then...');
                     return;
                 end
                 orderIndex = str2num(cell2mat(uiInput))';
@@ -561,7 +555,6 @@ classdef ephys < handle
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             reloadFlag = false;
-            noSyncFlag = false;
             check0spikeCells = false;
             
             if strcmp(obj.type,'init')
@@ -591,12 +584,7 @@ classdef ephys < handle
             
             if any(strcmp(loadMode,'reload'))
                 reloadFlag = true;
-                loadMode   = loadMode(~strcmp(loadMode,'reload'));
-            end
-
-            if any(strcmpi(loadMode,'nosync'))
-                noSyncFlag = true;
-                loadMode   = loadMode(~strcmpi(loadMode,'nosync'));
+                loadMode = loadMode(~strcmp(loadMode,'reload'));
             end
             
             if nargin < 3
@@ -610,7 +598,7 @@ classdef ephys < handle
             for i = 1:length(loadStr)
                 
                 % load some meta data
-                if ~reloadFlag; obj.loadMetaData(trialInd(i),noSyncFlag); end
+                if ~reloadFlag; obj.loadMetaData(trialInd(i)); end
                                
                 for j = 1:length(loadMode)
                     
@@ -641,7 +629,7 @@ classdef ephys < handle
             end
             
             % make sure to add empty cells to all trials if a unit fires 
-            % only on some trials - DACQ only
+            % only on some trials
             if check0spikeCells
                 cellTet  = vertcat( cellTet,{ obj.cell_ID(:,1:2) } );
                 allCellN = sortrows(unique(vertcat(cellTet{:}),'rows'),2);
@@ -664,13 +652,13 @@ classdef ephys < handle
             
             % pre-allocate some data (e.g. part that isn't loaded), such
             % that all properties have same size
-            obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
+            obj.preallocEmpty(true,{'posData','spikeData','lfpData'});
         end
     end
     
     methods(Hidden)
         %%
-        function loadMetaData(obj, trialIterator,noSyncFlag)
+        function loadMetaData(obj, trialIterator)
             % loadMeta - load meta data
             % Method for ephys class objects (hidden)
             %
@@ -687,7 +675,7 @@ classdef ephys < handle
                 case 'dacq'
                     scanpix.dacqUtils.loadSet(obj,trialIterator);
                 case 'npix'
-                    scanpix.npixUtils.loadMeta(obj,trialIterator,noSyncFlag);
+                    scanpix.npixUtils.loadMeta(obj,trialIterator);
                 case 'nexus'
                 case 'bhave'
                     scanpix.bhaveUtils.loadMetaData(obj,trialIterator);
@@ -715,7 +703,6 @@ classdef ephys < handle
                     scanpix.npixUtils.loadPosNPix(obj,trialIterator);
                 case 'nexus'
                 case 'bhave'
-                    obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
                     scanpix.bhaveUtils.loadPosBhave(obj,trialIterator);
             end
         end
@@ -737,6 +724,7 @@ classdef ephys < handle
                 case 'dacq'
                     cellIDs = scanpix.dacqUtils.loadSpikes(obj,trialIterator);
                 case 'npix'
+%                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag, false);
                     scanpix.npixUtils.loadSpikesNPix(obj,trialIterator,reloadFlag);
                 case 'nexus'
                 case 'bhave'
@@ -818,7 +806,7 @@ classdef ephys < handle
                     classFolder = what('scanpix');
                     [fNames, dataDir] = uigetfile(fullfile(classFolder.path,'files','*.mat'),'Select params containers Map to load.');
                     if isnumeric(fNames)
-                        warning('scaNpix::ephys::getParams:Loading of params container aborted!');
+                        warning('scaNpix::ephys::getParams: Loading of params container aborted!');
 %                         prmsMap = containers.Map;
                         return;
                     end
@@ -868,7 +856,7 @@ classdef ephys < handle
             
             dirList = scanpix.fxchange.uigetfile_n_dir(defaultDir,'Select Top Level Folder(s) With Session Data');
             if isempty(dirList)
-                warning('scaNpix::ephys::fetchFileNamesAndPath:Loading Aborted. Und tschuess!');
+                warning('scaNpix::ephys::fetchFileNamesAndPath: Loading Aborted. Und tschuess!');
                 [trialNames, dataDir] = deal(NaN);
                 return
             end
@@ -880,13 +868,13 @@ classdef ephys < handle
             end
             
             if isempty(trialStruct)
-                warning('scaNpix::ephys::fetchFileNamesAndPath:No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
+                warning('scaNpix::ephys::fetchFileNamesAndPath: No ''%s'' file(s) found in selcted folder(s). Go and find your data yourself.',fileExt);
                 return
             end
-            %
-            [~,ind]   = sort([trialStruct.datenum]);
-            tempNames = {trialStruct(ind).name}';
-            C         = regexp(tempNames,fileExt,'split');
+            
+            [~,ind]      = sort([trialStruct.datenum]);
+            tempNames    = {trialStruct(ind).name}';
+            C = regexp(tempNames,fileExt,'split');
             
             if nargout > 1
                 dataDir = strcat({trialStruct(ind).folder}', filesep);
@@ -925,16 +913,17 @@ classdef ephys < handle
             end
             
             % UI selection
-            [select, loadCheck]  = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400],'CancelString','Keep All');
+            [select, loadCheck] = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400],'CancelString','Keep All');
             if ~loadCheck
                 return;
             else
-                trialNameStrOut  = trialNameStrIn(select);
-                %
-                ind              = ismember(obj.trialNames,trialNameStrOut);
-                obj.trialNames   = obj.trialNames(ind);
-                obj.dataPath     = obj.dataPath(ind);
-                obj.dataPathSort = obj.dataPathSort(ind);
+                trialNameStrOut = trialNameStrIn(select);
+                
+%                 if nargout == 1
+                    ind            = ismember(obj.trialNames,trialNameStrOut);
+                    obj.trialNames = obj.trialNames(ind);
+                    obj.dataPath   = obj.dataPath(ind);
+%                 end
             end
             
         end
@@ -978,38 +967,6 @@ classdef ephys < handle
                 end
             end
         end
-
-        %%
-        function copyObj = deepCopy(obj)
-            % deepCopy - create a deep copy of a scanpix.ephys object
-            % which isn't straightforward due to its derivation from the handle
-            % class. This seems the only hacky way Matlab is currently
-            % offering (other than using Mixin.copyable instead of handle
-            % class)
-            %
-            % Syntax:
-            %       copyObj = obj.deepCopy
-            %       
-            %
-            % Inputs:
-            %
-            % Outputs:
-            %       copyObj - deep copy of input obj
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
-            if ~isfolder(obj.dataPath{1})
-                tmpPath = cd;
-            else
-                tmpPath = obj.dataPath{1};
-            end 
-            filenameOut = scanpix.helpers.checkSaveFile(fullfile(tmpPath,[char(datetime('now','format','yyyyMMddHHmmssSSS')) '.mat']));
-            save(filenameOut, 'obj','-v7.3');
-            %
-            foo     = load(filenameOut);
-            copyObj = foo.obj;
-            delete(filenameOut);
-
-        end   
     end
     %
     methods
@@ -1052,7 +1009,7 @@ classdef ephys < handle
             
             % quite a lot of input parsing/checking to do here %%%%%%%%
             if ~obj.loadFlag
-                warning('scaNpix::ephys::addMaps:You need to load some data first before you can make any maps... Fairly obvious if you ask me.');
+                warning('scaNpix::ephys::addMaps: You need to load some data first before you can make any maps... Fairly obvious if you ask me.');
                 return;
             end
             
@@ -1062,18 +1019,16 @@ classdef ephys < handle
                     str = {'pos','rate','dir','lin','sac','objVect','speed'};
                     [select, loadCheck] = listdlg('PromptString','Select what maps to make:','ListString',str,'ListSize',[160 100],'SelectionMode','Single');
                     if ~loadCheck
-                        warning('scaNpix::ephys::addMaps:No data selected. No maps will be created. Boring...');
+                        warning('scaNpix::ephys::addMaps: No data selected. No maps will be created. Boring...');
                         return;
                     else
                         mapType = str{select};
                     end
                 end
                 
-%                 if ~iscell(mapType); mapType = {mapType}; end
-%                 
-%                 if all(ismember(mapType,{'pos','rate'}))
-%                     mapType = mapType(~strcmp(mapType,'pos'));
-%                 end
+                if all(ismember(mapType,{'pos','rate'}))
+                    mapType = mapType(~strcmp(mapType,'pos'));
+                end
             else
                 mapType = 'pos';
             end
@@ -1102,7 +1057,7 @@ classdef ephys < handle
                     end
                     f            = fieldnames(temp);
                     prms         = temp.(f{1}).(mapType);
-                    warning(['scaNpix::ephys::addMaps:Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
+                    warning(['scaNpix::ephys::addMaps: Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
                 end
             end
             
@@ -1116,7 +1071,7 @@ classdef ephys < handle
                     [fName, dataDir] = uigetfile(fullfile(classFolder.path,'files', '*.mat'), 'Select map params to load.');
                     % fail gracefully
                     if isnumeric(fName)
-                        warning('scaNpix:ephys:addMaps:Loading Map Params aborted. Will use defaults instead!');
+                        warning('scaNpix:ephys:addMaps: Loading Map Params aborted. Will use defaults instead!');
                         prms         = obj.mapParams.(mapType);
                     else
                         temp         = load( fullfile(dataDir, fName) );
@@ -1132,7 +1087,7 @@ classdef ephys < handle
                     output           = scanpix.helpers.makeCustomUIDialogue(prompts, defaultVals);
                     % exit gracefully
                     if isempty(output)
-                        warning('scaNpix::ephys::addMaps:Aborted changing parameters for rate map generation - will use those currently set in object.');
+                        warning('scaNpix::ephys::addMaps: Aborted changing parameters for rate map generation - will use those currently set in object.');
                         prms         = obj.mapParams.(mapType);
                     else
                         % format as structure
@@ -1146,53 +1101,36 @@ classdef ephys < handle
             % explicitly
             if ~isempty(varargin) && (nargin > 4 || isstruct(varargin{1}) )
                 prms = obj.mapParams.(mapType);
-                if ischar(varargin{1})                                                           
-                    for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   
-                elseif isstruct(varargin{1})                                                     
-                    s = varargin{1};   f = fieldnames(s.(mapType));                                      
-                    for i=1:length(f);   prms.(f{i}) = s.(mapType).(f{i});   end                        
+                if ischar(varargin{1})                                                           %
+                    for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   %
+                elseif isstruct(varargin{1})                                                     %
+                    s = varargin{1};   f = fieldnames(s.(mapType));                                        %
+                    for i=1:length(f);   prms.(f{i}) = s.(mapType).(f{i});   end                        %
                 end
             end
             
             % these params get set from general data params container
-            
+            prms.posFs               = obj.params('posFs');
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            %
             % make some maps
             switch lower(mapType)
                 case {'pos','rate'}
-                    % prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
+                    prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
                     
                     for i = trialInd
                         if ~isempty( obj.trialMetaData(i).envSize )
-                            prms.envSize = obj.trialMetaData(i).envSize ./ 100 .* obj.trialMetaData(i).ppm; % in pixels
+                            prms.envSize = obj.trialMetaData(i).envSize / 100 * obj.trialMetaData(i).ppm; % in pixels
                         elseif strcmp(obj.fileType,'.set')
-                            if obj.trialMetaData(i).PosIsScaled
-                                scaleFact = obj.trialMetaData(i).ppm / obj.trialMetaData(i).ppm_org; 
-                                prms.envSize = ceil([obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin] .* scaleFact);
-                            else
-                                prms.envSize = ceil([obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin]);
-                            end
+                            prms.envSize = [obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin];
                         end
                         
                         if strcmpi(mapType,'pos')
                             prms.smooth = 'boxcar';
                             prms.posOnly = true;
                         end
-
-                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            sampleTimes = [];
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            sampleTimes = obj.spikeData.sampleT{i};
-                            prms.posFs  = obj.params('posFs');
-                        end
-                        if strcmpi(mapType,'pos')
-                            [ ~, obj.maps(1).pos{i}, ~ ]                                      = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
-                        else
-                            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
-                        end
+                        
+                        [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
                     end
                     
                     %         % pad maps so size is the same for all maps is set
@@ -1211,16 +1149,9 @@ classdef ephys < handle
                     %         end
                     
                 case 'dir'
-                    % prms.speedFilterLimits = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
+                    prms.speedFilterLimits = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
                     for i = trialInd
-                         if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            sampleTimes = [];
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            sampleTimes = obj.spikeData.sampleT{i};
-                            prms.posFs  = obj.params('posFs');
-                        end
-                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, sampleTimes, obj.posData.speed{i},  prms  );
+                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, obj.spikeData.sampleT{i}, obj.posData.speed{i},  prms  );
                     end
                     
                 case 'lin'
@@ -1235,14 +1166,14 @@ classdef ephys < handle
                         else
                             uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
                             if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps:No track properties, no linear rate maps...');
+                                warning('scaNpix::ephys::addMaps: No track properties, no linear rate maps...');
                                 return;
                             else
-                                trackProps.type                  = uiInput{1};
-                                obj.trialMetaData(i).trialType   = uiInput{1};
-                                trackProps.length                = str2double(uiInput{2});
+                                trackProps.type = uiInput{1};
+                                obj.trialMetaData(i).trialType = uiInput{1};
+                                trackProps.length = str2double(uiInput{2});
                                 obj.trialMetaData(i).trackLength = str2double(uiInput{2});
-                                skipNextUI                       = true;
+                                skipNextUI = true;
                             end
                         end
                         
@@ -1252,67 +1183,44 @@ classdef ephys < handle
                         elseif ~skipNextUI
                             uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
                             if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps:No track length, no linear rate maps...');
+                                warning('scaNpix::ephys::addMaps: No track length, no linear rate maps...');
                                 return;
                             else
                                 trackProps.length = str2double(uiInput{1});
                                 obj.trialMetaData(trialInd).trackLength = str2double(uiInput{1});
                             end
                         end
-                        trackProps.ppm     = obj.trialMetaData(i).ppm;
-                        % trackProps.posFs   = obj.params('posFs');
-                        trackProps.objType = obj.type;
-
-                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            sampleTimes      = [];
-                            prms.posFs       = obj.trialMetaData(i).log.InterpPosFs;
-                            trackProps.posFs = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            sampleTimes      = obj.spikeData.sampleT{i};
-                            % prms.posFs       = obj.params('posFs');
-                            trackProps.posFs = obj.params('posFs');
-                        end
+                        trackProps.ppm   = obj.trialMetaData(i).ppm;
+                        trackProps.posFs = obj.params('posFs');
                         
-                        [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+                        [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
                         obj.maps(1).linPos{i} = num2cell(posMap,2);
                     end
                     
                 case 'sac'
                     
                     if any(cellfun('isempty', obj.maps(1).rate(trialInd)))
-                        warning('scaNpix::ephys::addMaps:You need to generate rate maps before demanding spatial autocorrelograms.')
+                        warning('scaNpix::ephys::addMaps: You need to generate rate maps before demanding spatial autocorrelograms.')
                         return
                     end
                     
                     for i = trialInd
                         % we don't want to smooth the AC but use smoothed rate map as input
-                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x,prms),obj.maps.rate{i},'uni',0);
+                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x),obj.maps.rate{i},'uni',0);
                     end
                     
                 case 'objvect'
                     for i = trialInd
                         if isfield(obj.trialMetaData(i),'objectPos') && ~isempty(obj.trialMetaData(i).objectPos)
-                            if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                                sampleTimes = [];
-                                prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                            else
-                                sampleTimes = obj.spikeData.sampleT{i};
-                                prms.posFs  = obj.params('posFs');
-                            end
-                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
+                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, obj.spikeData.sampleT{i}, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
                         else
-                            warning('scaNpix::ephys::addMaps:If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
+                            warning('scaNpix::ephys::addMaps: If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
                         end
                     end
                     
                 case 'speed'
                     
                     for i = trialInd
-                         if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            prms.posFs  = obj.params('posFs');
-                        end
                         obj.maps(1).speed{i} = scanpix.maps.makeSpeedMap( obj.spikeData.spk_Times{i}, obj.posData.speed{i}, obj.trialMetaData(i).duration,  prms  );
                     end
                     
@@ -1324,59 +1232,24 @@ classdef ephys < handle
         end
         
         %%
-        function spatProps = getSpatialProps(obj, score, trialInd, varargin)
-            %
+        function spatProps = getSpatialProps(obj, score)
+            
             if strcmp(obj.type,'bhave')
-                warning('scaNpix::ephys::addMaps:This ain''t gonna work for behavioural data. I guess you had to try...');
+                warning('scaNpix::ephys::addMaps: This ain''t gonna work for behavioural data. I guess you had to try...');
                 return;
             end
-            %
-            if nargin < 3
-                trialInd = 1:length(obj.trialNames);
-            end
-            %
-            c = 1;
+            
             switch lower(score)
                 case {'spatialinfo','si'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
-                        warning('scaNpix::ephys::getSpatialProps::spatialInfo:You need to make rate maps before demanding their spatial info.');
+                        warning('scaNpix::ephys::getSpatialProps::spatialInfo: You need to make rate maps before demanding their spatial info.');
                         spatProps = [];
                         return
                     end
-                    %
-                    prms         = obj.mapParams.rate;
-                    prms.posOnly = true;
                     
-                    spatProps = nan(size(obj.cell_ID,1),length(trialInd));
-                    
-                    for i = trialInd
-                        % sample rate for positions
-                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            prms.posFs  = obj.params('posFs');
-                        end
-                        prms.envSize = obj.trialMetaData(i).envSize ./ 100 .* obj.trialMetaData(i).ppm;
-                        % need to get a boxcar pos map as a canonical estimate of dwell in case of adaptively smoothed maps
-                        if strcmp(prms.smooth,'adaptive')
-                            [ ~, posMap, ~ ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, [], obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms);
-                        else
-                            posMap = obj.maps(1).pos{i};
-                        end
-                        % get mean rates
-                        % if nargin < 4
-                        %     if prms.speedFilterFlagRMaps
-                        %         speedLims = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
-                        %     else
-                        %         speedLims = 'none';
-                        %     end
-                        %     meanRates     = scanpix.analysis.getMeanRate(obj.spikeData.spk_Times{i},prms.posFs,obj.posData.speed{i},speedLims);
-                        % else
-                        %     meanRates     = varargin{1};
-                        % end
-                        % SI
-                        spatProps(:,c) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},cell2mat(posMap));
-                        c = c + 1;
+                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
+                    for i = 1:length(obj.trialNames)
+                        spatProps(:,i) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},obj.maps(1).pos{i});
                     end
                 case {'raleighvect','rv'}
                     if isempty(obj.maps(1).dir) || isempty(obj.maps(1).dir{1})
@@ -1385,27 +1258,25 @@ classdef ephys < handle
                         return
                     end
                     
-                    spatProps = nan(size(obj.cell_ID,1),length(trialInd));
-                    for i = trialInd
-                        spatProps(:,c) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
-                        c = c + 1;
+                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
+                    for i = 1:length(obj.trialNames)
+                        spatProps(:,i) = cell2mat(cellfun(@(x) scanpix.analysis.rayleighVect(x),obj.maps(1).dir{i},'uni',0));
                     end
-                case {'gridprops','grid','gridness'}
+                case {'gridprops','grid'}
                     if isempty(obj.maps(1).sACs) || isempty(obj.maps(1).sACs{1})
                         warning('scaNpix::ephys::getSpatialProps::gridProps:You need to make spatial ACs before demanding grid properties.');
                         spatProps = [];
                         return
                     end
                     
-                    spatProps = nan(size(obj.cell_ID,1),6,length(trialInd));
+                    spatProps = nan(size(obj.cell_ID,1),3,length(obj.trialNames));
                     % format params
                     prms      = fieldnames(obj.mapParams.gridProps)';
                     prms(2,:) = struct2cell(obj.mapParams.gridProps)'; 
-                    for i = trialInd
+                    for i = 1:length(obj.trialNames)
                         [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,prms{:}),obj.maps(1).sACs{i},'uni',0);
                         % for now just output the basics
-                        spatProps(:,:,c) = cell2mat(cellfun(@(x) [x.gridness x.wavelength x.orientation],temp,'uni',0));
-                        c = c + 1;
+                        spatProps(:,:,i) = cell2mat(cellfun(@(x) [x.gridness x.wavelength x.orientation],temp,'uni',0));
                     end
                 case {'borderscore','bs'}
                     if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
@@ -1414,10 +1285,9 @@ classdef ephys < handle
                         return
                     end
                     
-                    spatProps = nan(size(obj.cell_ID,1),length(trialInd));
-                    for i = trialInd
-                        [spatProps(:,c), ~] = scanpix.analysis.getBorderScore(obj.maps(1).rate{i},obj.mapParams.rate.binSizeSpat);
-                        c = c + 1;
+                    spatProps = nan(size(obj.cell_ID,1),length(obj.trialNames));
+                    for i = 1:length(obj.trialNames)
+                        [spatProps(:,i), ~] = scanpix.analysis.getBorderScore(obj.maps(1).rate{i},obj.mapParams.rate.binSizeSpat);
                     end
                 otherwise
             end
@@ -1451,31 +1321,30 @@ classdef ephys < handle
             
             
             if strcmp(obj.type,'dacq')
-                warning('scaNpix::ephys::loadWaves:Waveforms for DACQ type objects are auto loaded. No need to ask for that again here compadre...');
+                warning('scaNpix::ephys::loadWaves: Waveforms for DACQ type objects are auto loaded. No need to ask for that again here compadre...');
                 return
             end
             %
             if strcmp(obj.type,'bhave')
-                warning('scaNpix::ephys::loadWaves:This ain''t gonna work for behavioural data. I guess you had to try...');
+                warning('scaNpix::ephys::addMaps: This ain''t gonna work for behavioural data. I guess you had to try...');
                 return;
             end
             
             % deal with loading params
-            if nargin == 1
-                % use default params
-                %                 addParams = {'nch'; obj.trialMetaData(1).nChan};
-                addParams = {};
-            elseif strcmp(varargin{1},'ui')
+%             if nargin == 1
+%                 % use defaults, only add channel n from object metadata
+%                 addParams = {'nch'; obj.trialMetaData(1).nChan};
+            if strcmp(varargin{1},'ui')
                 % UI dialoge
-                %                 prompts = {'mode',    'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'save' };
-                %                 varargs = {'mode',    'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'save' };
-                %                 defVals = {'single',  obj.trialMetaData(1).nChanTot, 250,                  5,                  40,                  0.375,             0,           0,     };
-                prompts = {'mode',   'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply filter', 'save', 'clu IDs'};
-                varargs = {'mode',   'nwave',              'getnch',           'nsamp',             'prepeak',         'filter',       'save', 'clu'    };
-                defVals = {'single', 250,                  5,                  69,                  0.4,                false,          false,  []      };
+%                 prompts = {'mode',    'N channels',                  'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply CAR', 'save' };
+%                 varargs = {'mode',    'nch',                         'nwave',              'getnch',           'nsamp',             'prepeak',         'car',       'save' };
+%                 defVals = {'single',  obj.trialMetaData(1).nChanTot, 250,                  5,                  40,                  0.375,             0,           0,     };
+                prompts = {'mode',    'N waves / cluster', 'n chan / waveform', 'n samp / waveform', 'nSamplesPrePeak', 'apply filter', 'save' };
+                varargs = {'mode',    'nwave',              'getnch',           'nsamp',             'prepeak',         'filter',       'save' };
+                defVals = {'single',  250,                  5,                  40,                  0.375,             0,              0,     };
                 rtn = scanpix.helpers.makeCustomUIDialogue(prompts,defVals);
                 if isempty(rtn)
-                    warning('scaNpix::ephys::loadWaves:Waveform loading aborted. That lacks class mate...');
+                    warning('scaNpix::ephys::loadWaves: Waveform loading aborted. That lacks class mate...');
                     return;
                 end
 

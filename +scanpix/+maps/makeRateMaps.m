@@ -48,6 +48,7 @@ prms.showWaitBar          = false;
 prms.envSize              = [];
 prms.trimNaNs             = false;
 prms.posOnly              = false;
+prms.posIsFit2Env         = true;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % - This is the template code for name-value list OR struct passing of parameters -- %
@@ -82,10 +83,12 @@ binSizePix = floor( ppm/100 * prms.binSizeSpat ); % this many pix in one bin  %%
 % % bin positions
 % % note to comparison to old Scan - to replicate the exact map from the original version you would have to do the following:
 % positions = bsxfun(@minus,positions, floor( min(positions,[],1)/binSizePix )*binSizePix ); 
-positions = positions - min(positions) + eps; 
-% positions(positions == 0) = 1;
+if ~prms.posIsFit2Env
+    positions = positions - min(positions) + eps; % if you have't fit the positions to the environment and your environment is badly sampled along some edge(s), the resulting ratemap will not be binned correctly
+end
+% bin
 posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
-
+% get size in bins
 if isempty(prms.envSize)
     nBins = [max(posBinned(:,1)) max(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
 else

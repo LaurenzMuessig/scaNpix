@@ -43,7 +43,8 @@ colormap(ax, cMapBinned);
 axis(ax,'off');
 %
 mapSz = size(map);
-set(ax,'ydir','normal','xlim',[0.5 mapSz(2)+0.5],'ylim',[0.5 mapSz(1)+0.5]);
+set(ax,'ydir','reverse','xlim',[0.5 mapSz(2)+0.5],'ylim',[0.5 mapSz(1)+0.5]);
+% set(ax,'xlim',[0.5 mapSz(2)+0.5],'ylim',[0.5 mapSz(1)+0.5]);
 xLabelStruct = get(ax,'xlabel');
 xLabelStruct.VerticalAlignment = 'bottom'; 
 xLabelStruct.String = ['peakFR=' num2str(max(map(:),[],'omitnan'),'%.1f')];

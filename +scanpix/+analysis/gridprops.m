@@ -85,7 +85,7 @@ if ~isstruct(p.Results.props)
     Props.offset            = [NaN NaN];
     Props.offsetFull        = nan(3,2);
     % Props.phaseOffset       = [NaN NaN];
-    % Props.centralPeakMask   = {nan(size(autoCorr)),nan(size(autoCorr))};
+    Props.centralPeakMask   = {nan(size(autoCorr)),nan(size(autoCorr))};
     Props.fieldSize         = [NaN NaN];
     Props.ellOrient         = [NaN NaN];
     Props.ellAbScale        = nan(1,4);
@@ -151,6 +151,8 @@ else
 end
 annMask(distMap > maxDist) = false;
 
+Props.centralPeakMask{outInd} = centrPeakMask;
+
 %%
 % --------------------------------------------------------------------------------------------------
 % ---- GRIDNESS ------------------------------------------------------------------------------------
@@ -180,8 +182,8 @@ if getGridProps || p.Results.getellgridness
     end
        
     % orientation - define 3 axes Moser style
-    [orientation, tmp] = deal(atan2(xyCoordMaxBinCentral(:,2),xyCoordMaxBinCentral(:,1)));
-    
+    [orientation, tmp] = deal(atan2(xyCoordMaxBinCentral(:,2),xyCoordMaxBinCentral(:,1))); %
+    % orientation = orientation .* -1;
     [~,ax1_ind]  = min(abs(orientation)); 
     tmp(ax1_ind) = NaN;
     
@@ -471,7 +473,7 @@ elseif plotEllipse %Do draw
     scatter(hAx,closestPeaksCoord(:,1), closestPeaksCoord(:,2)); %Draw on peaks
     elipseData=sf_fit_ellipse(closestPeaksCoord(:,1), closestPeaksCoord(:,2), hAx);
     hold(hAx,'off');
-    set(hAx,'ydir','normal');
+    % set(hAx,'ydir','normal');
     title(hAx,'Ellipse fit');
 end
 

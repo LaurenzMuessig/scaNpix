@@ -21,7 +21,7 @@ function ResT = obj2table(obj,rowFormat,options)
 arguments
     obj (1,:) {mustBeA(obj,'scanpix.ephys')}
     rowFormat (1,:) {mustBeMember(rowFormat,{'cell','dataset'})} = 'cell';
-    options.maxn (1,1) {mustBeNumeric};
+    options.maxn (1,1) {mustBeNumeric} = length(obj.trialNames); 
     options.minspikes (1,1) {mustBeNumeric};
     options.trialPattern (1,:) {mustBeA(options.trialPattern,'cell')} = {};
     options.scores (1,:) {mustBeA(options.scores,'cell')} = {};
@@ -39,12 +39,6 @@ end
 %%
 scores   = {'SI','RV','gridness','borderScore','intraStab'};
 scoreInd = ismember(scores, options.scores);
-%
-if ~isfield(options,'maxn')
-    maxNCol = length(obj.trialNames);
-else
-    maxNCol = options.maxn;
-end
 %  
 if options.addlfp && strcmp(rowFormat,'dataset')
     addlfp = true;
@@ -69,18 +63,18 @@ copyObj.deleteData('cells',ind);
 
 %% Set up results table %
 if strcmp(rowFormat,'dataset')
-    scoreDum  = cell(1,maxNCol);
+    scoreDum  = cell(1,options.maxn);
 else
-    scoreDum  = nan(1,maxNCol);
+    scoreDum  = nan(1,options.maxn);
 end
 varList   =   {
                 'rat',          NaN; ...
-                'age',          nan(1,maxNCol); ...
+                'age',          nan(1,options.maxn); ...
                 'dataset',      cell(1,1); ...
                 'cellID',       NaN; ...
                 %'trialInd',    scoreDum; ...
                 'envType',      cell(size(scoreDum)); ...
-                'nExp',         nan(1,maxNCol); ...
+                'nExp',         nan(1,options.maxn); ...
                 'isPreProbe',   scoreDum; ...
                 
                 'posData',      cell(size(scoreDum)); ...
