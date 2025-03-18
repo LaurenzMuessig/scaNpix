@@ -29,6 +29,8 @@ end
 %%
 if isempty(map);  return; end
 
+% if ~exist(ax,'var'); ax = axes; end
+
 %% plot
 % bin rate map
 [rMapBinned, cMapBinned] = scanpix.maps.binAnyRMap(map, 'colmap',options.colmap, 'nsteps', options.nsteps, 'cmapEdge', options.cmapEdge); % bin rate map

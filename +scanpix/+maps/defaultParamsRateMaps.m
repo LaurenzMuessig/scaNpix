@@ -89,14 +89,10 @@ prms.sac.hSize                   = 5;
 prms.sac.sigma                   = 1.5;
 
 %% grid props
-% prms.gridProps.peakmode          = 'zscore';     % 
-% prms.gridProps.centthr           = 0.4;          % 
-prms.gridProps.zscorethr         = 1;            % 
-% prms.gridProps.peakthr           = 0.25;    % 
-prms.gridProps.getprops          = true;  
-prms.gridProps.getellgridness    = true;  
-
-prms.gridProps.plot              = false;         % Display figure with 'donut' of autocorr bins that are rotated and correlated to form grid score.
-prms.gridProps.ax                = {}; 
+prms.gridProps.peakDetect        = 'watershed';     % 
+prms.gridProps.zScoreThr         = 1;            % 
+prms.gridProps.minPeakSz         = 4;    % 
+prms.gridProps.plotEllipse       = false;         
 prms.gridProps.verbose           = false; 
 end
+

@@ -134,7 +134,7 @@ if ~isempty(options.trialPattern)
     tabInd                = 1:length(dataInd)+length(missTrials);
     tabInd(missTrials)    = [];
 else
-    [dataInd, tabInd] = deal(1:length(copyObj.trialNames));
+    [dataInd, tabInd]     = deal(1:length(copyObj.trialNames));
 end
 %
 prmsRate = copyObj.mapParams.rate;
@@ -255,13 +255,13 @@ switch rowFormat
                 if any(cellfun('isempty',copyObj.maps.sACs(dataInd)))
                     copyObj.addMaps('sac',dataInd);
                 end
-                tmpGridProps                   = copyObj.getSpatialProps('gridprops', i);
-                ResT.gridness(:,tabInd(c))     = tmpGridProps(:,1);
-                ResT.gridness_ell(:,tabInd(c)) = tmpGridProps(:,2);
+                tmpGridProps                        = copyObj.getSpatialProps('gridprops', i);
+                ResT.gridness(:,tabInd(c))          = tmpGridProps(:,1);
+                ResT.gridness_ell(:,tabInd(c))      = tmpGridProps(:,4);
                 if options.addgridprops
-                    ResT.gridScale(:,tabInd(c))     = tmpGridProps(:,3);
-                    ResT.gridOr(:,tabInd(c))        = tmpGridProps(:,5);
-                    ResT.gridScale_ell(:,tabInd(c)) = tmpGridProps(:,4);
+                    ResT.gridScale(:,tabInd(c))     = tmpGridProps(:,2);
+                    ResT.gridOr(:,tabInd(c))        = tmpGridProps(:,3);
+                    ResT.gridScale_ell(:,tabInd(c)) = tmpGridProps(:,5);
                     ResT.gridOr_ell(:,tabInd(c))    = tmpGridProps(:,6);
                 end
             end
@@ -368,11 +368,11 @@ switch rowFormat
                 % ResT.gridness(1,tabInd)     = cellfun(@(x) x(:,1),tmp,'uni',0);
                 % ResT.gridness_ell(1,tabInd) = cellfun(@(x) x(:,2),tmp,'uni',0);
                 ResT.gridness(1,tabInd)     = num2cell(squeeze(tmp(:,1,:)),1);
-                ResT.gridness_ell(1,tabInd) = num2cell(squeeze(tmp(:,2,:)),1);
+                ResT.gridness_ell(1,tabInd) = num2cell(squeeze(tmp(:,4,:)),1);
                 if options.addgridprops
-                    ResT.gridScale(1,tabInd)     = num2cell(squeeze(tmp(:,3,:)),1);
-                    ResT.gridOr(1,tabInd)        = num2cell(squeeze(tmp(:,5,:)),1);
-                    ResT.gridScale_ell(1,tabInd) = num2cell(squeeze(tmp(:,4,:)),1);
+                    ResT.gridScale(1,tabInd)     = num2cell(squeeze(tmp(:,2,:)),1);
+                    ResT.gridOr(1,tabInd)        = num2cell(squeeze(tmp(:,3,:)),1);
+                    ResT.gridScale_ell(1,tabInd) = num2cell(squeeze(tmp(:,5,:)),1);
                     ResT.gridOr_ell(1,tabInd)    = num2cell(squeeze(tmp(:,6,:)),1);
                     
                 end

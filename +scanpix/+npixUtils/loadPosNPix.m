@@ -114,7 +114,7 @@ else
     %                 ppm(:) = round( mean( envSzPix ./ (obj.trialMetaData(trialIterator).envSize ./ 100) ) );
 end
 
-%% post process - basically as scanpix.dacqUtils.postprocess_data_v2
+%% post process basically as scanpix.dacqUtils.postprocess_data_v2
 % scale data to standard ppm if desired
 if ~isempty(obj.params('ScalePos2PPM'))
     scaleFact = (obj.params('ScalePos2PPM')/ppm(1));
@@ -147,7 +147,7 @@ end
 led = fixPositions(led, mean(diff(sampleT)), ppm(1), obj, trialIterator );
 
 % smooth
-kernel         = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( obj.params('posSmooth') * obj.params('posFs') ); % as per Ephys standard - 400ms boxcar filter
+kernel = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( obj.params('posSmooth') * obj.params('posFs') ); % as per Ephys standard - 400ms boxcar filter
 % Smooth lights individually, then get direction.
 % doing the smoothing with convolution directly rather than imfilter will prevent spreading of NaNs in the data
 smLight = nan(size(led));

@@ -1402,9 +1402,10 @@ classdef ephys < handle
                     prms      = fieldnames(obj.mapParams.gridProps)';
                     prms(2,:) = struct2cell(obj.mapParams.gridProps)'; 
                     for i = trialInd
-                        [~, temp]        = cellfun(@(x) scanpix.analysis.gridprops(x,prms{:}),obj.maps(1).sACs{i},'uni',0);
+                        [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,prms{:}),obj.maps(1).sACs{i},'uni',0);
+                        [~, ellProps]     = cellfun(@(x) scanpix.analysis.gridprops(x,true,prms{:}),obj.maps(1).sACs{i},'uni',0);
                         % for now just output the basics
-                        spatProps(:,:,c) = cell2mat(cellfun(@(x) [x.gridness x.wavelength x.orientation],temp,'uni',0));
+                        spatProps(:,:,c) = [cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0)), cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0))];
                         c = c + 1;
                     end
                 case {'borderscore','bs'}

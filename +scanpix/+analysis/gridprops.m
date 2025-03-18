@@ -1,4 +1,4 @@
-function [gridness, Props] = gridprops(autoCorr,varargin)
+function [gridness, Props] = gridprops(autoCorr,fitEllipse,options)
 % Using autocorrelogram calculates grid wavelength, orientation, gridness and x,y
 % offset of peaks
 % package: scanpix.analysis
@@ -42,73 +42,41 @@ function [gridness, Props] = gridprops(autoCorr,varargin)
 % LM 2022
 
 %% Params
-zScoreThr             = 1; % 90th percentile in units of std (1.282)
-getGridProps          = true;
-propsStruct           = [];
-getEllipticalGridness = true;
-plotProps             = false;  
-axArr                 = {};
-verbose               = false;
-%
-p = inputParser;
-addOptional(p,'isEllipseFit',false,@islogical);
-addParameter(p,'zscorethr',zScoreThr,@isscalar);
-addParameter(p,'getprops',getGridProps,@islogical);
-addParameter(p,'props',propsStruct,(@(x) isempty(x) | isstruct(x)));
-addParameter(p,'getellgridness',getEllipticalGridness,@islogical);
-addParameter(p,'plot',plotProps,@islogical);
-addParameter(p,'ax',axArr,@iscell);
-addParameter(p,'verbose',verbose,@islogical);
-
-parse(p,varargin{:});
-%
-getGridProps = p.Results.getprops;
-axArr        = p.Results.ax;
-
-if p.Results.isEllipseFit
-    outInd = 2;
-else
-    outInd = 1;
+arguments
+    autoCorr {mustBeNumeric}
+    fitEllipse (1,1) {mustBeNumericOrLogical} = false;
+    options.peakDetect (1,:) {mustBeMember(options.peakDetect,{'watershed','zscore'})} = 'watershed';   
+    options.zScoreThr (1,1) {mustBeNumeric} = 1;
+    options.minPeakSz (1,1) {mustBeNumeric} = 4;
+    options.plotEllipse (1,1) {mustBeNumericOrLogical} = false;
+    options.ax  {ishghandle(options.ax, 'axes')}
+    options.verbose (1,1) {mustBeNumericOrLogical} = false;
 end
 
 %%
-% Preallocate output Props %
-gridness = [NaN NaN];
-if ~isstruct(p.Results.props)
-    Props.wavelength        = [NaN NaN];
-    Props.wavelengthFull    = nan(3,2);
-    Props.gridness          = [NaN NaN];
-    Props.orientation       = [NaN NaN];
-    Props.orientationFull   = nan(3,2);
-    Props.ax_ind            = nan(3,2);
-    Props.closestPeaksCoord = nan(6,4);
-    Props.offset            = [NaN NaN];
-    Props.offsetFull        = nan(3,2);
-    % Props.phaseOffset       = [NaN NaN];
-    Props.centralPeakMask   = {nan(size(autoCorr)),nan(size(autoCorr))};
-    Props.fieldSize         = [NaN NaN];
-    Props.ellOrient         = [NaN NaN];
-    Props.ellAbScale        = nan(1,4);
-    Props.acReg             = nan(size(autoCorr));
-else
-    Props                   = p.Results.props;
-end
+gridness                = NaN;
+%
+Props.gridness          = NaN;
+Props.wavelength        = NaN;
+Props.wavelengthFull    = nan(3,1);
+Props.orientation       = NaN;
+Props.orientationFull   = nan(3,1);
+Props.offset            = NaN;
+Props.offsetFull        = nan(3,1);
+Props.fieldSize         = NaN;
+Props.closestPeaksCoord = nan(6,2);
+Props.centralPeakMask   = nan(size(autoCorr));
+Props.gridMask          = nan(size(autoCorr));
+Props.peakMask          = nan(size(autoCorr));
+Props.acReg             = nan(size(autoCorr));
+Props.isEllipseFit      = fitEllipse;
+Props.ellOrient         = NaN;
+Props.ellAbScale        = nan(1,2);
+% tmpProps.ax_ind            = nan(3,1);
 
-
+%%
 % Protect against all(autocorr==nan) (when rate map is 0Hz) %
 if all(isnan(autoCorr));   return;     end
-
-if nargout > 1 || p.Results.plot; getGridProps = true; end
-
-if  p.Results.plot && isempty(axArr)
-    axArr = scanpix.plot.multPlot([1 1+p.Results.getellgridness.*2  ],'plotsize',[150 150],'plotsep',[75 40]);
-elseif isempty(axArr)
-    axArr = cell(1, 1+p.Results.getellgridness.*2 );
-end
-
-% Pre-treat the AC to remove NaNs  %
-% autoCorr(isnan(autoCorr)) = 0;
-
 
 %%
 % --------------------------------------------------------------------------------------------------
@@ -116,49 +84,64 @@ end
 % --------------------------------------------------------------------------------------------------
 
 % ---- Find central peak in auto corr --- %
-autoCorrTemp = autoCorr;
-annMask      = true(size(autoCorr));
+% autoCorrTemp = autoCorr;
+[xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask]= findGridPeaks(autoCorr,options.peakDetect, options.zScoreThr, options.minPeakSz); 
+if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
+    if options.verbose; warning('scaNpix::analysis::gridprops: No peaks found. Skipping grid cell properties calculation'); end
+    return
+end
 
-% find central peak and get max distance of 6 closest peaks 
-[centralPoint, ~, distFromCentre,peakStats] = findGridPeaks(autoCorrTemp,annMask,p.Results.zscorethr,true); 
-if isempty(peakStats)
-    if p.Results.verbose; warning('scaNpix::analysis::gridprops: No peak found. Skipping grid cell properties calculation'); end
-    return;
+% Regularise by fitting ellipse to AC 
+if fitEllipse
+    if options.plotEllipse
+        if ~isfield(options,'ax'); options.ax = axes; end
+    else
+        options.ax = [];
+    end
+
+    [ ~, ~, orient, abScale ]      = gridEllipse_fit( autoCorr, xyCoordMaxBin(2:end,:), options.plotEllipse,  options.ax, options.verbose );
+    if ~isnan(abScale)
+        autoCorr                   = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
+        % update peak positions
+        [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask]= findGridPeaks(autoCorr,options.peakDetect, options.zScoreThr, options.minPeakSz);
+        if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
+            if options.verbose; warning('scaNpix::analysis::gridprops: No peaks found. Skipping grid cell properties calculation'); end
+            return
+        end
+        %
+        Props.ellOrient            = orient;
+        Props.ellAbScale           = abScale;
+        Props.acReg                = autoCorr;
+    else
+        if options.verbose; warning('scaNpix::analysis::gridprops: Couldn''t fit am ellipse to peaks of autocorr'); end
+        return;
+    end
 end
+ 
 % make central peak mask
-% [colsIm, rowsIm]                            = meshgrid(1:length(autoCorr), 1:length(autoCorr));
 [colsIm, rowsIm]                            = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
-distMap                                     = sqrt((rowsIm-centralPoint(1)).^2 + (colsIm-centralPoint(2)).^2);
-centrPeakMask                               = distMap < peakStats.EquivDiameter;
-% sanity checks for central peak
-% if peakStats.EquivDiameter >= length(autoCorr)/2 - peakStats.EquivDiameter/2 
-if peakStats.MajorAxisLength/2 >= length(autoCorr)/2 - peakStats.MajorAxisLength/4 
-    if p.Results.verbose; warning('scaNpix::analysis::gridprops: Central peak of autoCorr is too large. Skipping grid cell properties calculation'); end
-    return;
-% elseif peakStats.Eccentricity > 0.9 
-%     if p.Results.verbose; warning('scaNpix::analysis::gridprops: Central peak of autoCorr has bad shape. Skipping grid cell properties calculation'); end
-%     return;
-end
-% find 6 peaks within annulus around central peak
-annMask(centrPeakMask | distMap > distFromCentre) = false;
-[xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,~, failFlag] = findGridPeaks(autoCorrTemp,annMask,p.Results.zscorethr); 
-% make final annulus mask
-annMask                    = ~centrPeakMask;
+distMap                                     = sqrt((rowsIm-xyCoordMaxBin(1,1)).^2 + (colsIm-xyCoordMaxBin(1,2)).^2);
+centrPeakMask                               = distMap < peakStats(1).MajorAxisLength/2;
+
+% make annulus mask
 if ~isempty(distFromCentre)
-    maxDist                = max(distFromCentre+[peakStats.MinorAxisLength]'./4); 
+    maxDist                = max(distFromCentre+mean([peakStats.MajorAxisLength])'/2); 
 else
     maxDist                = floor(length(autoCorr)/2); % set to full AC radius in case no peaks are found
 end
+annMask                    = ~centrPeakMask;
 annMask(distMap > maxDist) = false;
-
-Props.centralPeakMask{outInd} = centrPeakMask;
+%
+Props.centralPeakMask      = centrPeakMask;
+Props.peakMask             = peakMask;
+Props.gridMask             = annMask;
 
 %%
 % --------------------------------------------------------------------------------------------------
 % ---- GRIDNESS ------------------------------------------------------------------------------------
 % --------------------------------------------------------------------------------------------------
 rotAngle = [60, 120, 30, 90, 150];
-annCorr = nan(1,length(rotAngle));
+annCorr  = nan(1,length(rotAngle));
 % loop over rotations
 for i=1:length(rotAngle)
     autoCorr_rot = imrotate(autoCorr, rotAngle(i), 'bilinear', 'crop');
@@ -166,203 +149,114 @@ for i=1:length(rotAngle)
     annCorr(i)   = corr2(autoCorr(annMask & nanMask),autoCorr_rot(annMask & nanMask));
 end
 
+if any(isnan(annCorr))
+    if options.verbose; warning('scaNpix::analysis::gridprops: Some of the correlations for computing gridness return NaNs - likely means that the central peak is too big to return any meaningful values.'); end
+    return;
+end
+
 % gridnesss (as per ususal)
-gridness(1,1)  = min(annCorr(1:2)) - max(annCorr(3:end));
-Props.gridness(1,outInd) = gridness(1,1);
+gridness       = min(annCorr(1:2)) - max(annCorr(3:end));
+Props.gridness = gridness;
 
 %%
 % --------------------------------------------------------------------------------------------------
 % ---- GRID PROPERTIES -----------------------------------------------------------------------------
 % --------------------------------------------------------------------------------------------------
-if getGridProps || p.Results.getellgridness
-      
-    if failFlag
-        if p.Results.verbose; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); end
-        return; 
-    end
-       
-    % orientation - define 3 axes Moser style
-    [orientation, tmp] = deal(atan2(xyCoordMaxBinCentral(:,2),xyCoordMaxBinCentral(:,1))); %
-    % orientation = orientation .* -1;
-    [~,ax1_ind]  = min(abs(orientation)); 
-    tmp(ax1_ind) = NaN;
-    
-    [~, sortInd] = sort(circ_dist(abs(tmp),abs(orientation(ax1_ind))));
+if length(xyCoordMaxBin) == 7
 
-    orientation                     = orientation([ax1_ind sortInd(1) sortInd(2)]);   
-    Props.orientation(1,outInd)     = circ_mean(orientation);
-    Props.orientationFull(:,outInd) = orientation;
-    Props.ax_ind(:,outInd)          = [ax1_ind; sortInd(1); sortInd(2)];
-    
+    % orientation - define 3 axes Moser style
+    orientation           = atan2(xyCoordMaxBinCentral(2:end,2),xyCoordMaxBinCentral(2:end,1)); %
+
+    [~, sortInd]          = sort(abs(orientation));
+    orientation           = -orientation([sortInd(1:3)]);  % need to flip orientation due to inverted y-axis
+
+    Props.orientation     = circ_mean(orientation);
+    Props.orientationFull = orientation;
+    % Props.ax_ind          = sortInd(1:3);
+
+
     % wavelength
-    Props.wavelength(1,outInd)      = mean(distFromCentre([ax1_ind sortInd(1) sortInd(2)]),'omitnan'); % wavelength
-    Props.wavelengthFull(:,outInd)  = distFromCentre([ax1_ind sortInd(1) sortInd(2)]); 
-    
+    Props.wavelength      = mean(distFromCentre([sortInd(1:3)]),'omitnan'); % wavelength
+    Props.wavelengthFull  = distFromCentre([sortInd(1:3)]);
+
     % offset
-    Props.offsetFull(:,outInd)      = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)
-    Props.offset(1,outInd)          = min( Props.offsetFull(:,outInd) ); % 
+    Props.offsetFull      = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)
+    Props.offset          = min( Props.offsetFull ); %
     %
-    Props.closestPeaksCoord(1:length(xyCoordMaxBin),outInd*2-1:outInd*2) = round(xyCoordMaxBin);
+    tmp                     = ceil(xyCoordMaxBin(2:end,:));
+    Props.closestPeaksCoord = tmp(sortInd,:);
 
     % field size THIS NEEDS WORK AS NOT MATCHING WITH THE GENERAL ALGORTIHM
     aboveThrMask               = bwlabel(autoCorr>0.4,8);
-    aboveThrMask( aboveThrMask ~= aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 0;
-    aboveThrMask( aboveThrMask == aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 1;
-    Props.fieldSize(1,outInd)  = sum(logical(aboveThrMask(:)));
-
-    if p.Results.plot
-        % make a nice figure with auto corr props - adapted from Dan Manson's code
-        plotGridProps(autoCorr,annMask,Props.closestPeaksCoord([ax1_ind sortInd(1) sortInd(2)],outInd*2-1:outInd*2),size(autoCorr),Props.wavelength(1,outInd),orientation,Props.offsetFull(:,outInd), gridness(1,1), axArr{1},p.Results.isEllipseFit);
-    end
-
+    aboveThrMask( aboveThrMask ~= aboveThrMask(ceil(xyCoordMaxBin(1)),ceil(xyCoordMaxBin(2))) ) = 0;
+    aboveThrMask( aboveThrMask == aboveThrMask(ceil(xyCoordMaxBin(1)),ceil(xyCoordMaxBin(2))) ) = 1;
+    Props.fieldSize = sum(logical(aboveThrMask(:)));
+else
+    if options.verbose; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); end
 end
 
-% --------------------------------------------------------------------------------------------------
-% ---- Regularise by fitting ellipse to AC ---------------------------------------------------------
-% --------------------------------------------------------------------------------------------------
-if p.Results.getellgridness
 
-    [ ~, ~, orient, abScale ] = gridEllipse_fit( autoCorr, xyCoordMaxBin, p.Results.plot, axArr{2}, p.Results.verbose );
-    if ~isnan(abScale)
-        autoCorrReg             = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
-        [tmp, Props]            = scanpix.analysis.gridprops(autoCorrReg,true,'zscorethr',p.Results.zscorethr,'getprops',getGridProps,'getellgridness',false,'plot',p.Results.plot,'ax',axArr(3),'props',Props);
-        gridness(1,2)           = tmp(1,1);
-        %
-        Props.ellOrient(1,2)    = orient;
-        Props.ellAbScale(1,3:4) = abScale;
-        Props.acReg             = autoCorrReg;  
-    end   
-    
-end
 
 end
 
 % -------------------------------------------------------------------------------------------------
 % --- INLINE FUNCTIONS ----------------------------------------------------------------------------
 % -------------------------------------------------------------------------------------------------
-function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, peakStats, failFlag] = findGridPeaks(autoCorr,annMask,thr,centrPeakOnlyFlag)
+function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, peakStats, peakMask] = findGridPeaks(autoCorr,method,zThr,minPeakSz)
 %%
-if nargin == 3
-    centrPeakOnlyFlag = false;
+% autoCorrTemp = autoCorr;
+
+switch method
+    case 'zscore'
+        thrMap                       = (autoCorr - mean(autoCorr(:),'omitnan')) ./ std(autoCorr(:),'omitnan'); 
+        thrMask                      = thrMap > zThr;        
+        fieldsLabel                  = bwlabel(thrMask);
+    case 'watershed'
+        thrMap                       = autoCorr;
+        thrMap(isnan(thrMap))        = 0;
+        fieldsLabel                  = watershed(-thrMap);
+        fieldsLabel(isnan(autoCorr)) = 0;
 end
-failFlag      = false;
-
-%%
- autoCorrTemp = autoCorr;
- % this works pretty well
- autoCorrTemp(~annMask) = NaN;
- zAutoCorr              = (autoCorrTemp - mean(autoCorrTemp(:),'omitnan')) ./ std(autoCorrTemp(:),'omitnan');
- peaksAutoCorr          = zAutoCorr > thr;
- peakStats              = regionprops(peaksAutoCorr,autoCorr, 'WeightedCentroid','EquivDiameter','MajorAxisLength','MinorAxisLength');
- xyCoordMaxBin          = reshape([peakStats.WeightedCentroid], 2,[])'; %Still x,y pair  
- 
- centralPoint           = ceil([size(autoCorrTemp,2)/2,size(autoCorrTemp,1)/2]); %m,n pair
- xyCoordMaxBinCentral   = xyCoordMaxBin-repmat(fliplr(centralPoint), [size(xyCoordMaxBin,1), 1]);
- distFromCentre         = sum(xyCoordMaxBinCentral.^2,2).^0.5; 
- % exit gracefully
- if ~any(peaksAutoCorr(:))
-     if ~centrPeakOnlyFlag 
-         failFlag = true;
-     end
-     return
- end
- [~, orderOfClose]      = sort(distFromCentre);
- if centrPeakOnlyFlag
-     orderOfClose       = orderOfClose(1:min([7,length(orderOfClose)])); % take central peak + 6 closest peaks
-     distFromCentre     = max(distFromCentre(orderOfClose) + [peakStats(orderOfClose).MinorAxisLength]'./4); % max dist of peaks from centre   
-     orderOfClose       = orderOfClose(1); % just keep central peak
-
- else
-    orderOfClose        = orderOfClose(1:min([6,length(orderOfClose)])); % take max 6 closest peaks
-    distFromCentre      = distFromCentre(orderOfClose,:);
- end
- %
- xyCoordMaxBin          = xyCoordMaxBin(orderOfClose,:);
- xyCoordMaxBinCentral   = xyCoordMaxBinCentral(orderOfClose,:);
- peakStats              = peakStats(orderOfClose);
- %
- if ~centrPeakOnlyFlag && length(xyCoordMaxBin) < 6
-     failFlag = true;
-     return
- end
-
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-function plotGridProps(sac,gridnessMask,closestPeaksCoord,sizeAC,scale,orientation,offset, gridness,ax,isEllipseFit)
-
-% a. plot the sac with gridnessmask in jet and background in grey
-[sacForeGround,sacBackGround] = deal(sac);
-sacForeGround(~gridnessMask)  = NaN;
-sacBackGround(gridnessMask)   = NaN;
-% plot background first (grey)
-imagesc(ax,sacBackGround,[min(sac(:)),max(sac(:))]);
-colormap(ax,gray);
-set(ax,'ydir','normal');
-% plot foreground (jet) - we need to add new axis to plot (make the background for that transparent)
-ax2 = axes(get(ax,'parent'),'units','pixels','position',get(ax,'position'));
-imagesc(ax2,sacForeGround,'alphadata',~isnan(sacForeGround),[min(sac(:)),max(sac(:))]);
-set(ax2,'color','none','visible','off','ydir','normal');
-colormap(ax2,jet);
 %
-hold(ax,'on'); hold(ax2,'on');
+thresholds = nan(size(thrMap));
+for i = 1:max(fieldsLabel(:))
 
-% b. plot 3 grid axes
-centralPoint = ceil(sizeAC/2);
-for k=1:3
-    plot(ax,[centralPoint(1) closestPeaksCoord(k,1)],[centralPoint(2) closestPeaksCoord(k,2)],'k','Linewidth',2);
-    plot(ax2,[centralPoint(1) closestPeaksCoord(k,1)],[centralPoint(2) closestPeaksCoord(k,2)],'k','Linewidth',2);
-end
-
-% c. plot white horizontal/vertical lines as cartesian reference frame
-plot(ax,[0.5 sizeAC(2)],centralPoint([1 1],[2 2]),'--w','Linewidth',2);
-plot(ax,[centralPoint(1,1) centralPoint(1,1)],[0.5 sizeAC(2)],'--w','Linewidth',2);
-plot(ax2,[0.5 sizeAC(2)],centralPoint([1 1],[2 2]),'--w','Linewidth',2);
-plot(ax2,[centralPoint(1,1) centralPoint(1,1)],[0.5 sizeAC(2)],'--w','Linewidth',2);
-
-% d. plot a red curve to show the grid offset - depending on which wall grid is anchored to, we need to bake in a shift for y
-[minOffset,ind] = min(offset);
-%
-if orientation(ind) < 0
-    if orientation(ind) < -30*pi/180
-        shift = pi/2 - minOffset;
-    else
-        shift = 0;
-    end
-else
-    if orientation(ind) > 30*pi/180
-        shift = 3/2*pi;
-    else
-        shift = 2*pi-minOffset;
+    if sum(fieldsLabel == i) < minPeakSz; continue; end
+    
+    if strcmp(method,'watershed')
+        thresholds(fieldsLabel == i) = max(thrMap(fieldsLabel == i),[],'omitnan')/2;
+    elseif strcmp(method,'zscore')
+        thresholds(fieldsLabel == i) = zThr;
     end
 end
 %
-mag = scale*.60;
-th = shift:0.05:minOffset+shift;
-[x,y] = pol2cart(th,mag);
+peakMask             = thrMap > thresholds;
+peakMask             = imclose(peakMask,strel('square',3));
 %
-plot(ax,x + centralPoint(2),  centralPoint(1)-y,'-r','Linewidth',3);
-plot(ax2,x + centralPoint(2),  centralPoint(1)-y,'-r','Linewidth',3);
+peakStats            = regionprops(peakMask,autoCorr, 'WeightedCentroid','EquivDiameter','MajorAxisLength','MinorAxisLength','PixelIdxList');
+%
+xyCoordMaxBin        = round(reshape([peakStats.WeightedCentroid], 2,[])'); %Still x,y pair
 
-% e. add some annotations
-hold(ax,'off'); hold(ax2,'off');
-axis(ax,'off');
-lastBins = (fliplr(size(sac)));
-text(ax,lastBins(2)+1, lastBins(1)-0.5,num2str(round(gridness(1,1),3)));
-text(ax,lastBins(2)+1, lastBins(2)*0.25,sprintf('%s\n%s','scale:',num2str(round(scale,2))));
-text(ax,lastBins(2)+1, 1,sprintf('%s\n%s','orientation:',num2str(round(circ_mean(orientation)*180/pi,2))));
-if abs(mod(orientation(ind)*180/pi,60) - 30) < mod(orientation(ind)*180/pi,60)
-    text(ax,lastBins(2)/2-3.5, -4,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
-else
-   text(ax,lastBins(2)+1, lastBins(2)/2,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
-end
+centralPoint         = ceil([size(autoCorr,2)/2,size(autoCorr,1)/2]); %m,n pair
+xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [size(xyCoordMaxBin,1), 1]);
+distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;
+% exit gracefully
+if ~any(peakMask(:)); return; end
+
+% now get the 6 closest peaks to cental one
+[~, orderOfClose]     = sort(distFromCentre);
 %
-if isEllipseFit
-    title(ax,'spatial autocorr - ellipse corrected');
-else
-    title(ax,'spatial autocorr');
-end
+orderOfClose          = orderOfClose(1:min([7,length(orderOfClose)])); % take central peak + 6 closest peaks
+distFromCentre        = distFromCentre(orderOfClose);
+%
+xyCoordMaxBin         = xyCoordMaxBin(orderOfClose,:);
+xyCoordMaxBinCentral  = xyCoordMaxBinCentral(orderOfClose,:);
+peakStats             = peakStats(orderOfClose);
+% remove all but closest 6 peaks from peak mask
+allInd                      = 1:numel(autoCorr);
+setToZero                   = ~ismember(allInd',vertcat(peakStats.PixelIdxList));
+peakMask(allInd(setToZero)) = 0;
+
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -465,13 +359,13 @@ end
 %Option to draw elipse onto sac - useful for debugging - do this is second
 %arg is true
 if ~plotEllipse %Don't draw
-    elipseData=sf_fit_ellipse(closestPeaksCoord(:,1), closestPeaksCoord(:,2));
+    elipseData=sf_fit_ellipse(closestPeaksCoord(:,1), closestPeaksCoord(:,2),[],verboseFlag);
 elseif plotEllipse %Do draw
     imagesc(hAx,sac); %draw sac
     axis(hAx,'equal','off');
     hold(hAx,'on');
     scatter(hAx,closestPeaksCoord(:,1), closestPeaksCoord(:,2)); %Draw on peaks
-    elipseData=sf_fit_ellipse(closestPeaksCoord(:,1), closestPeaksCoord(:,2), hAx);
+    elipseData=sf_fit_ellipse(closestPeaksCoord(:,1), closestPeaksCoord(:,2), hAx, verboseFlag);
     hold(hAx,'off');
     % set(hAx,'ydir','normal');
     title(hAx,'Ellipse fit');
@@ -479,7 +373,7 @@ end
 
 %Check if an ellipse was fit - if not elipseData will be empty
 if isempty(elipseData) || isempty(elipseData.a) %No ellipse found; LM EDIT!!! 
-    warning('scaNpix::analysis::gridprops:Failed to fit ellipse - returning nan');
+    if verboseFlag; warning('scaNpix::analysis::gridprops:Failed to fit ellipse - returning nan'); end
     [ xyScale, eccent, orient, abScale ] = deal(nan);
     return
 end
@@ -516,7 +410,7 @@ xyScale=sqrt(sum([ellipse_x; ellipse_y].^2,1)); %[xScale, yScale]
 end
 
 % From Barry lab (based on fxchange function):
-function ellipse_t = sf_fit_ellipse( x,y,axis_handle )
+function ellipse_t = sf_fit_ellipse( x,y,axis_handle, verboseFlag )
 %
 % fit_ellipse - finds the best fit to an ellipse for the given set of points.
 %
@@ -674,7 +568,7 @@ a = sum(X)/(X'*X);
 
 % check for warnings
 if ~isempty( lastwarn )
-    disp( 'stopped because of a warning regarding matrix inversion' );
+    if verboseFlag; warning('scaNpix::analysis::gridprops: Stopped because of a warning regarding matrix inversion' ); end
     ellipse_t = [];
     return
 end
@@ -707,8 +601,8 @@ end
 test = a*c;
 switch (1)
     case (test>0),  status = '';
-    case (test==0), status = 'Parabola found';  warning( 'fit_ellipse: Did not locate an ellipse' );
-    case (test<0),  status = 'Hyperbola found'; warning( 'fit_ellipse: Did not locate an ellipse' );
+    case (test==0), status = 'Parabola found';  if verboseFlag; warning( 'fit_ellipse: Did not locate an ellipse' ); end
+    case (test<0),  status = 'Hyperbola found'; if verboseFlag; warning( 'fit_ellipse: Did not locate an ellipse' ); end
 end
 
 % if we found an ellipse return it's data
@@ -910,4 +804,21 @@ end
 %     orientation = orientation([ax1_ind sortInd(1) sortInd(2)]);
 
 
+% if 0
+%     % % this works pretty well
+%     % autoCorrTemp(~annMask) = NaN;
+%     % zAutoCorr              = (autoCorrTemp - mean(autoCorrTemp(:),'omitnan')) ./ std(autoCorrTemp(:),'omitnan');
+%     % peaksAutoCorr          = zAutoCorr > thr;
+% 
+% else
+%     autoCorrTemp(isnan(autoCorrTemp)) = 0;
+%     fieldsLabel  = watershed(-autoCorrTemp);
+% 
+%     thresholds = nan(size(autoCorrTemp));
+%     for i = 1:max(fieldsLabel(:))
+%         thresholds(fieldsLabel == i) = max(autoCorrTemp(fieldsLabel == i),[],'omitnan')/2;
+%     end
+%     peaksAutoCorr          = autoCorrTemp > thresholds;
+%     peaksAutoCorr = imclose(peaksAutoCorr,strel('square',3));
+% end
 
