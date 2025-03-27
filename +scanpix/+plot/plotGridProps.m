@@ -24,8 +24,10 @@ for i = 1:2
     else
         sac      = ellProps.acReg;
         tmpProps = ellProps;
-        ax       = options.axArray{3};
+        ax       = options.axArray{3}; 
     end
+    %
+    if all(isnan(sac)); continue; end
 
     %
     sizeAC                             = size(sac);

@@ -22,6 +22,8 @@ function ResShuf = generateShuffData(objData,varargin)
 % LM 2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+warning('off');
+
 matchflag = false;
 
 %%
@@ -174,7 +176,7 @@ parfor j = 1:length(objData)
             for m = 1:length(p.Results.scores)
                 if strcmp(p.Results.scores{m},'gridness')
                     tmp = copyObj.getSpatialProps(p.Results.scores{m}, k);
-                    tmpT.(p.Results.scores{m})(:,k) = num2cell([vertcat(tmpT.(p.Results.scores{m}){:,k}),max(tmp(:,1:2),[],2,'omitnan')],2);
+                    tmpT.(p.Results.scores{m})(:,k) = num2cell([vertcat(tmpT.(p.Results.scores{m}){:,k}),max(tmp(:,1),tmp(:,4),'omitnan')],2);
                 else
                     tmpT.(p.Results.scores{m})(:,k) = num2cell([vertcat(tmpT.(p.Results.scores{m}){:,k}),copyObj.getSpatialProps(p.Results.scores{m}, k)],2);
                 end
@@ -194,9 +196,11 @@ parfor j = 1:length(objData)
     %
     fprintf('Finished shuffling %s\n',copyObj.dataSetName);
 end
+
 % save
 save(['ResShuf_' char(datetime('today','format','yyMMdd')) '.mat'],'ResShuf','-v7.3');
-
+%
+warning('on');
 
 end
 
