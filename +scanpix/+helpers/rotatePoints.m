@@ -13,7 +13,13 @@ function xyRot = rotatePoints(xy,refPoints)
 %     refPoints(:,2) = xy(ind,:)';
 % end
 
+%%
+arguments
+    xy (:,2) {mustBeNumeric}
+    refPoints (2,:) {mustBeNumeric}
+end
 
+%%
 % angle of misalignment
 theta = atan2(diff(refPoints(2,:)),diff(refPoints(1,:))); 
 % rotate

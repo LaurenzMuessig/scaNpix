@@ -13,7 +13,13 @@ function loadPos(obj, trialIterator)
 %
 % TW/LM 2020 (adapted from org. SCAN function)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialIterator (1,1) {mustBeNumeric}
+end
 
+%%
 fprintf('Loading pos file for %s [..........] ', obj.trialNames{trialIterator});
 
 %%% Read data from File %%%
@@ -84,9 +90,11 @@ posFile.header  = posHeader; % For mTint function compatibility.
 posFile.led_pos = led_pos;
 posFile.led_pix = led_pix;
 %Interpolate, Filter and Smooth %  %%%%%%%%%% THIS COULD USE A BIT MORE EFFICIENCY AND BE UPDATED
-[obj.posData(1).XYraw{trialIterator}, obj.posData(1).direction{trialIterator}, obj.posData(1).speed{trialIterator}] = scanpix.dacqUtils.postprocess_pos_data_v2(posFile, obj.params('posMaxSpeed'), obj.params('posSmooth'), obj.trialMetaData(trialIterator), obj.params('posHead'));
+[obj.posData(1).XYraw{trialIterator}, obj.posData(1).direction{trialIterator}, obj.posData(1).speed{trialIterator}, obj.trialMetaData(trialIterator).log.PosLoadingStats] = scanpix.dacqUtils.postprocess_pos_data_v2(posFile, obj.params('posMaxSpeed'), obj.params('posSmooth'), obj.trialMetaData(trialIterator), obj.params('posHead'));
 
-obj.params('posFs') = sscanf(scanpix.dacqUtils.getValue(posHeader,'sample_rate'),'%d');
+obj.params('posFs')                    = sscanf(scanpix.dacqUtils.getValue(posHeader,'sample_rate'),'%d');
+obj.trialMetaData(trialIterator).posFs = sscanf(scanpix.dacqUtils.getValue(posHeader,'sample_rate'),'%d');
+
 % remove DACQ overhang
 if obj.trialMetaData(trialIterator).duration * obj.params('posFs') < length(led_pos)
     obj.posData(1).XYraw{trialIterator}     = obj.posData(1).XYraw{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs'),:); % truncate data

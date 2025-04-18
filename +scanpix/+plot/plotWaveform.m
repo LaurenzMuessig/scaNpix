@@ -1,4 +1,4 @@
-function plotWaveform(waveforms,varargin)
+function plotWaveform(waveforms,options)
 % plotWaveform - plot wave form of a cell. ATM will only plot the waveform
 % on max channel
 % package: scanpix.plot
@@ -18,28 +18,23 @@ function plotWaveform(waveforms,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %% parse input
-defaultMaxWaves         = 250;
-defaulthAx              = [];
-defaultPlotIndividWaves = true;
-defaultLineWidth        = 3;
-% 
-p = inputParser;
-checkAx = @(x) ishghandle(x, 'axes') || @isempty;
-addOptional(p,'ax',defaulthAx, checkAx);
-addParameter(p,'maxWaves',defaultMaxWaves,@isscalar);
-addParameter(p,'plotIndWFs',defaultPlotIndividWaves,@islogical);
-addParameter(p,'linew',defaultLineWidth);
-parse(p,varargin{:});
-% 
-if isempty(p.Results.ax)
-    hAx = axes;
-else
-    hAx = p.Results.ax;
+arguments
+    waveforms {mustBeNumeric} 
+    options.ax {ishghandle(options.ax, 'axes')}
+    options.maxWaves (1,1) {mustBeNumeric} = 250; 
+    options.linew (1,1) {mustBeNumeric} = 3; 
+    options.plotAllWaves (1,1) {mustBeNumericOrLogical} = true;
 end
 
+% 
 if isempty(waveforms)
     return;
 end
+%
+if ~isfield(options,'ax')
+    options.ax = axes;
+end
+
 
 %% plot
 if size(waveforms,3) == 1
@@ -52,34 +47,34 @@ if size(waveforms,3) == 1
 end
 
 
-meanWFs = squeeze(nanmean(waveforms,1));
+meanWFs = squeeze(mean(waveforms,1,'omitnan'));
 if size(meanWFs,1) == 1; meanWFs = meanWFs'; end
 
 [~, maxInd] = max(abs(min(meanWFs,[],1) - max(meanWFs,[],1)));
-if p.Results.plotIndWFs
+if options.plotAllWaves
     axLims  = [min(min(waveforms(:,:,maxInd))) max(max(waveforms(:,:,maxInd)))];
 else
     axLims  = [min(meanWFs(:)) max(meanWFs(:))];
 end
 
 nSamples = size(waveforms,2);
-if size(waveforms,1) > p.Results.maxWaves
-    selInd = round(linspace(1,size(waveforms,1),p.Results.maxWaves));
-    waveforms = [squeeze(waveforms(selInd,:,maxInd)) nan(p.Results.maxWaves,1)]; % adding NaNs will results in plotting a sngle line object
-    nWaves = p.Results.maxWaves;
+if size(waveforms,1) > options.maxWaves
+    selInd    = round(linspace(1,size(waveforms,1),options.maxWaves));
+    waveforms = [squeeze(waveforms(selInd,:,maxInd)) nan(options.maxWaves,1)]; % adding NaNs will results in plotting a sngle line object
+    nWaves    = options.maxWaves;
 else
-    nWaves = size(waveforms,1);
+    nWaves    = size(waveforms,1);
     waveforms = [squeeze(waveforms(:,:,maxInd)) nan(nWaves,1)];
 end
-waveforms = waveforms';
+waveforms     = waveforms';
 
-if p.Results.plotIndWFs; plot(hAx,repmat([1:nSamples,NaN],1,nWaves)',waveforms(:),'color',[0.5 0.5 0.5],'linewidth',.3); end
-hold(hAx, 'on');
-plot(hAx,meanWFs(:,maxInd),'color',[1 0 0],'linewidth',p.Results.linew);
-hold(hAx, 'off');
-set(hAx,'xlim',[1 size(meanWFs,1)],'ylim',axLims);
+if options.plotAllWaves; plot(options.ax,repmat([1:nSamples,NaN],1,nWaves)',waveforms(:),'color',[0.5 0.5 0.5],'linewidth',.3); end
+hold(options.ax, 'on');
+plot(options.ax,meanWFs(:,maxInd),'color',[1 0 0],'linewidth',options.linew);
+hold(options.ax, 'off');
+set(options.ax,'xlim',[1 size(meanWFs,1)],'ylim',axLims);
 
-ylabel(hAx,'amplitude (\muV)');
+ylabel(options.ax,'amplitude (\muV)');
     
 end
 

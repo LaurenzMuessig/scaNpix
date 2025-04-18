@@ -3,16 +3,17 @@ function plotGridProps(autoCorr,options)
 %%
 arguments
     autoCorr {mustBeNumeric}
-    options.peakDetect (1,:) {mustBeMember(options.peakDetect,{'watershed','zscore'})} = 'watershed';
-    options.zScoreThr (1,1) {mustBeNumeric} = 1;
+    options.thresh (1,1) {mustBeNumeric} = -1;
+    options.binAC (1,1) {mustBeNumericOrLogical} = false;
+    options.nBinSteps (1,1) {mustBeNumeric} = 20;
     options.minPeakSz (1,1) {mustBeNumeric} = 4;
-    options.axArray (1,3) {mustBeA(options.axArray,'cell')} = scanpix.plot.multPlot([1 3],'plotsize',[150 150],'plotsep',[75 40]);
+    options.axArray (1,3) {mustBeA(options.axArray,'cell')} = scanpix.plot.multPlot([1 3],'plotsize',[150 150],'plotsep',[75 40]); 
 end
 
 
 %%
-[~, Props]    = scanpix.analysis.gridprops(autoCorr,'peakDetect',options.peakDetect,'zScoreThr',options.zScoreThr,'minPeakSz',options.minPeakSz);
-[~, ellProps] = scanpix.analysis.gridprops(autoCorr,true,'peakDetect',options.peakDetect,'zScoreThr',options.zScoreThr,'minPeakSz',options.minPeakSz,'plotEllipse',true,'ax',options.axArray{2});
+[~, Props]    = scanpix.analysis.gridprops(autoCorr,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz);
+[~, ellProps] = scanpix.analysis.gridprops(autoCorr,true,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz,'plotEllipse',true,'ax',options.axArray{2});
 
 %%
 for i = 1:2

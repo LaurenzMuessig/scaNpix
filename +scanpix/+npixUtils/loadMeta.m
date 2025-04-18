@@ -13,7 +13,14 @@ function loadMeta(obj, trialIterator, noSyncFlag)
 %
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialIterator (1,1) {mustBeNumeric}
+    noSyncFlag (1,1) {mustBeNumericOrLogical} 
+end
 
+%%
 %
 obj.trialMetaData(trialIterator).log.missingSyncsAPStream        = 0;
 obj.trialMetaData(trialIterator).log.missingFramesPosStream      = 0;
@@ -53,7 +60,7 @@ end
 
 obj.trialMetaData(trialIterator).ppm         = [];
 obj.trialMetaData(trialIterator).ppm_org     = [];
-obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
+% obj.trialMetaData(trialIterator).trackLength = []; % add field to xml?
 
 % load channel map
 chanMapInfo = dir(fullfile(obj.dataPath{trialIterator},'*kiloSortChanMap*'));

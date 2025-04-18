@@ -16,7 +16,13 @@ function sparsity = getSparsity(rMap,posMap)
 %
 % LM 2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    rMap {mustBeNumeric}
+    posMap {mustBeNumeric}
+end
 
+%%
 P_x = posMap ./ sum(posMap(:),'omitnan');
 %
 num   = sum(rMap(:) .* P_x(:), 'omitnan')^2;

@@ -1,4 +1,4 @@
-function [smoothedRate,smoothedSpk,smoothedPos,medFiltRad] = adaptiveSmooth(pos, spk, alpha, varargin)
+function [smoothedRate,smoothedSpk,smoothedPos,medFiltRad] = adaptiveSmooth(pos, spk, alpha)
 % adaptiveSmooth - Adaptive smoothing of rate maps.
 % package: scanpix.maps
 %
@@ -15,44 +15,51 @@ function [smoothedRate,smoothedSpk,smoothedPos,medFiltRad] = adaptiveSmooth(pos,
 % with the same kernal group as for the rate map.
 %
 % TW
+%%
+arguments
+    pos {mustBeNumeric}
+    spk {mustBeNumeric}
+    alpha (1,1) {mustBeNumeric} = 200;
+end
 
+%%
 % Check for empty spk maps %
-if sum(sum(spk))==0
-    smoothedPos=pos;    smoothedPos(pos==0)=nan;
-    smoothedSpk=spk;    smoothedSpk(pos==0)=nan;
-    smoothedRate=spk;   smoothedRate(pos==0)=nan;
-    medFiltRad = nan;
+if sum(sum(spk)) == 0
+    smoothedPos  = pos;   smoothedPos(pos==0)  = NaN;
+    smoothedSpk  = spk;   smoothedSpk(pos==0)  = NaN;
+    smoothedRate = spk;   smoothedRate(pos==0) = NaN;
+    medFiltRad   = NaN;
     return
 end
-if ~isempty(varargin) && strcmp(varargin{1},'newKernel');   legacyKernel = 0;   else    legacyKernel = 0;    end
+% if ~isempty(varargin) && strcmp(varargin{1},'newKernel');   legacyKernel = 0;   else    legacyKernel = 0;    end
 % Pre-assign output %
-smoothedPos=zeros(size(pos));
-smoothedSpk=zeros(size(pos));
+smoothedPos = zeros(size(pos));
+smoothedSpk = zeros(size(pos));
 % Visited env template: use this to get numbers of visited bins in filter at edge of environemnt %
-vis=zeros(size(pos));
-vis(pos>0)=1;
+vis         = zeros(size(pos));
+vis(pos>0)  = 1;
 % Pre-assign map which records which bins have passed %
-smoothedCheck=false(size(pos));
-smoothedCheck(pos==0)=true; % Disregard unvisited - mark as already done.
+smoothedCheck         = false(size(pos));
+smoothedCheck(pos==0) = true; % Disregard unvisited - mark as already done.
 % Pre-assign list of radii used (this is for reporting purposes, not used for making maps) %
-radiiUsedList=nan(1,sum(sum(pos>0)));
-radiiUsedCount=1;
+radiiUsedList  = nan(1,sum(sum(pos>0)));
+radiiUsedCount = 1;
 % These parameters depend on place or dir mode %
-if size(pos,2)>1
-    boundary=0;             % IMFILTER boundary condition
-    if legacyKernel   
-        rBump=0.5;              % Increase radius in 0.5 bin steps.
-    else
-        rBump=1;
-    end
-elseif size(pos,2)==1
-    boundary='circular';
-    rBump=1;                % Increase radius in 1 bin steps.
+if size(pos,2) > 1
+    boundary = 0;             % IMFILTER boundary condition
+    rBump    = 1;
+    % if legacyKernel   
+    %     rBump=0.5;              % Increase radius in 0.5 bin steps.
+    % else
+    %     rBump=1;
+    % end
+elseif size(pos,2) == 1
+    boundary = 'circular';
+    rBump    = 1;                % Increase radius in 1 bin steps.
 end
 
-
 %%% Run increasing radius iterations %%%
-r=1; % Circle radius
+r = 1; % Circle radius
 while any(any(~smoothedCheck))
     % Check radius isn't getting too big (if >map/2, stop running) %
     if r>max(size(pos))/2
@@ -62,52 +69,52 @@ while any(any(~smoothedCheck))
     end
     % Construct filter kernel ...
     if size(pos,2)>1
-        % Place: Flat disk, where r>=distance to bin centre %
-        if legacyKernel
-            f=fspecial('disk',r); 
-            f(f>=(max(max(f))/3))=1;
-            f(f~=1)=0;
-        else
-            [xx,yy] = meshgrid( -r:r );
-            [~,rho] = cart2pol( xx, yy );
-            f       = double(rho<=r);
-        end
-    elseif size(pos,2)==1 
+        % % Place: Flat disk, where r>=distance to bin centre %
+        % if legacyKernel
+        %     f=fspecial('disk',r); 
+        %     f(f>=(max(max(f))/3))=1;
+        %     f(f~=1)=0;
+        % else
+        [xx,yy] = meshgrid( -r:r );
+        [~,rho] = cart2pol( xx, yy );
+        f       = double(rho<=r);
+        % end
+    elseif size(pos,2) == 1 
         % Direction: boxcar window, r bins from centre symmetrically %
-        f=ones(1+(r*2),1);
+        f = ones(1+(r*2),1);
     end     
     % Filter maps (get N spikes and pos sum within kernel) %
-    fSpk=imfilter(spk,f,boundary);
-    fPos=imfilter(pos,f,boundary);
-    fVis=imfilter(vis,f,boundary);
+    fSpk = imfilter(spk,f,boundary);
+    fPos = imfilter(pos,f,boundary);
+    fVis = imfilter(vis,f,boundary);
     % Which bins pass criteria at this radius? %
 %     warning('off', 'MATLAB:divideByZero');
-    binsPassed=alpha./(sqrt(fSpk).*fPos) <= r;
+    binsPassed = alpha./(sqrt(fSpk).*fPos) <= r;
 %     warning('on', 'MATLAB:divideByZero');
-    binsPassed=binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
+    binsPassed = binsPassed & ~smoothedCheck; % Only get the bins that have passed in this iteration.
     % Add these to list of radii used %
-    nBins=sum(binsPassed(:));
-    radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1)=r;
-    radiiUsedCount=radiiUsedCount+nBins;
+    nBins                                                = sum(binsPassed(:));
+    radiiUsedList(radiiUsedCount:radiiUsedCount+nBins-1) = r;
+    radiiUsedCount                                       = radiiUsedCount+nBins;
     % Assign values to smoothed maps %
-    smoothedSpk(binsPassed)=fSpk(binsPassed)./fVis(binsPassed);
-    smoothedPos(binsPassed)=fPos(binsPassed)./fVis(binsPassed);
+    smoothedSpk(binsPassed)   = fSpk(binsPassed)./fVis(binsPassed);
+    smoothedPos(binsPassed)   = fPos(binsPassed)./fVis(binsPassed);
     % Record which bins were smoothed this iteration %
-    smoothedCheck(binsPassed)=true;
+    smoothedCheck(binsPassed) = true;
     % Increase circle radius %
-    r=r+rBump;
+    r                         = r+rBump;
 end
 
 % Assign Output %
 % warning('off', 'MATLAB:divideByZero');
-smoothedRate=smoothedSpk./smoothedPos;
+smoothedRate = smoothedSpk./smoothedPos;
 % set rates to 0 for parts where no smoothing occured (these are NaN otherwise) - this is only relevant for maps with very few spikes
 smoothedRate(isnan(smoothedRate)) = 0;
 % warning('on', 'MATLAB:divideByZero');
-smoothedRate(pos==0)=nan;
-smoothedPos(pos==0) =nan;
-smoothedSpk(pos==0) =nan;
-medFiltRad = nanmedian(radiiUsedList);
+smoothedRate(pos==0) = NaN;
+smoothedPos(pos==0)  = NaN;
+smoothedSpk(pos==0)  = NaN;
+medFiltRad           = median(radiiUsedList,'omitnan');
 
 % Report radii sizes %
 if 0

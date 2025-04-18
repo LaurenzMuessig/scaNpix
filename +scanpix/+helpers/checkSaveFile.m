@@ -16,7 +16,12 @@ function filenameOut = checkSaveFile(filenameIn)
 %
 % LM 2020
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    filenameIn {mustBeText}
+end
 
+%%
 [path,tmpName,ext] = fileparts(filenameIn);
 
 %% check if file exist and generate unique filename if necessary

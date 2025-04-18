@@ -129,7 +129,8 @@ end
 % [colsIm, rowsIm]                            = meshgrid(1:length(autoCorr), 1:length(autoCorr));
 [colsIm, rowsIm]                            = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
 distMap                                     = sqrt((rowsIm-centralPoint(1)).^2 + (colsIm-centralPoint(2)).^2);
-centrPeakMask                               = distMap < peakStats.EquivDiameter;
+centPeakDiam                                = peakStats.EquivDiameter;
+centrPeakMask                               = distMap < centPeakDiam;
 % sanity checks for central peak
 % if peakStats.EquivDiameter >= length(autoCorr)/2 - peakStats.EquivDiameter/2 
 if peakStats.MajorAxisLength/2 >= length(autoCorr)/2 - peakStats.MajorAxisLength/4 
@@ -205,10 +206,11 @@ if getGridProps || p.Results.getellgridness
     Props.closestPeaksCoord(1:length(xyCoordMaxBin),outInd*2-1:outInd*2) = round(xyCoordMaxBin);
 
     % field size THIS NEEDS WORK AS NOT MATCHING WITH THE GENERAL ALGORTIHM
-    aboveThrMask               = bwlabel(autoCorr>0.4,8);
-    aboveThrMask( aboveThrMask ~= aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 0;
-    aboveThrMask( aboveThrMask == aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 1;
-    Props.fieldSize(1,outInd)  = sum(logical(aboveThrMask(:)));
+    % aboveThrMask               = bwlabel(autoCorr>0.4,8);
+    % aboveThrMask( aboveThrMask ~= aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 0;
+    % aboveThrMask( aboveThrMask == aboveThrMask(ceil(centralPoint(1)),ceil(centralPoint(2))) ) = 1;
+    % Props.fieldSize(1,outInd)  = sum(logical(aboveThrMask(:)));
+    Props.fieldSize = pi*(centPeakDiam/2)^2;   
 
     if p.Results.plot
         % make a nice figure with auto corr props - adapted from Dan Manson's code

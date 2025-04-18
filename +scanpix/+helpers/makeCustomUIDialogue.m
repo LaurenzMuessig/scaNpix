@@ -23,12 +23,14 @@ function output = makeCustomUIDialogue(prompts, defaultVals,fillBoxLength)
 
 %% TO-Do:
 % check pix scaling on smaller screen
-
-%% check inputs
-if nargin == 1
-    defaultVals = cell(length(prompts),1); % all empty fields
+%%
+arguments
+    prompts {mustBeA(prompts,'cell')}
+    defaultVals {mustBeA(defaultVals,'cell')} = cell(length(prompts),1);
+    fillBoxLength (1,1) {mustBeNumeric} = 120;
 end
 
+%%
 if length(prompts) ~= length(defaultVals)
     error('Length of field names and default values doesn''t match mate');
 end
@@ -39,11 +41,7 @@ if any(logInd); defaultVals(logInd) = num2cell(double([defaultVals{logInd}])); e
 
 nLines  = 20;
 lineSz1 = [120 20]; % need to check if this scales well on e.g. laptop!
-if nargin < 3
-    lineSz2 = [120 20];  % need to check if this scales well on e.g. laptop!
-else
-    lineSz2 = [fillBoxLength 20]; 
-end
+lineSz2 = [fillBoxLength 20]; 
 
 %% create the dialogue
 screenSz = get(0,'screensize');

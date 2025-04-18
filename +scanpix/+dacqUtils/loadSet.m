@@ -14,7 +14,13 @@ function loadSet(obj, trialIterator)
 %
 % TW/LM 2020 (adapted from org. SCAN function)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialIterator (1,1) {mustBeNumeric}
+end
 
+%%
 % sanity check
 if ~exist(fullfile(obj.dataPath{trialIterator},[obj.trialNames{trialIterator} '.set']),'file')
     ME = MException('scaNpix:loadSet:setFileNotFound', ['Could not find ''' strrep(obj.dataPath{trialIterator},'\','/') obj.trialNames{trialIterator} '.set''' ]); % should maybe switch to forward slash everywhere
@@ -108,14 +114,17 @@ else
     end
 end
 % need to initialise here
+setFile.posFs           = []; % no method yet for dacq data to gather that
 setFile.ppm             = []; % will be populated when loading pos data
 setFile.ppm_org         = []; % will be populated when loading pos data
 % for these the trick is to add them after initial loading using the addMetaData method and then reload the pos data with the reload flag
 setFile.trialType       = []; % no method yet for dacq data to gather that
-setFile.trackLength     = []; % no method yet for dacq data to gather that
+% setFile.trackLength     = []; % no method yet for dacq data to gather that
 setFile.envSize         = []; % no method yet for dacq data to gather that
 setFile.envBorderCoords = []; % no method yet for dacq data to gather that
 setFile.PosIsScaled     = []; % no method yet for dacq data to gather that
+setFile.PosIsFitToEnv   = {false,[]};
+setFile.log             = struct();
 
 % output
 if isempty(obj.trialMetaData)

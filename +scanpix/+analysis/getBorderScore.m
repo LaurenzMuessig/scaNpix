@@ -1,4 +1,4 @@
-function [borderScore, mainWall] = getBorderScore(maps,binSize,varargin)
+function [borderScore, mainWall] = getBorderScore(maps,binSize,options)
 % Calculate border-score, as defined by Solstad et al, 2008. This is an
 % updated version from TW's original function ('borderScoreForScaledRateMaps'). 
 % This version doesn't assume the rate map is a square array, but will
@@ -33,32 +33,18 @@ function [borderScore, mainWall] = getBorderScore(maps,binSize,varargin)
 %
 % TW, LM 2019
 
-%% PARAMS
-% Important variables %
-prms.rateThr            = 0.2;       % Fraction of max rate to use as field threshold.
-prms.sizeThr            = 200;       % This many cm-sq of contiguous bins.
-prms.maxBinDistBorder   = 4;
-prms.debugModeON        = 0; 
-
-% - This is the template code for name-value list OR struct passing of parameters -- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-
-%% Pre Process map
-% % exit straight away if map is empty
-% if all( isnan(map(:)) )
-%     borderScore = nan;
-%     mainWall    = nan;
-%     return
-% end   
-
+%% 
+%%
+arguments
+    maps 
+    binSize (1,1) {mustBeNumeric}
+    options.rateThr (1,1) {mustBeNumeric} = 0.2;
+    options.sizeThr (1,1) {mustBeNumeric} = 200;
+    options.maxBinDistBorder (1,1) {mustBeNumeric} = 4;
+    options.debug (1,1) {mustBeNumericOrLogical} = false;
+end
+                                                                             %
+%%
 if ~iscell(maps)
     maps = {maps};
 end
@@ -80,14 +66,14 @@ rowSub      = 1:size(templateMap,1); % index for all rows
 % bins for borders in all 4 directions
 % North
 indN                = accumarray(cols(:),templateMap(:),[size(templateMap,2) 1],@(x) find(~isnan(x),1,'first')); % this is the row index of northern map edge (orderd by column N)
-filtBinOutInd       = indN > prms.maxBinDistBorder;
+filtBinOutInd       = indN > options.maxBinDistBorder;
 indN(filtBinOutInd) = []; % remove bins that have too high wall distance
 meanN               = floor( mean(indN) ); % average
 indN                = [indN colSub(~filtBinOutInd)']; % final index into map for border bins
 % now do the rest for other walls
 % south
 indS                = accumarray(cols(:),maps{1}(:),[size(maps{1},2) 1],@(x) find(~isnan(x),1,'last'));
-filtBinOutInd       = indS < max(indS) - prms.maxBinDistBorder;
+filtBinOutInd       = indS < max(indS) - options.maxBinDistBorder;
 indS(filtBinOutInd) = [];
 meanS               = ceil(mean(indS));
 indS                = [indS colSub(~filtBinOutInd)'];
@@ -95,13 +81,13 @@ indS                = [indS colSub(~filtBinOutInd)'];
 rows                = rows';
 templateMap         = templateMap';
 indE                = accumarray(rows(:),templateMap(:),[size(templateMap,2) 1],@(x) find(~isnan(x),1,'first')); % this is the column index of Eastern map edge (orderd by row N)
-filtBinOutInd       = indE > prms.maxBinDistBorder;
+filtBinOutInd       = indE > options.maxBinDistBorder;
 indE(filtBinOutInd) = [];
 meanE               = floor(mean(indE));
 indE                = [rowSub(~filtBinOutInd)' indE];
 % west
 indW                = accumarray(rows(:),templateMap(:),[size(templateMap,2) 1],@(x) find(~isnan(x),1,'last'));
-filtBinOutInd       = indW < max(indW) - prms.maxBinDistBorder;
+filtBinOutInd       = indW < max(indW) - options.maxBinDistBorder;
 indW(filtBinOutInd) = [];
 meanW               = ceil(mean(indW));
 indW                = [rowSub(~filtBinOutInd)' indW];
@@ -113,11 +99,11 @@ templateMap = templateMap'; % transpose back to original format
 for i = 1:length(maps)
     
     % find all fields above thresh
-    bwMap    = maps{i} >= ( max(maps{i}(:),[],'omitnan')*prms.rateThr );
+    bwMap    = maps{i} >= ( max(maps{i}(:),[],'omitnan')*options.rateThr );
     fieldMap = bwlabel(bwMap,4);
     stats    = regionprops(fieldMap,'Area','PixelList');
     % only keep fields that are big enough
-    keepInd  = [ stats(:).Area ] .* binSize > prms.sizeThr ;
+    keepInd  = [ stats(:).Area ] .* binSize > options.sizeThr ;
     % fail gracefully
     if ~any(keepInd); continue; end
     
@@ -176,7 +162,7 @@ for i = 1:length(maps)
     borderScore(i)    = (Cm-Dm) / (Cm + Dm);
     
     %% debug plot
-    if prms.debugModeON
+    if options.debug
         figure;
         scanpix.plot.plotRateMap(maps{i},subplot(1,2,1));
         axis square
@@ -184,7 +170,7 @@ for i = 1:length(maps)
         fieldMap2PLot(isnan(templateMap)) = 0;
         fieldMap2PLot(mapInd) = 2;
         subplot(1,2,2)
-        imagesc(fieldMap2PLot); colormap([1 1 1; 0 0 1; 1 0 0]);
+        imagesc(fieldMap2PLot); colormap(gca,[1 1 1; 0 0 1; 1 0 0]);
         axis square
         hold on
         if mainWall == 1

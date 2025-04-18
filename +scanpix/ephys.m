@@ -56,7 +56,6 @@ classdef ephys < handle
     properties(Hidden)
         fileType              char    = '';
         type                  char {mustBeMember(type,{'npix','dacq','nexus','bhave','init'})} = 'init';
-        %         uniqueCellIndex(:,1)  logical
         fields2spare          cell    = {'params','dataSetName','cell_ID','cell_Label'}; % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
         mapParams             struct  = scanpix.maps.defaultParamsRateMaps;
         loadFlag              logical = false;                                         % flag so we know something has been loaded into object
@@ -833,11 +832,10 @@ classdef ephys < handle
                 throw(ME);
             end
             
-            if ~strcmp(prmsMap('type'),obj.type)
-                ME = MException('scaNpix:ephys::getParams:invalidPRMSMap', [prmsMap('type') ' and ' obj.type ' don''t match. I knew this would happen but you didn''t want to listen.']);
-                throw(ME);
-            end
-
+            % if ~strcmp(prmsMap('type'),obj.type)
+            %     ME = MException('scaNpix:ephys::getParams:invalidPRMSMap', [prmsMap('type') ' and ' obj.type ' don''t match. I knew this would happen but you didn''t want to listen.']);
+            %     throw(ME);
+            % end
             obj.params = prmsMap;
         end
         
@@ -1015,7 +1013,7 @@ classdef ephys < handle
     methods
         
         %%
-        function addMaps(obj, mapType, trialInd, varargin )
+        function addMaps(obj, mapType, trialInd )
             % addMaps - create different types of firing rate maps for data in object
             %
             % We can add spatial rate maps ('rate'), directional rate maps ('dir') or
@@ -1028,22 +1026,10 @@ classdef ephys < handle
             %       obj.addMaps
             %       obj.addMaps(mapType)
             %       obj.addMaps(mapType, trialInd)
-            %       obj.addMaps(mapType, trialInd, varargin )
-            %       obj.addMaps(mapType, [], varargin )
-            %       obj.addMaps(__, 'load' )
-            %       obj.addMaps(__, 'ui' )
-            %       obj.addMaps(__, prmsStruct )
-            %       obj.addMaps(__, Name-Value comma separated list )
             %
             % Inputs:
             %    mapType  - mapType string {'rate','dir', lin'}
             %    trialInd - numeric index for trial(s) for which you want to make maps (default: all trials)
-            %    varargin - optional argument to control parameter selection
-            %             - 'default': use default parameter space
-            %             - 'load': load parameter file from disk
-            %             - 'ui': open UI dialogue for parameter collection
-            %             - prmsStruct: structure with parameter fields to be changed from defaults
-            %             - name-value: comma separated list of name-value pairs
             %
             % Outputs:
             %
@@ -1068,212 +1054,49 @@ classdef ephys < handle
                         mapType = str{select};
                     end
                 end
-                
-%                 if ~iscell(mapType); mapType = {mapType}; end
-%                 
-%                 if all(ismember(mapType,{'pos','rate'}))
-%                     mapType = mapType(~strcmp(mapType,'pos'));
-%                 end
             else
                 mapType = 'pos';
             end
-            
-            
+            %            
             if nargin < 3 || isempty(trialInd)
                 trialInd = 1:length(obj.trialNames); % default: do all trials in object
             end
-            
-            if nargin < 4 || isempty(varargin{1})
-                if isempty( obj.params('myRateMapParams') )
-                    % use default params
-                    if strcmp(mapType,'pos')
-                        prms = obj.mapParams.rate;
-                    else
-                        prms = obj.mapParams.(mapType);
-                    end
-                else
-                    % use user defined params
-                    classFolder = what('scanpix');
-                    try
-                        temp    = load( fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) ); %
-                    catch
-                        ME = MException('scaNpix::ephys::addMaps:''rateMapParamsNotFound', ['' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) ''' doesn''t exist buddy... ']);
-                        throw(ME);
-                    end
-                    f            = fieldnames(temp);
-                    prms         = temp.(f{1}).(mapType);
-                    warning(['scaNpix::ephys::addMaps:Using user-defined parameters to make maps loaded from ' fullfile(classFolder.path,'files', obj.params('myRateMapParams') ) '.'] );
-                end
-            end
-            
-            if nargin == 4 && ischar(varargin{1})
-                if strcmpi(varargin{1},'default')
-                    % use defaults
-                    prms = scanpix.maps.defaultParamsRateMaps;
-                    prms = prms.(mapType);
-                elseif strcmpi(varargin{1},'load')
-                    % load from file
-                    [fName, dataDir] = uigetfile(fullfile(classFolder.path,'files', '*.mat'), 'Select map params to load.');
-                    % fail gracefully
-                    if isnumeric(fName)
-                        warning('scaNpix:ephys:addMaps:Loading Map Params aborted. Will use defaults instead!');
-                        prms         = obj.mapParams.(mapType);
-                    else
-                        temp         = load( fullfile(dataDir, fName) );
-                        f            = fieldnames(temp);
-                        prms         = temp.(f{1}).(mapType);
-                    end
-                    
-                elseif strcmpi(varargin{1},'ui')
-                    % open UI dialogue to grab parameters
-                    prms             = obj.mapParams.(mapType);
-                    prompts          = fieldnames(prms);
-                    defaultVals      = struct2cell(prms);
-                    output           = scanpix.helpers.makeCustomUIDialogue(prompts, defaultVals);
-                    % exit gracefully
-                    if isempty(output)
-                        warning('scaNpix::ephys::addMaps:Aborted changing parameters for rate map generation - will use those currently set in object.');
-                        prms         = obj.mapParams.(mapType);
-                    else
-                        % format as structure
-                        prms         = cell2struct(output(:,2), output(:,1), 1);
-                    end
-                    
-                end
-            end
-            
-            % Name-Value pair or struct input to change some params
-            % explicitly
-            if ~isempty(varargin) && (nargin > 4 || isstruct(varargin{1}) )
-                prms = obj.mapParams.(mapType);
-                if ischar(varargin{1})                                                           
-                    for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   
-                elseif isstruct(varargin{1})                                                     
-                    s = varargin{1};   f = fieldnames(s.(mapType));                                      
-                    for i=1:length(f);   prms.(f{i}) = s.(mapType).(f{i});   end                        
-                end
-            end
-            
-            % these params get set from general data params container
-            
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
-            %
+           
+            %%
             % make some maps
             switch lower(mapType)
                 case {'pos','rate'}
-                    % prms.speedFilterLimits   = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
                     
                     for i = trialInd
-                        if ~isempty( obj.trialMetaData(i).envSize )
-                            prms.envSize = obj.trialMetaData(i).envSize ./ 100 .* obj.trialMetaData(i).ppm; % in pixels
-                        elseif strcmp(obj.fileType,'.set')
-                            if obj.trialMetaData(i).PosIsScaled
-                                scaleFact = obj.trialMetaData(i).ppm / obj.trialMetaData(i).ppm_org; 
-                                prms.envSize = ceil([obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin] .* scaleFact);
-                            else
-                                prms.envSize = ceil([obj.trialMetaData(i).ymax-obj.trialMetaData(i).ymin obj.trialMetaData(i).xmax-obj.trialMetaData(i).xmin]);
-                            end
-                        end
-                        
+                        %
                         if strcmpi(mapType,'pos')
-                            prms.smooth = 'boxcar';
-                            prms.posOnly = true;
-                        end
-
-                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            sampleTimes = [];
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
+                            [ ~, obj.maps(1).pos{i}, ~ ]                                      = scanpix.maps.makeRateMaps(obj, i, mapType );
                         else
-                            sampleTimes = obj.spikeData.sampleT{i};
-                            prms.posFs  = obj.params('posFs');
-                        end
-                        if strcmpi(mapType,'pos')
-                            [ ~, obj.maps(1).pos{i}, ~ ]                                      = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
-                        else
-                            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms );
+                            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj, i, mapType );
                         end
                     end
-                    
-                    %         % pad maps so size is the same for all maps is set
-                    %         mapSz = reshape(cell2mat(cellfun(@(x) size(x{1}),obj.maps.rate,'uni',0)),2,[]);
-                    %         maxSz = max(mapSz,[],2);
-                    %         padSz = ceil((maxSz-mapSz) ./ 2);
-                    %
-                    %         mapType = {'rate','pos','spike'};
-                    %         for i = 1:length(mapType)
-                    %             for j = trialInd
-                    %                 obj.maps.(mapType{i}){j} = cellfun(@(x) padarray(x,[padSz(1,j) padSz(2,j)],NaN), obj.maps.(mapType{i}){j},'uni',0);
-                    %                 if any(mapSz(:,j) + 2*padSz(:,j) > maxSz)
-                    %                     obj.maps.(mapType{i}){j} = cellfun(@(x) x(1:maxSz(1),1:maxSz(2)),obj.maps.(mapType{i}){j},'uni',0); % might need to trim off one row/column
-                    %                 end
-                    %             end
-                    %         end
                     
                 case 'dir'
                     % prms.speedFilterLimits = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
                     for i = trialInd
-                         if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            sampleTimes = [];
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            sampleTimes = obj.spikeData.sampleT{i};
-                            prms.posFs  = obj.params('posFs');
-                        end
-                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj.spikeData.spk_Times{i}, obj.posData.direction{i}, sampleTimes, obj.posData.speed{i},  prms  );
+                        obj.maps(1).dir{i} = scanpix.maps.makeDirMaps( obj, i );
                     end
                     
                 case 'lin'
-                    % map making a bit more involved mostly because we need some extra parameters we can't infer from data alone - should check if we
-                    % can solve this more elegantly
-                    prms.speedFilterLimits  = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
-                    skipNextUI = false;
+                    %
                     for i = trialInd
-                        % we need the type of the track (for how smoothing is done)
-                        if ~isempty(obj.trialMetaData(i).trialType)
-                            trackProps.type = obj.trialMetaData(i).trialType;
-                        else
-                            uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
-                            if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps:No track properties, no linear rate maps...');
-                                return;
-                            else
-                                trackProps.type                  = uiInput{1};
-                                obj.trialMetaData(i).trialType   = uiInput{1};
-                                trackProps.length                = str2double(uiInput{2});
-                                obj.trialMetaData(i).trackLength = str2double(uiInput{2});
-                                skipNextUI                       = true;
-                            end
-                        end
-                        
-                        % we need the length of the track for the pos scaling to work
-                        if ~isempty(obj.trialMetaData(i).trackLength)
-                            trackProps.length= obj.trialMetaData(i).trackLength;
-                        elseif ~skipNextUI
-                            uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
-                            if isempty(uiInput)
-                                warning('scaNpix::ephys::addMaps:No track length, no linear rate maps...');
-                                return;
-                            else
-                                trackProps.length = str2double(uiInput{1});
-                                obj.trialMetaData(trialInd).trackLength = str2double(uiInput{1});
-                            end
-                        end
-                        trackProps.ppm     = obj.trialMetaData(i).ppm;
-                        % trackProps.posFs   = obj.params('posFs');
-                        trackProps.objType = obj.type;
+                        %
+                        [linPos, dirInd]        = scanpix.maps.linearisePosData(obj, i);
+                        dirInd                  = [dirInd == 1, dirInd == 2]; % make logical
+                        %
+                        linPos                  = repmat(linPos,1,3);
+                        linPos(~dirInd(:,1),2)  = NaN;
+                        linPos(~dirInd(:,2),3)  = NaN;
+                        obj.posData(1).linXY{i} = linPos;
 
-                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            sampleTimes      = [];
-                            prms.posFs       = obj.trialMetaData(i).log.InterpPosFs;
-                            trackProps.posFs = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            sampleTimes      = obj.spikeData.sampleT{i};
-                            % prms.posFs       = obj.params('posFs');
-                            trackProps.posFs = obj.params('posFs');
-                        end
-                        
-                        [obj.maps(1).lin{i}, posMap, obj.posData(1).linXY{i}] = scanpix.maps.makeLinRMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.posData.direction{i},obj.posData.speed{i}, trackProps, prms );
+                        % I REMOVED CODE THAT USES UI TO FETCH METADATA FOR LIN TRACK DATA
+                        %
+                        [obj.maps(1).lin{i}, posMap ] = scanpix.maps.makeLinRMaps(obj, i );
                         obj.maps(1).linPos{i} = num2cell(posMap,2);
                     end
                     
@@ -1283,10 +1106,11 @@ classdef ephys < handle
                         warning('scaNpix::ephys::addMaps:You need to generate rate maps before demanding spatial autocorrelograms.')
                         return
                     end
-                    
+                    options = scanpix.helpers.struct2params(obj.mapParams.sac);
                     for i = trialInd
                         % we don't want to smooth the AC but use smoothed rate map as input
-                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x,prms),obj.maps.rate{i},'uni',0);
+
+                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x,options{:}),obj.maps.rate{i},'uni',0);
                     end
                     
                 case 'objvect'
@@ -1308,12 +1132,7 @@ classdef ephys < handle
                 case 'speed'
                     
                     for i = trialInd
-                         if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            prms.posFs  = obj.params('posFs');
-                        end
-                        obj.maps(1).speed{i} = scanpix.maps.makeSpeedMap( obj.spikeData.spk_Times{i}, obj.posData.speed{i}, obj.trialMetaData(i).duration,  prms  );
+                        obj.maps(1).speed{i} = scanpix.maps.makeSpeedMap( obj, i );
                     end
                     
                 otherwise
@@ -1399,11 +1218,11 @@ classdef ephys < handle
                     
                     spatProps = nan(size(obj.cell_ID,1),6,length(trialInd));
                     % format params
-                    prms      = fieldnames(obj.mapParams.gridProps)';
-                    prms(2,:) = struct2cell(obj.mapParams.gridProps)'; 
+                    options = scanpix.helpers.struct2params(obj.mapParams.gridProps);
+                    %
                     for i = trialInd
-                        [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,prms{:}),obj.maps(1).sACs{i},'uni',0);
-                        [~, ellProps]     = cellfun(@(x) scanpix.analysis.gridprops(x,true,prms{:}),obj.maps(1).sACs{i},'uni',0);
+                        [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,options{:}),obj.maps(1).sACs{i},'uni',0);
+                        [~, ellProps]     = cellfun(@(x) scanpix.analysis.gridprops(x,true,options{:}),obj.maps(1).sACs{i},'uni',0);
                         % for now just output the basics
                         spatProps(:,:,c) = [cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0)), cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0))];
                         c = c + 1;
@@ -1587,3 +1406,46 @@ end
 %                 chanMapKS          = double(readNPY(fullfile(path2data_B,'channel_map.npy'))) + 1;  % 
 %                 [clu_Depth,clu_Ch] = scanpix.npixUtils.getCluChDepthFromTemplates(templates, Winv, [chanMapKS(:) chanPos(:,2)]);
 %             end
+
+% if ~isempty(obj.trialMetaData(i).trialType)
+                        %     trackProps.type = obj.trialMetaData(i).trialType;
+                        % else
+                        %     uiInput = inputdlg({'linear track type', 'linear track length (cm)'},'',1,{'sqtrack','62.5'});
+                        %     if isempty(uiInput)
+                        %         warning('scaNpix::ephys::addMaps:No track properties, no linear rate maps...');
+                        %         return;
+                        %     else
+                        %         trackProps.type                  = uiInput{1};
+                        %         obj.trialMetaData(i).trialType   = uiInput{1};
+                        %         trackProps.length                = str2double(uiInput{2});
+                        %         obj.trialMetaData(i).trackLength = str2double(uiInput{2});
+                        %         skipNextUI                       = true;
+                        %     end
+                        % end
+                        % 
+                        % % we need the length of the track for the pos scaling to work
+                        % if ~isempty(obj.trialMetaData(i).trackLength)
+                        %     trackProps.length= obj.trialMetaData(i).trackLength;
+                        % elseif ~skipNextUI
+                        %     uiInput = inputdlg({'linear track length (cm)'},'',1,{'62.5'});
+                        %     if isempty(uiInput)
+                        %         warning('scaNpix::ephys::addMaps:No track length, no linear rate maps...');
+                        %         return;
+                        %     else
+                        %         trackProps.length = str2double(uiInput{1});
+                        %         obj.trialMetaData(trialInd).trackLength = str2double(uiInput{1});
+                        %     end
+                        % end
+                        % trackProps.ppm     = obj.trialMetaData(i).ppm;
+                        % % trackProps.posFs   = obj.params('posFs');
+                        % trackProps.objType = obj.type;
+
+                        % if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+                        %     sampleTimes      = [];
+                        %     prms.posFs       = obj.trialMetaData(i).log.InterpPosFs;
+                        %     trackProps.posFs = obj.trialMetaData(i).log.InterpPosFs;
+                        % else
+                        %     sampleTimes      = obj.spikeData.sampleT{i};
+                        %     % prms.posFs       = obj.params('posFs');
+                        %     trackProps.posFs = obj.params('posFs');
+                        % end

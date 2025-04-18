@@ -25,6 +25,11 @@ function [bits_per_spike, bits_per_sec] = spatial_info(rMaps, pMap)
 %    bits_per_sec   - 1:nMaps  array of spatial info per second
 %
 % LM 2020
+%%
+arguments
+    rMaps
+    pMap {mustBeNumeric}
+end
 
 %% format inputs
 if ~iscell(rMaps)
@@ -47,7 +52,7 @@ rates          = reshape([rMaps{:}],[mapSz nCells]); % rate maps as 3D map x cel
 pos            = pMap(:) .* ones(size(rates));
 % pos(isnan(pos)) = NaN;
 % calculate bits for formula
-mean_rate      = sum(rates.*pos,1,'omitnan')./duration;
+mean_rate      = sum(rates.*pos,1,'omitnan') ./ duration;
 p_x            = pos ./ duration;
 % p_r            = bsxfun(@rdivide, rates, meanRates'); 
 p_r            = bsxfun(@rdivide, rates, mean_rate); 

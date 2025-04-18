@@ -1,4 +1,4 @@
-function [dirMaps, dirPosMap] = makeDirMaps(spkTimes, HDirections, sampleTimes, speed, varargin)
+function [dirMaps, dirPosMap] = makeDirMaps(obj, trialInd, addDirFilter, cellInd)
 % makeDirMaps - generate directional firing rate maps from spike times 
 % and heading direction of animal
 %
@@ -32,64 +32,46 @@ function [dirMaps, dirPosMap] = makeDirMaps(spkTimes, HDirections, sampleTimes, 
 % LM 2020
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% To do: CHECK IT'S ALL GOOD
-
-%% params
-prms.dirSmoothKern        = 5;         % in bins
-prms.binSizeDir           = 6;         % in degrees
-prms.speedFilterFlagDMaps = 0;  % y/n
-prms.speedFilterLimitLow  = 2.5;
-prms.speedFilterLimitHigh = 400;
-prms.posFs                = 50;        % in Hz
-prms.showWaitBar          = false;
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% - This is the template code for name-value list OR struct passing of parameters -- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% in case just 1 cell
-if ~iscell(spkTimes)
-    spkTimes = {spkTimes};
-end
-% we want degrees
-if max(HDirections) <= 2*pi
-    HDirections = HDirections * 180/pi;
+%% 
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialInd (1,1) {mustBeNumeric}
+    addDirFilter {mustBeNumericOrLogical} = false(size(obj.posData.direction{trialInd},1),1);
+    cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
 end
 
-if nargin < 3
+%%
+% only relevant for npix data - check for interpolated Fs
+if strcmp(obj.type,'npix') && isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
     sampleTimes = [];
+else
+    sampleTimes = obj.spikeData.sampleT{trialInd};
 end
+
+% data from object
+HDirections                 = obj.posData.direction{trialInd};
+HDirections(addDirFilter,1) = NaN;
+%
+spkTimes                    = obj.spikeData.spk_Times{trialInd}(cellInd);
 
 %% speed filter
-if nargin > 3 && prms.speedFilterFlagDMaps && ~isempty(speed)
-    speedFilter            = speed <= prms.speedFilterLimitLow | speed > prms.speedFilterLimitHigh;
-else
-    speedFilter            = false(length(HDirections),1); 
+if obj.mapParams.dir.speedFilterFlagDMaps 
+    speedFilter                = obj.posData.speed{trialInd} <= obj.mapParams.dir.speedFilterLimits(1)  | obj.posData.speed{trialInd} > obj.mapParams.dir.speedFilterLimits(2);
+    HDirections(speedFilter,:) = NaN;
 end
-HDirections(speedFilter,:) = NaN;
 
 %% occupancy Map
-nBins                   = ceil(360/prms.binSizeDir);
-HDBinned                = ceil(HDirections ./ prms.binSizeDir);
+nBins                   = ceil(360/obj.mapParams.dir.binSizeDir);
+HDBinned                = ceil(HDirections ./ obj.mapParams.dir.binSizeDir);
 HDBinned(HDBinned == 0) = max(HDBinned); % bin=0 is the same as last bin
-occMapRaw               = accumarray(HDBinned(~isnan(HDBinned)),1,[nBins 1]) ./ prms.posFs;
+occMapRaw               = accumarray(HDBinned(~isnan(HDBinned)),1,[nBins 1]) ./ obj.trialMetaData(trialInd).posFs  ;
 
 %% make maps
 % smooth occupancy map
-kernel          = ones(prms.dirSmoothKern,1) ./ prms.dirSmoothKern;
+kernel          = ones(obj.mapParams.dir.dirSmoothKern,1) ./ obj.mapParams.dir.dirSmoothKern;
 dirPosMap       = imfilter(occMapRaw,kernel,'circular');
  
-if prms.showWaitBar; hWait = waitbar(0); end
+if obj.mapParams.dir.showWaitBar; hWait = waitbar(0); end
 
 % pre-allocate
 dirMaps          = cell(length(spkTimes),1);
@@ -102,7 +84,7 @@ for i = 1:length(spkTimes)
     
     % spike Map
     if isempty(sampleTimes)
-        spkPosBinInd = ceil(spkTimes{i} .* prms.posFs ); 
+        spkPosBinInd = ceil(spkTimes{i} .* obj.trialMetaData(trialInd).posFs ); 
     else
         % as sample times can be somewhat irregular we can't just bin by sample rate for e.g. neuropixel data
 %         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleTimes - x)), spkTimes{i}, 'UniformOutput', 0); % this is ~2x faster than running min() on whole array at once
@@ -118,11 +100,11 @@ for i = 1:length(spkTimes)
     % dir map
     dirMaps{i}      = sm_spkDirMap ./ dirPosMap;
         
-    if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Dir Maps... %i/%i done.',i,length(spkTimes))); end
+    if obj.mapParams.dir.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Dir Maps... %i/%i done.',i,length(spkTimes))); end
 
 end
 
-if prms.showWaitBar; close(hWait); end
+if obj.mapParams.dir.showWaitBar; close(hWait); end
 
 end
 

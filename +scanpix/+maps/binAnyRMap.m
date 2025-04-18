@@ -44,7 +44,7 @@ end
 switch lower(options.colmap)
     case 'hcg' 
         temp   = scanpix.maps.highContGrayColMap;
-        ind    = round(linspace(1,length(temp),p.Results.nsteps));
+        ind    = round(linspace(1,length(temp),options.nsteps));
         cMap   = temp(ind,:);   
         nSteps = options.nsteps;
     case 'poulter'

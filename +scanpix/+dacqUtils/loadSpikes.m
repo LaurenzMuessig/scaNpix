@@ -17,6 +17,12 @@ function cell_ID = loadSpikes(obj, trialIterator)
 % load MUA when no cut file is found
 %
 %%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialIterator (1,1) {mustBeNumeric}
+end
+
+%%
 [~,nTetrodes] = scanpix.dacqUtils.findDACQFiles( [obj.dataPath{trialIterator} filesep], obj.trialNames{trialIterator}, 'tet' );
 if isempty(nTetrodes)
     ME = MException('scaNpix::loadSpikes:TetrodeFilesMissing', [' Can''t find any tetrode files for ' fullfile(obj.dataPath{trialIterator},[obj.trialNames{trialIterator} '.set']) '.' ]);
@@ -31,6 +37,7 @@ cell_ID                 = zeros(0, 2);
 scanpix.fxchange.textprogressbar(['Loading tetrode data for ' obj.trialNames{trialIterator} ' ']);
 
 % loop through recorded tetrodes
+loadFail = nan(1,length(nTetrodes));
 for i = 1:length(nTetrodes)
     
     %%%%%%%%%%%%%% TETRODE FILE %%%%%%%%%%%%
@@ -68,12 +75,12 @@ for i = 1:length(nTetrodes)
     elseif strcmp(obj.params('cutFileType'),'clu')
         cutFileName = fullfile(obj.dataPath{trialIterator}, [ obj.trialNames{trialIterator} obj.params('cutTag1') '.clu.' num2str(nTetrodes(i)) ] );
     else
-        ME = MException('scaNpix::loadSpikes:InvalidCutFileExtension', ['''' obj.params('cutFileType') '''' ' is not a valid extension for cut files - only ''cut'' or ''clu'' are allowed' ]);
+        ME = MException('scaNpix::dacqUtils::loadSpikes:InvalidCutFileExtension', ['''' obj.params('cutFileType') '''' ' is not a valid extension for cut files - only ''cut'' or ''clu'' are allowed' ]);
         throw(ME);
     end
     
     if exist(cutFileName,'file') ~= 2
-        warning(['scaNpix: Can''t find ''' obj.trialNames{trialIterator} obj.params('cutTag1') '_' num2str(nTetrodes(i)) obj.params('cutTag2') '.cut''. No data loaded for Tet #' num2str(nTetrodes(i)) '.']);
+        loadFail(i) = nTetrodes(i);
         continue;
     end
     
@@ -97,7 +104,8 @@ for i = 1:length(nTetrodes)
     
     % sanity check
     if length(spk_TimesRaw) ~= length(cut)
-        warning(['scaNpix: Trial ', obj.trialNames{trialIterator}, ': Number of spikes in cut and tetrode file for tetrode ' num2str(nTetrodes(i)) ' don''t match. Cut file corrupt?. Data loading for this tetrode will be skipped']);
+        loadFail(i) = nTetrodes(i);
+        % warning(['scaNpix::dacqUtils::loadSpikes: Trial ', obj.trialNames{trialIterator}, ': Number of spikes in cut and tetrode file for tetrode ' num2str(nTetrodes(i)) ' don''t match. Cut file corrupt?. Data loading for this tetrode will be skipped']);
         continue;
     end
     
@@ -142,7 +150,12 @@ end
 obj.spikeData(1).spk_Times{trialIterator}     = spikeTimes;
 obj.spikeData(1).spk_waveforms{trialIterator} = waveforms;
 obj.spikeData(1).sampleT{trialIterator}       = [];  % not relevant for dacq data, but we need to keep format consistent with neuropix data
-
+%
 scanpix.fxchange.textprogressbar('  DONE!');
+%
+if any(~isnan(loadFail))
+    warning(['scaNpix::dacqUtils::loadSpikes: Loading issues for ''' obj.trialNames{trialIterator} obj.params('cutTag1') '_XX' obj.params('cutTag2') '.cut''. No data loaded for Tet # ' num2str(loadFail(~isnan(loadFail))) '. Either data is corrupt or no cut file is present in folder.']);
+end
+
 end
 

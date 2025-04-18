@@ -13,9 +13,14 @@ function loadPosNPix(obj, trialIterator)
 %
 % LM 2020
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialIterator (1,1) {mustBeNumeric}
+end
 
+%%
 fprintf('Loading pos data for %s .......... ', obj.trialNames{trialIterator});
-
 
 %% process data
 
@@ -189,19 +194,21 @@ obj.posData(1).direction{trialIterator}   = dirData(1:endIdxNPix);
 if obj.trialMetaData(trialIterator).log.InterpPos2PosFs 
     sampleTimes = obj.spikeData.sampleT{trialIterator};
     % newT = (0:1/obj.params('posFs'):(length(sampleTimes)-1)*(1/obj.params('posFs')))'; %
-    newT = linspace(0,sampleTimes(end),length(sampleTimes))'; %
-    obj.trialMetaData(trialIterator).log.InterpPosFs = length(sampleTimes) / sampleTimes(end);
+    newT        = linspace(0,sampleTimes(end),length(sampleTimes))'; %
+    realFs      = length(sampleTimes) / sampleTimes(end);
 
     if length(xy) - length(sampleTimes) == 1
-        newTint           = newT(2) - newT(1);
+        newTint            = newT(2) - newT(1);
         % newT(end+1) = newT(end) + 1/obj.params('posFs');
         % sampleTimes(end+1) = sampleTimes(end) + 1/obj.params('posFs');
-        newT(end+1)       = newT(end) + newTint;
+        newT(end+1)        = newT(end) + newTint;
         sampleTimes(end+1) = sampleTimes(end) + newTint;
     elseif length(xy) - length(sampleTimes) > 1
         error('scaNpix::npixUtils::loadPosNPix:Something went wrong here. Mismatch of n of pos frames and sync pulses for %s!',obj.trialnames{trialIterator});
     end
     obj.trialMetaData(trialIterator).log.InterpPosSampleTimes = newT;
+    obj.trialMetaData(trialIterator).log.InterpPosFs          = realFs;
+    obj.trialMetaData(trialIterator).posFs                    = realFs;
     %
     for i = 1:2
         xy(:,i) = interp1(sampleTimes, xy(:,i), newT);
@@ -217,8 +224,12 @@ obj.trialMetaData(trialIterator).ppm       = ppm(1);
 obj.trialMetaData(trialIterator).ppm_org   = ppm(2);
 
 % scale position
-boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
-scanpix.maps.scalePosition(obj, trialIterator,'envszpix', boxExt,'circflag',circleFlag); 
+if ~isempty(obj.trialMetaData(trialIterator).envSize )
+    boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
+    scanpix.maps.scalePosition(obj, trialIterator,'envSzPix', boxExt,'circleFlag',circleFlag);
+else
+    obj.trialMetaData(trialIterator).PosIsFitToEnv = {false,[]};
+end
 
 % running speed
 pathDists                                  = sqrt( diff(xy(:,1)).^2 + diff(xy(:,2)).^2 ) ./ ppm(1) .* 100; % distances in cm

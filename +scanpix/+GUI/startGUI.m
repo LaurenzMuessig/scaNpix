@@ -18,7 +18,13 @@ function startGUI(GUIType,dataType)
 %
 % LM 2020
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    GUIType (1,:) {mustBeMember(GUIType,{'main','lfpBrowser','phyHelp'})} = 'main';
+    dataType (1,:) {mustBeMember(dataType,{'npix','dacq'})} = 'npix';
+end
 
+%%
 
 %
 if nargin == 0

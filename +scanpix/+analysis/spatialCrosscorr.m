@@ -1,4 +1,4 @@
-function [spatCorr] = spatialCrosscorr(interpBlRm, interpCompRm, varargin)
+function [spatCorr] = spatialCrosscorr(interpBlRm, interpCompRm, options)
 % 2D cross-correlation of rate maps.
 % package: scanpix.analysis
 %
@@ -14,27 +14,19 @@ function [spatCorr] = spatialCrosscorr(interpBlRm, interpCompRm, varargin)
 % Written by Caswell Barry
 % small edits by LM @ 2022
 
-prms.method           = 'moser';
-prms.removeMinOverlap = 1;
-prms.smooth           = 0;
-prms.hSize            = 5;
-prms.sigma            = 1.5;
+%%
+arguments
+    interpBlRm {mustBeNumeric}
+    interpCompRm {mustBeNumeric}
+    options.method (1,:) {mustBeMember(options.method,{'moser','barry'})} = 'moser';
+    options.removeMinOverlap (1,1) {mustBeNumericOrLogical} = true;
+    options.smooth (1,1) {mustBeNumericOrLogical} = false;
+    options.hSize (1,1) {mustBeNumeric} = 5;
+    options.sigma (1,1) {mustBeNumeric} = 1.5;
+end
 
-%% parse input
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% - This is the template code for name-value list OR struct passing of parameters -- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-switch lower(prms.method)
+%%
+switch lower(options.method)
     case 'moser'
         interpBlRm(isnan(interpBlRm))     = 0;
         interpCompRm(isnan(interpCompRm)) = 0;
@@ -44,7 +36,7 @@ switch lower(prms.method)
             return
         end
         [spatCorr,overlapBins] = scanpix.fxchange.normxcorr2_general(interpBlRm,interpCompRm);
-        if prms.removeMinOverlap
+        if options.removeMinOverlap
             spatCorr(overlapBins<20) = NaN; % Remove autocorr bins with small overlaps.
         end
     case 'barry'
@@ -69,7 +61,7 @@ switch lower(prms.method)
         
         nBins=filter2(onesInterpBlRm, onesInterpCompRm, 'full'); % N overlapping bins at each displacement
         
-        if prms.removeMinOverlap
+        if options.removeMinOverlap
             nBins(nBins<20) = 0; % Remove autocorr bins with small overlaps.
         end
         
@@ -96,8 +88,8 @@ switch lower(prms.method)
 end
 
 % Smoooth AC map %
-if prms.smooth
-    spatCorr = imfilter(spatCorr, fspecial('gaussian', prms.hSize, prms.sigma));
+if options.smooth
+    spatCorr = imfilter(spatCorr, fspecial('gaussian', options.hSize, options.sigma));
 end
 
 end

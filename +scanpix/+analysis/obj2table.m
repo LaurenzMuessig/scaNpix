@@ -174,7 +174,12 @@ end
 if addlfp
     if strcmp(copyObj.fileType,'.set')
         ResT.lfp(:,tabInd)        = copyObj.lfpData.lfpHighSamp(dataInd); 
-        ResT.lfpChannel(:,tabInd) = copyObj.lfpData.lfpTet(dataInd);
+    
+        tmpChanInf = cell(1,length(dataInd));
+        for i = 1:length(dataInd)
+            tmpChanInf{i} = [copyObj.trialMetaData(dataInd(i)).lfp_channel; copyObj.lfpData.lfpTet{dataInd(i)}];
+        end
+        ResT.lfpChannel(:,tabInd) = tmpChanInf; 
         ResT.lfpFilter(:,tabInd)  = {copyObj.trialMetaData(dataInd).lfp_filter};
     else
         %%%%%% ?????? %%%%%%

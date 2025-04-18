@@ -15,6 +15,15 @@ function moment = get1stMomentAC(st,acWin,acBin,trDur)
 %
 % LM/TW 
 
+%%
+arguments
+    st {mustBeNumeric}
+    acWin (1,1) {mustBeNumeric}
+    acBin (1,1) {mustBeNumeric}
+    trDur (1,1) {mustBeNumeric}
+end
+
+%%
 if length(st) == 1 || isempty(st)
     moment = NaN;
     return;

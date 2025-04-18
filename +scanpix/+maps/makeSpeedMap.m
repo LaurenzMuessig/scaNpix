@@ -1,4 +1,4 @@
-function speedMaps = makeSpeedMap(spikeTimes,speed,trialDur,varargin)
+function speedMaps = makeSpeedMap(obj, trialInd, cellInd)
 % makeSpeedMap - generate running speed firing rate maps from spike times 
 % and running speed of animal as in Kropf et al. (https://www.nature.com/articles/nature14622)
 % Note that output is a bit dense - check what data is where in cell array
@@ -28,36 +28,17 @@ function speedMaps = makeSpeedMap(spikeTimes,speed,trialDur,varargin)
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% parse input
-prms.posFs          = 50;    % Hz (50)
-prms.minBinProp     = 0.005; % valid speed bins need to contain > prctg of samples of population (0.5%)
-prms.speedBinSz     = 2;     % cm/s (2 cm/s)
-prms.maxSpeed       = 40;    % cm/s (40 cm/s)
-prms.smKernelLength = 0.25;  % in seconds (250ms)
-prms.normaliseFR    = false;  % logical flag
-prms.confInt        = 95;    % confidence interval
-prms.showWaitBar    = false;
-
-
-
-%% parse input
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% - This is the template code for name-value list OR struct passing of parameters -- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if ~iscell(spikeTimes)
-    spikeTimes = {spikeTimes};
+%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialInd (1,1) {mustBeNumeric}
+    cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
 end
 
+%%
+spkTimes = obj.spikeData.spk_Times{trialInd}(cellInd);
+
+%%
 % anon. fcn for 95% conf interval calculation - assuming normal dist which
 % is prob. not the best way
 CI = @(x,p)std(x(:),'omitnan')/sqrt(sum(~isnan(x(:)))) * tinv(abs([0,1]-(1-p/100)/2),sum(~isnan(x(:)))-1); %%
@@ -65,31 +46,31 @@ CI = @(x,p)std(x(:),'omitnan')/sqrt(sum(~isnan(x(:)))) * tinv(abs([0,1]-(1-p/100
 %% make speed map
 
 % bin running speeds
-[instSpeed,~,ind] = histcounts(speed,0:prms.speedBinSz:prms.maxSpeed);
-validBins = instSpeed > prms.minBinProp * trialDur*prms.posFs; % in Kropf et al. it's >0.5% of all bins
+[instSpeed,~,ind] = histcounts(obj.posData.speed{trialInd},0:obj.mapParams.speed.binSizeSpeed:obj.mapParams.speed.maxSpeed);
+validBins         = instSpeed > obj.mapParams.speed.minBinProp * obj.trialMetaData(trialInd).duration * obj.trialMetaData(trialInd).posFs; % in Kropf et al. it's >0.5% of all bins
+%
+occCounts         = accumarray(ind(ind~=0), 1, [size(instSpeed,2) 1])./ obj.trialMetaData(trialInd).posFs;
+%
+speedMaps         = cell(length(obj.spikeData.spk_Times{trialInd}),3);
 
-occCounts   = accumarray(ind(ind~=0), 1, [size(instSpeed,2) 1])./ prms.posFs;
+if obj.mapParams.speed.showWaitBar; hWait = waitbar(0); end
 
-speedMaps = cell(length(spikeTimes),3);
-
-if prms.showWaitBar; hWait = waitbar(0); end
-
-for i = 1:length(spikeTimes)
+for i = 1:length(spkTimes)
     % inst firing rate
-    instFRate = histcounts(ceil(spikeTimes{i}*prms.posFs),0:length(speed)); %.* prms.posFs;
+    instFRate = histcounts(ceil(spkTimes{i} * obj.trialMetaData(trialInd).posFs),0:length(obj.posData.speed{trialInd})); %.* prms.posFs;
     % smooth
-    kernel    = ones(1,ceil(prms.smKernelLength * prms.posFs)) ./ (prms.smKernelLength * prms.posFs); % Kropf uses kernel of 250ms
+    kernel    = ones(1,ceil(obj.mapParams.speed.smKernelLength * obj.trialMetaData(trialInd).posFs)) ./ (obj.mapParams.speed.smKernelLength * obj.trialMetaData(trialInd).posFs); % Kropf uses kernel of 250ms
 %     h = fspecial('average',[ceil(prms.smKernelLength * prms.posFs) 1],1/prms.posFs)
     instFRate = imfilter(instFRate,kernel,'replicate');
     
     % mean rate / speed bin 
-    speedMaps{i,1}(:,1) = prms.speedBinSz/2:prms.speedBinSz:prms.maxSpeed-prms.speedBinSz/2;
-    spikeCounts = accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1]);
+    speedMaps{i,1}(:,1) = obj.mapParams.speed.binSizeSpeed/2:obj.mapParams.speed.binSizeSpeed:obj.mapParams.speed.maxSpeed-obj.mapParams.speed.binSizeSpeed/2;
+    spikeCounts         = accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1]);
     speedMaps{i,1}(:,2) = spikeCounts./occCounts;
 %     speedMaps{i,1}(:,2) = accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@mean);
     % 95 CI for means (a bit dense)
 %     speedMaps{i,1}(:,3:4) = cell2mat( cellfun(@(x) CI(x,prms.confInt), accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@(x) {x}),'uni',0) );
-    speedMaps{i,1}(:,3:4) = cell2mat( cellfun(@(x) CI(x,prms.confInt), accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@(x) {x}),'uni',0) ) .* prms.posFs;
+    speedMaps{i,1}(:,3:4) = cell2mat( cellfun(@(x) CI(x,obj.mapParams.speed.confInt), accumarray(ind(ind~=0),instFRate(ind~=0)',[length(instSpeed) 1],@(x) {x}),'uni',0) ) .* obj.trialMetaData(trialInd).posFs;
     speedMaps{i,1}        = speedMaps{i,1}(validBins,:);
     % add Kropf et al. normalisation
 %     if prms.normaliseFR
@@ -99,11 +80,11 @@ for i = 1:length(spikeTimes)
 %         speedMaps{i,2} = tmpMap(validBins);
 %         speedMaps{i,3} = [b(1) b(2)];
 %     end
-    if prms.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Speed Maps... %i/%i done.',i,length(spkTimes))); end
+    if obj.mapParams.speed.showWaitBar; waitbar(i/length(spkTimes),hWait,sprintf('Making those Speed Maps... %i/%i done.',i,length(spkTimes))); end
 
 end
 
-if prms.showWaitBar; close(hWait); end
+if obj.mapParams.speed.showWaitBar; close(hWait); end
 
 end
 

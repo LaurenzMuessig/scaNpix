@@ -1,4 +1,4 @@
-function [eegFilt, eegPhase, cycleN] = lfpFilter(eeg, peakFreq, varargin)
+function [eegFilt, eegPhase, cycleN] = lfpFilter(eeg, peakFreq, sampleRate, options)
 % eegFilter - Filter EEG within some frequency band and also extract phase
 % We'll try and remove dodgy bits from data by a) making sure that
 % individual cycles have > threshold power and b) have lengths within limits
@@ -28,28 +28,19 @@ function [eegFilt, eegPhase, cycleN] = lfpFilter(eeg, peakFreq, varargin)
 % find indices for all cycles 
 %
 % TW/LM 2020
-
-%% Params
-prms.Fs                = 250; % sample rate for eeg in Hz
-prms.filtHalfBandWidth = 3;   % filter around peakFreq +/- prms.filtHalfBandWidth
-prms.powerThresh       = 5;   % percentile
-
-
-% - This is the template code for name-value list OR struct passing of parameters -- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
+%%
+arguments
+    eeg {mustBeNumeric}
+    peakFreq (1,1) {mustBeNumeric}
+    sampleRate  (1,1) {mustBeNumeric}
+    options.filtHalfBandWidth (1,1) {mustBeNumeric} = 3;
+    options.powerThresh (1,1) {mustBeNumeric} = 5;
+end
 
 %% Filter
 % Filter EEG %
-passBand       = ([-1 1] .* prms.filtHalfBandWidth  +  peakFreq);
-window         = fir1( round(prms.Fs), passBand./(prms.Fs/2), blackman(round(prms.Fs)+1) );
+passBand       = ([-1 1] .* options.filtHalfBandWidth  +  peakFreq);
+window         = fir1( round(sampleRate), passBand./(sampleRate/2), blackman(round(sampleRate)+1) );
 eegFilt        = filtfilt(window, 1, eeg );
 
 %% Phase & Cycles
@@ -74,12 +65,12 @@ if nargout > 1
     
     % remove bad data
     % power threshold - NEED TO PLAY AROUND WITH THRESHOLD BUT 5th PRCTLE SEEMS LIKE A REASONABLE CHOICE
-    thresh         = prctile(powerPerCycle, prms.powerThresh);
+    thresh         = prctile(powerPerCycle, options.powerThresh);
     badPowerCycle  = find(powerPerCycle < thresh);
     badPowerInd    = ismember(cycleN, badPowerCycle);
     % length threshold
     cycleLength    = accumarray(cycleN',1); % need to include phase slip samples here to get true length of cycles
-    cycleLengthLim = ceil(1 ./ passBand * prms.Fs); 
+    cycleLengthLim = ceil(1 ./ passBand * sampleRate); 
     badLengthCycle = find(cycleLength < cycleLengthLim(2) | cycleLength > cycleLengthLim(1));
     badLengthInd   = ismember(cycleN, badLengthCycle);
     

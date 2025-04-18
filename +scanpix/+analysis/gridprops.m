@@ -45,8 +45,9 @@ function [gridness, Props] = gridprops(autoCorr,fitEllipse,options)
 arguments
     autoCorr {mustBeNumeric}
     fitEllipse (1,1) {mustBeNumericOrLogical} = false;
-    options.peakDetect (1,:) {mustBeMember(options.peakDetect,{'watershed','zscore'})} = 'watershed';   
-    options.zScoreThr (1,1) {mustBeNumeric} = 1;
+    options.thresh (1,1) {mustBeNumeric} = -1;
+    options.binAC (1,1) {mustBeNumericOrLogical} = false;
+    options.nBinSteps (1,1) {mustBeNumeric} = 20;
     options.minPeakSz (1,1) {mustBeNumeric} = 4;
     options.plotEllipse (1,1) {mustBeNumericOrLogical} = false;
     options.ax  {ishghandle(options.ax, 'axes')}
@@ -92,7 +93,8 @@ if all(isnan(autoCorr));   return;     end
 
 % ---- Find central peak in auto corr --- %
 % autoCorrTemp = autoCorr;
-[xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask]= findGridPeaks(autoCorr,options.peakDetect, options.zScoreThr, options.minPeakSz); 
+[xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr, options.thresh, options.binAC, options.nBinSteps, options.minPeakSz); 
+
 if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
     if options.verbose; warning('scaNpix::analysis::gridprops: No peaks found. Skipping grid cell properties calculation'); end
     return
@@ -105,12 +107,12 @@ if fitEllipse
     else
         options.ax = [];
     end
-
+%
     [ ~, ~, orient, abScale ]      = gridEllipse_fit( autoCorr, xyCoordMaxBin(2:end,:), options.plotEllipse,  options.ax, options.verbose );
     if ~isnan(abScale)
         autoCorr                   = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
         % update peak positions
-        [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask]= findGridPeaks(autoCorr,options.peakDetect, options.zScoreThr, options.minPeakSz);
+        [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr,options.thresh,  options.binAC, options.nBinSteps, options.minPeakSz);
         if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
             if options.verbose; warning('scaNpix::analysis::gridprops: No peaks found. Skipping grid cell properties calculation'); end
             return
@@ -206,38 +208,12 @@ end
 % -------------------------------------------------------------------------------------------------
 % --- INLINE FUNCTIONS ----------------------------------------------------------------------------
 % -------------------------------------------------------------------------------------------------
-function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, peakStats, peakMask] = findGridPeaks(autoCorr,method,zThr,minPeakSz)
+function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, peakStats, peakMask] = findGridPeaks(autoCorr,thresh,binAC,nBinSteps,minPeakSz)
 %%
 % autoCorrTemp = autoCorr;
 
-switch method
-    case 'zscore'
-        thrMap                       = (autoCorr - mean(autoCorr(:),'omitnan')) ./ std(autoCorr(:),'omitnan'); 
-        thrMask                      = thrMap > zThr;        
-        fieldsLabel                  = bwlabel(thrMask);
-    case 'watershed'
-        thrMap                       = autoCorr;
-        thrMap(isnan(thrMap))        = 0;
-        fieldsLabel                  = watershed(-thrMap);
-        fieldsLabel(isnan(autoCorr)) = 0;
-end
-%
-thresholds = nan(size(thrMap));
-for i = 1:max(fieldsLabel(:))
+[peakStats, peakMask] = scanpix.analysis.fieldDetect(autoCorr,'thrMode','abs','thr',thresh,'binEdges',[-1 1],'binMap',binAC,'minPeakSz',minPeakSz,'nBinSteps',nBinSteps,'debugOn', false);
 
-    if sum(fieldsLabel == i) < minPeakSz; continue; end
-    
-    if strcmp(method,'watershed')
-        thresholds(fieldsLabel == i) = max(thrMap(fieldsLabel == i),[],'omitnan')/2;
-    elseif strcmp(method,'zscore')
-        thresholds(fieldsLabel == i) = zThr;
-    end
-end
-%
-peakMask             = thrMap > thresholds;
-peakMask             = imclose(peakMask,strel('square',3));
-%
-peakStats            = regionprops(peakMask,autoCorr, 'WeightedCentroid','EquivDiameter','MajorAxisLength','MinorAxisLength','PixelIdxList');
 %
 xyCoordMaxBin        = round(reshape([peakStats.WeightedCentroid], 2,[])'); %Still x,y pair
 

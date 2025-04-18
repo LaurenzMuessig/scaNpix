@@ -14,7 +14,13 @@ function loadLFPs(obj, trialIterator)
 %
 % TW/LM 2020 (adapted from org. SCAN function)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialIterator (1,1) {mustBeNumeric}
+end
 
+%%
 clear scanpix.fxchange.textprogressbar  % get rid of persistent variable in 'textprogressbar' which can cause issues if you stop code during execution
 
 noEGFflag = false;

@@ -1,4 +1,4 @@
-function [peakFreq, maxPower, s2n, bestEEGInd] = lfpPowerSpec(eeg, freqBand, varargin)
+function [peakFreq, maxPower, s2n, bestEEGInd] = lfpPowerSpec(eeg, freqBand, sampleRate, options)
 % eegPowerSpec - Calculate power spectrum for eeg using the FFT 
 % Extract peak frequency, power and signal-to-noise ratios in specific band
 %
@@ -30,34 +30,26 @@ function [peakFreq, maxPower, s2n, bestEEGInd] = lfpPowerSpec(eeg, freqBand, var
 %
 % LM 2020
 
-%% params
-prms.eegFs    = 250; % sampling rate (Hz)
-prms.maxFreq  = [];  % max frequency for spectrum (Hz) - if empty = Nyquist
-prms.smWinSz  = 2;   % smoothing window for spectrum (Hz)
-prms.s2nBand  = 0.5; % freq band around peak freq for signal2noise ratio
-prms.plotSpec = 0;   % plot the spectrum
+%%
+arguments
+    eeg {mustBeNumeric}
+    freqBand (1,2) {mustBeNumeric}
+    sampleRate  (1,1) {mustBeNumeric}
+    options.maxFreq {mustBeNumeric} = [];
+    options.smWinSz (1,1) {mustBeNumeric} = 2;
+    options.s2nBand (1,1) {mustBeNumeric} = 0.5;
+    options.plotSpec (1,1) {mustBeNumericOrLogical} = false;
+end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% - This is the template code for name-value list OR struct passing of parameters -- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%
 % a bit more input checking...
 % make sure array is nSamples x nEEGs 
 if size(eeg,1) < size(eeg,2)
     eeg = eeg';
 end
 %
-if isempty(prms.maxFreq)
-    prms.maxFreq = prms.eegFs/2; % Nyquist freq
+if isempty(options.maxFreq)
+    options.maxFreq = sampleRate/2; % Nyquist freq
 end
 
 %% remove NaNs
@@ -70,14 +62,14 @@ eeg       = bsxfun(@minus,eeg,mean(eeg,1,'omitnan'));
 nFFT      = nextpow2(length(eeg));
 fourTrans = fft(eeg, 2^nFFT, 1);
 % Frequencies at each power spectrum sample point
-freq     = ( 0 : length(fourTrans) - 1) * prms.eegFs / length(fourTrans);
-freq     = freq( freq <= prms.maxFreq ); % drop redundant frequencies
+freq     = ( 0 : length(fourTrans) - 1) * sampleRate / length(fourTrans);
+freq     = freq( freq <= options.maxFreq ); % drop redundant frequencies
 
 %% power
 tempPower = abs(fourTrans).^2 / length(fourTrans);  % same as power = fourTrans .* conj(fourTrans) / length(fourTrans), but for matrix abs(fourTrans).^2 is faster 
 tempPower = tempPower(1:length(freq), : ); % drop power for redundant frequencies
 % smooth power
-kernSz    = find(freq <= prms.smWinSz, 1 ,'last');
+kernSz    = find(freq <= options.smWinSz, 1 ,'last');
 kernel    = fspecial( 'Gaussian', [kernSz 1], kernSz/3 ) ; % TW uses sigma = kernSz/3
 power     = nan(size(tempPower));
 % smooth
@@ -106,22 +98,22 @@ end
 
 
 %% get s2n ratio
-peakFreqInd = freq > peakFreq' - prms.s2nBand & freq < peakFreq' + prms.s2nBand;
+peakFreqInd = freq > peakFreq' - options.s2nBand & freq < peakFreq' + options.s2nBand;
 s2n         = mean( reshape( power(peakFreqInd'), [], size(power,2) ), 1, 'omitnan' ) ./ mean( reshape( power(~peakFreqInd'), [], size(power,2) ), 1, 'omitnan' ); % might make sense to exclude all f<1-2Hz for this?
 
 %% best EEG index
 [maxVal, bestEEGInd] = max(s2n);
 
 %% plot
-if prms.plotSpec
+if options.plotSpec
     figure;
     plot(freq, power(:,maxVal ~= s2n)', 'k-');
     hold on
     plot(freq,power(:,bestEEGInd)','r-','linewidth', 3);
-    line([peakFreq(bestEEGInd)+0.1*prms.maxFreq peakFreq(bestEEGInd)],[maxPower(bestEEGInd)*1.1 maxPower(bestEEGInd)],'color',[0.5 0.5 0.5]);
+    line([peakFreq(bestEEGInd)+0.1*options.maxFreq peakFreq(bestEEGInd)],[maxPower(bestEEGInd)*1.1 maxPower(bestEEGInd)],'color',[0.5 0.5 0.5]);
     hold off
-    set(gca, 'ylim', [0 maxPower(bestEEGInd)*1.3], 'xlim', [0 prms.maxFreq]);
-    text(peakFreq(bestEEGInd)+0.1*prms.maxFreq,maxPower(bestEEGInd)*1.1,sprintf('Freq=%.2f',peakFreq(bestEEGInd)));
+    set(gca, 'ylim', [0 maxPower(bestEEGInd)*1.3], 'xlim', [0 options.maxFreq]);
+    text(peakFreq(bestEEGInd)+0.1*options.maxFreq,maxPower(bestEEGInd)*1.1,sprintf('Freq=%.2f',peakFreq(bestEEGInd)));
     xlabel('Frequency (Hz)');
     ylabel('Power (\muV^2)');
 end

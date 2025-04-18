@@ -6,9 +6,6 @@ function renameDACQFiles
 % LM 2018, 2020 - fixed bug when dealing with output files from running KlustaKwik
 
 %%
-makeBackUp = 1;
-
-%%
 defaultDir = fileparts(which('renameDACQFiles'));
 
 [fName, dataDir] = uigetfile(fullfile(defaultDir, '*.set'),'Select File From Group That You Want Renamed');
@@ -26,12 +23,11 @@ if strcmp(newFName,fName(1:end-4))
 end
 
 % for backup of original data
-if makeBackUp
-    backupDir = [dataDir 'tempBackup\'];
-    if ~isfolder(backupDir)
-        mkdir(backupDir);
-    end
+backupDir = [dataDir 'tempBackup\'];
+if ~isfolder(backupDir)
+    mkdir(backupDir);
 end
+
 % rename and move
 for i = 1:length(fList)
     [~,~,ext] = fileparts(fList(i).name);

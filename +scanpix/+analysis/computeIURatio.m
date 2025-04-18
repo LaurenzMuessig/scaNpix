@@ -18,7 +18,12 @@ function IUratio = computeIURatio(spatialACs,ellipseFits)
 %
 % LM 2023
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    spatialACs {mustBeA(spatialACs,'cell')}
+    ellipseFits (:,3) {mustBeNumeric}
 
+end
 %% some pre-checking
 if nargin == 1 
     %%%% NNEDS FIXING

@@ -14,7 +14,12 @@ function map_interp = interpMap(map)
 %
 % LM 2023
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    map {mustBeNumeric}
+end
 
+%%
 [X, Y]                = meshgrid(1:size(map,2), 1:size(map,1));
 [X2, Y2]              = meshgrid(1:0.01:size(map,2), 1:0.01:size(map,1));
 nanInterp             = interp2(X, Y, double(isnan(map)), X2, Y2, 'linear') == 1;

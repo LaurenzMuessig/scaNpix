@@ -20,8 +20,12 @@ function [field, value] = grabDefaults_mainGUI(defType)
 % See also: scanpix.GUI.mainGUI;
 %
 % LM 2021
+%%
+arguments
+    defType (1,:) {mustBeMember(defType,{'fig','gui','maps'})}
+end
 
-%
+%%
 switch lower(defType)
     case 'fig'
         % overview tab
@@ -40,7 +44,7 @@ switch lower(defType)
         % linearise tab
     case 'gui'
         defStruct.outputDir        = [cd filesep];
-        defStruct.filename_suffix  = datestr(now,'yymmdd');
+        defStruct.filename_suffix  = char(datetime('today','format','yyMMdd'));
         defStruct.WF_loadMode      = 'file';
     case 'maps'
         defStruct                     = scanpix.maps.defaultParamsRateMaps;

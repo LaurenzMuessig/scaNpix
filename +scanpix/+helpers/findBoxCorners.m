@@ -21,7 +21,13 @@ function cornerPoints = findBoxCorners(corner1, L1, corner2, L2)
 %
 % LM 2023
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%
+arguments
+    corner1 (:,1) {mustBeNumeric}
+    L1 (1,1) {mustBeNumeric}
+    corner2 (:,1) {mustBeNumeric}
+    L2 (1,1) {mustBeNumeric}
+end
 
 %% Distance between points
 distC1C2 = sqrt( (corner2(1)-corner1(1))^2 + (corner2(2)-corner1(2))^2 );
@@ -37,7 +43,7 @@ a = (L1^2 - L2^2 + distC1C2^2) / (2*distC1C2);
 % b = (L2^2 - L1^2 + distC1C2^2) / (2*distC1C2);
 
 % h
-h=sqrt(L1^2 - a^2);
+h = sqrt(L1^2 - a^2);
 
 %% centre of box
 boxCentre = [ corner1(1) + (a/distC1C2)*(corner2(1)-corner1(1)) , corner1(2) + (a/distC1C2)*(corner2(2)-corner1(2)) ];

@@ -13,7 +13,13 @@ function rtnVal = getValue(txt,keyStr)
 %    rtnVal - value corresponding to 'name' 
 %
 % TW (org. Scan function)
+%% 
+arguments
+    txt {mustBeA(txt,'cell')}
+    keyStr (1,:) {mustBeText}
+end
 
+%%
 ind = strcmp(keyStr,txt(:,1));
 if ~any(ind)
     rtnVal = [];

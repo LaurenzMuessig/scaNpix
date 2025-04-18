@@ -1,4 +1,4 @@
-function [linPos, dirInd, cohRunInd] = linearisePosData(xy,direction,trackProps,varargin)
+function [linPos, dirInd, cohRunInd] = linearisePosData(obj, trialInd)
 % linearisePosData - linearise postion data from linear track recordings.
 % Atm square track or classic linear track is supported.
 % package: scanpix.maps
@@ -24,42 +24,22 @@ function [linPos, dirInd, cohRunInd] = linearisePosData(xy,direction,trackProps,
 %
 % LM 2020
 % 
-% To-Do: TrackType definition is clumsy and inflexible at the moment
-
-
-%% params
-% general
-prms.minDwellForEdge      = 1; % in s
-prms.durThrCohRun         = 2; % In seconds
-% sq track
-prms.filtSigmaForRunDir   = 3;  % Units=sec. Sigma of the Gaussian filter to pre-filter the data before finding CW and CCW runs. Kernel is 2*sigma in length.
-prms.durThrJump           = 2;  % In seconds
-prms.gradThrForJumpSmooth = 2.5;
-% lin track
-prms.runDimension         = [];  % This is the dimension to run (X=1, Y=2)
-prms.dirTolerance         = 70;  % Tolerance for heading direction, relative to arm direction, for calculating run direction (degrees)
-% unused atm
-% prms.cornerExtent       = 10; % As a percent of the whole arm. Value refers to each corner on each arm, so value of 5% means in the end 90% of arm is used for data.
-% prms.debug              = 0;
-
-% ---------------------------------------------------------------------------------- %
-
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for i=1:2:length(varargin);   prms.(varargin{i}) = varargin{i+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for i=1:length(f);   prms.(f{i}) = s.(f{i});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-
-prms.dirTolerance = prms.dirTolerance * pi/180;   % radians
-trackLength = trackProps.ppm * (trackProps.length/100); % in pix
 
 %%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialInd (:,1) {mustBeNumeric}
+end
 
-if contains(lower(trackProps.type),'sq')
+%%
+trackLength = obj.trialMetaData(trialInd).ppm * max(obj.trialMetaData(trialInd).envSize)/100; % in pix
+% data from object
+xy          = obj.posData.XY{trialInd};
+HDirections = obj.posData.direction{trialInd};
+
+% positions(addPosFilter,:) = NaN;
+%%
+if contains(lower(obj.trialMetaData(trialInd).trialType),'sq')
     % 1) Linearise the positions %
     % 1a. First need a good estimate of env edges, for radial-isation routine to work well. Use the same as for box scaling,
     %     i.e. the first camera pixel in each dimension with >=1 sec of summed dwell.
@@ -67,7 +47,7 @@ if contains(lower(trackProps.type),'sq')
     for i = 1:2
         d              = xy(:,i);
         dHist          = histcounts( d, 0:1:ceil(max(d)) );
-        goodD          = dHist >= prms.minDwellForEdge * trackProps.posFs;
+        goodD          = dHist >= obj.mapParams.linpos.minDwellForEdge * obj.trialMetaData(trialInd).posFs;
         envEdges(:,i)  = [find(goodD,1,'first'); find(goodD,1,'last')];
     end
     % 1b. Radialise square.
@@ -78,18 +58,18 @@ if contains(lower(trackProps.type),'sq')
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % 2 Sort out the CW and CCW runs properly ('radialLineariseSquare_v2' only does it on a sample-by-sample basis) %
     % First, rotate the dirs 90deg CCW, so as to switch from phys/eng convention to DACQ convention - makes the following code easier to think about.
-    direction                  = direction + 90;
-    direction(direction>360)   = direction(direction>360) - 360;
+    HDirections                  = HDirections + 90;
+    HDirections(HDirections>360) = HDirections(HDirections>360) - 360;
     % Split the data by arm occupany, then for each arm check if we are facing CW or CCW %
     % armsDims(n,:) gives the upper and lower limits into arm n, arms start at the TL corner and run clockwise (usual xy->pol conversion is anti-clock, but DACQ coords have inverted y-axis).
-    if strcmp(trackProps.objType,'dacq')
+    if strcmp(obj.type,'dacq')
         dirDefs                 = [0, 90, 180, -90]; 
-    elseif strcmp(trackProps.objType,'npix')
+    elseif strcmp(obj.type,'npix')
         dirDefs                 = [0, -90, 180, 90];  % These define the amount to be added to the actual dirs, before classifying CW and CCW. One for each arm.
     end
-    dirInd                      = zeros(size(direction));
+    dirInd                      = zeros(size(HDirections));
     for i = 1:4
-        tempDir                 = direction;
+        tempDir                 = HDirections;
         ind                     = linPos > armDims(i,1) & linPos <= armDims(i,2);
         tempDir(~ind)           = nan;
         tempDir                 = mod( tempDir+dirDefs(i), 360 );
@@ -116,32 +96,32 @@ if contains(lower(trackProps.type),'sq')
     % 3a. Smooth the path (to look for larger scale dir trends) %
     linPosRad  = ( linPos ./ max(armDims(:)) ) .* (2*pi);
     linPosUW   = ( unwrap(linPosRad) ./ (2*pi) ) .* max(armDims(:));
-    k          = fspecial('gaussian',[ prms.filtSigmaForRunDir * trackProps.posFs * 3, 1], prms.filtSigmaForRunDir * trackProps.posFs);
+    k          = fspecial('gaussian',[ round(obj.mapParams.linpos.filtSigmaForRunDir * obj.trialMetaData(trialInd).posFs * 3), 1], round(obj.mapParams.linpos.filtSigmaForRunDir * obj.trialMetaData(trialInd).posFs) );
     linPosUWSm = imfilter(linPosUW,k,'replicate');
     % 3b. Now remove the jumps %
     stateChangeInd    = diff( dirInd == 1 ) ~= 0;
     stateChangeNumInd = find(stateChangeInd)';
     epochLengths      = [stateChangeNumInd(1),  diff( stateChangeNumInd )];   % List of lengths (in samples)
-    isEpochJumpNumInd = find( epochLengths < (prms.durThrJump * trackProps.posFs) );
+    isEpochJumpNumInd = find( epochLengths < (obj.mapParams.linpos.durThrJump * obj.trialMetaData(trialInd).posFs) );
     isEpochJumpNumInd = isEpochJumpNumInd( isEpochJumpNumInd~=1 );  % Don't attempt to remove the first epoch, even if it is small.
     for j=isEpochJumpNumInd
         ind = (stateChangeNumInd(j-1)+1) : stateChangeNumInd(j);
         gr  = mean(diff(linPosUWSm(ind)));  % gr is the gradient of the smoothed linear positions in the jump window.
-        gr  = (gr * trackProps.posFs) / (trackProps.ppm / 100);  % Change units to cm/s
-        if dirInd(ind(1)) == 2  && gr > prms.gradThrForJumpSmooth
+        gr  = (gr * obj.trialMetaData(trialInd).posFs) / (obj.trialMetaData(trialInd).ppm / 100);  % Change units to cm/s
+        if dirInd(ind(1)) == 2  && gr > obj.mapParams.linpos.gradThrForJumpSmooth
             dirInd(ind) = 1;
-        elseif dirInd(ind(1)) == 1  && gr < -prms.gradThrForJumpSmooth
+        elseif dirInd(ind(1)) == 1  && gr < -obj.mapParams.linpos.gradThrForJumpSmooth
             dirInd(ind) = 2;
         end
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % 4. Define coherent runs (of over a duration threshold) %
-    if prms.durThrCohRun > 0
+    if obj.mapParams.linpos.durThrCohRun > 0
         stateChangeInd    = diff( dirInd == 1 ) ~= 0;
         stateChangeNumInd = find(stateChangeInd)';
         epochLengths      = [stateChangeNumInd(1),  diff( stateChangeNumInd )];   % List of lengths (in samples)
-        isCohRunNumInd    = find( epochLengths > ( prms.durThrCohRun * trackProps.posFs ) );
+        isCohRunNumInd    = find( epochLengths > ( obj.mapParams.linpos.durThrCohRun * obj.trialMetaData(trialInd).posFs ) );
 %             cohRunInd         = zeros(size(xy,1),1);
         cohRunInd         = false(size(xy,1),1);
         
@@ -166,52 +146,52 @@ if contains(lower(trackProps.type),'sq')
     end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
-elseif contains(lower(trackProps.type),'lin')
+elseif contains(lower(obj.trialMetaData(trialInd).trialType),'lin')
     
-    if isempty(prms.runDimension)
-        [ ~, prms.runDimension ] =  max(range(xy)); % estimate run dimension
+    if isempty(obj.mapParams.linpos.runDimension)
+        [ ~, obj.mapParams.linpos.runDimension ] = max(range(xy)); % estimate run dimension
     end
     
-    linPos = xy( :, prms.runDimension );
+    linPos = xy( :, obj.mapParams.linpos.runDimension );
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Find ends of track %
     pHist  = histcounts( linPos, 0:1:ceil(max(linPos)) );
-    goodP  = pHist >= prms.minDwellForEdge * trackProps.posFs;
+    goodP  = pHist >= obj.mapParams.linpos.minDwellForEdge * obj.trialMetaData(trialInd).posFs;
     trEnds = [find(goodP,1,'first'); find(goodP,1,'last')];
     % remove data form beyond ends of track %
-    linPos(linPos < trEnds(1)) = nan;
-    linPos(linPos > trEnds(2)) = nan;
+    linPos(linPos < trEnds(1))   = NaN;
+    linPos(linPos > trEnds(2))   = NaN;
     % Scale %
-    linPos  = linPos - trEnds(1);
-    SF = trackLength / diff(trEnds);
-    linPos  = linPos .* SF;
+    linPos                       = linPos - trEnds(1);
+    SF                           = trackLength / diff(trEnds);
+    linPos                       = linPos .* SF;
     linPos(linPos > trackLength) = trackLength;    % Have checked that when this happens, it is a many decimal places rounding error.
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Make an index of which direction on the track the rat was running %
-    if prms.runDimension == 1
+    if obj.mapParams.linpos.runDimension == 1
         armDirs = [0 180];   % Remember that the dir data is always in physics convention in matlab (0deg=east).
     else
         armDirs = [90 270];
     end
-    dirInd = zeros( size(direction) );
+    dirInd = zeros( size(HDirections) );
     for i = 1:2
-        ang2ArmDir    = circ_dist( circ_ang2rad(direction), circ_ang2rad(armDirs(i)) );
-        ind           = abs(ang2ArmDir) <= prms.dirTolerance;
+        ang2ArmDir    = circ_dist( circ_ang2rad(HDirections), circ_ang2rad(armDirs(i)) );
+        ind           = abs(ang2ArmDir) <= obj.mapParams.linpos.dirTolerance;
         dirInd( ind ) = i;
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if prms.durThrCohRun > 0
+    if obj.mapParams.linpos.durThrCohRun > 0
         % Define coherent runs (of over a duration threshold) %
 %         cohRunInd         = zeros(size(xy,1),1);
-        cohRunInd         = false(size(xy,1),1);
+        cohRunInd             = false(size(xy,1),1);
         for i = 1:2
             stateChangeInd    = diff( [0; dirInd == i; 0] );
             stateChangeNumInd = find( stateChangeInd );
             epochLengths      = diff( stateChangeNumInd );       % List of lengths (in samples)
-            isCohRunNumInd    = find( epochLengths > (prms.durThrCohRun*trackProps.posFs) );
+            isCohRunNumInd    = find( epochLengths > (oobj.mapParams.linposptions.durThrCohRun * obj.trialMetaData(trialInd).posFs) );
             for j=1:length(isCohRunNumInd)
                 ind = (stateChangeNumInd( isCohRunNumInd(j)) ) : (stateChangeNumInd( isCohRunNumInd(j)+1 ) - 1);
 %                 if dirInd(ind(1)) == 1
@@ -290,7 +270,6 @@ posTh(ind)   = posTh(ind) + 2*pi;
 % Use histc to convert the real data radial positions into an index of
 % where they fall with respect to the idealiased square bin limits.
 [~,~,linPos] = histcounts(posTh, sqTh);
-
 
 end
 

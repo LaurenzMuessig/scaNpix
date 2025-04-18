@@ -3,11 +3,14 @@ function sttc = getSTTC(st1,st2,trialDur,dt)
 %   https://www.jneurosci.org/content/34/43/14288
 
 %%
-% default delta
-if nargin == 3
-    dt = 0.5;
+arguments
+    st1 {mustBeNumeric}
+    st2 {mustBeNumeric}
+    trialDur (1,1) {mustBeNumeric}
+    dt (1,1) {mustBeNumeric} = 0.5;
 end
-%
+
+%%
 
 if isempty(st1) || isempty(st2)
     sttc = NaN;

@@ -17,7 +17,12 @@ function [linMapsNormed, normInd] = normLinMaps(linMaps)
 %
 % LM 2020
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    linMaps {mustBeNumeric}
+end
 
+%%
 maxMaps       = max(linMaps, [], 2, 'omitnan');
 [~, maxInd]   = max( bsxfun(@eq, linMaps, maxMaps),[], 2, 'omitnan');
 [~, normInd]  = sort( maxInd );

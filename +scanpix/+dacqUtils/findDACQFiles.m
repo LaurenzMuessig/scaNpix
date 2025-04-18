@@ -18,13 +18,15 @@ function [ fNames, validTrodes ] = findDACQFiles( dataDir, identifier, type, rem
 %
 %
 % LM 2020
-
-
-% default - keep extension
-if nargin == 3 || strcmp(type,'tet')
-    removeEXT = 0;
+%% 
+arguments
+    dataDir (1,:) {mustBeFolder}
+    identifier (1,:) {mustBeText}
+    type (1,:) {mustBeMember(type,{'set','pos','tet','eeg','egf'})} = 'set';
+    removeEXT (1,1) {mustBeNumericOrLogical} = false; 
 end
 
+%%
 validTrodes = [];
 
 % find specific type
@@ -47,23 +49,20 @@ switch type
         fNames = {temp(:).name};           
     case 'tet'
         % a bit more involved to find all tetrode files
-        temp = dir(fullfile(dataDir,['*' identifier '*']));
-        allFiles = {temp(:).name};
-        tetFileInd = ~cellfun('isempty',regexp(allFiles,'(?<=[.])\d')); % all files ending with an integer
+        temp           = dir(fullfile(dataDir,['*' identifier '*']));
+        allFiles       = {temp(:).name};
+        tetFileInd     = ~cellfun('isempty',regexp(allFiles,'(?<=[.])\d')); % all files ending with an integer
         % output files from KK also have integer after a '.', so we need to remove them from list
-        notKKFilesInd = cellfun('isempty',regexp(allFiles,'\w*(clu|fet|klg|fmask)\w*'));
-        fNames = allFiles(tetFileInd & notKKFilesInd); % all tetrode file 
+        notKKFilesInd  = cellfun('isempty',regexp(allFiles,'\w*(clu|fet|klg|fmask)\w*'));
+        fNames         = allFiles(tetFileInd & notKKFilesInd); % all tetrode file 
         % can also get numeric list of tet numbers 
         if nargout == 2
             splitNames  = regexp(fNames, '[.]', 'split'); % split into name + extension
             splitNames  = vertcat(splitNames{:});
             validTrodes = sort(str2double(splitNames(:,2)))'; % terode numbers that were recorded;
-            % in case your identifier matches more trials, careful here as
-            % a bit of hack!
+            % in case your identifier matches more trials, careful here as a bit of hack!
             validTrodes = unique(validTrodes);
-        end  
-    otherwise        
-        error(['"' type '"' 'is not a valid file type! That''s embarrassing mate'])
+        end 
 end
 
 if length(fNames) == 1
@@ -74,6 +73,6 @@ end
 if removeEXT
     splitNames = regexp(fNames, '[.]', 'split'); % split into name + extension
     splitNames = vertcat(splitNames{:});
-    fNames = splitNames(:,1)'; 
+    fNames     = splitNames(:,1)'; 
 end
 end

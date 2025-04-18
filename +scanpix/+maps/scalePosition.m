@@ -1,4 +1,4 @@
-function scalePosition(obj, trialIndex, varargin)
+function scalePosition(obj, trialIndex, options)
 % scalePosition - Find the edges of vis env, and scale path 
 % package: scanpix.maps
 % 
@@ -23,26 +23,36 @@ function scalePosition(obj, trialIndex, varargin)
 % LM/TW 2020
 % LM: 2024: added circle scaling from BVC paper
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialIndex (1,1) {mustBeNumeric}
+    options.envSzPix (1,:) {mustBeNumeric} = [250 250];
+    options.minoccedge (1,1) {mustBeNumeric} = 50;
+    options.circleFlag (1,1) {mustBeNumericOrLogical} = false;
+    options.minoccrad (1,1) {mustBeNumeric} = 0.5;
+    options.cenlim (1,1) {mustBeNumeric} = 4;
+    options.cenoffset (1,1) {mustBeNumeric} = 3;
+    options.radest (1,:) {mustBeMember(options.radest,{'largestWellSampledRadius','fixedPercentileOfDwell'})} = 'largestWellSampledRadius';
+end
 
-
-envSzPix             = [250 250];
-minOccForEdge        = 50;
-circleFlag           = false;
-% these are hard coded for now - not sure they need to be dynamically set
-minOccForRad         = 0.5;
-cenFindIterLim       = 4;
-cenFindOffsetThr     = 3;
-radiusEstimateMethod = 'largestWellSampledRadius';   %  'fixedPercentileOfDwell';  
-
-p = inputParser;
-addParameter(p,'envszpix',envSzPix,@isnumeric);
-addParameter(p,'minoccedge',minOccForEdge,@isscalar);
-addParameter(p,'circflag',circleFlag,@islogical);
-addParameter(p,'minoccrad',minOccForRad,@isscalar);
-addParameter(p,'cenlim',cenFindIterLim,@isscalar);
-addParameter(p,'cenoffset',cenFindOffsetThr,@isscalar);
-addParameter(p,'radest',radiusEstimateMethod,@ischar);
-parse(p,varargin{:});
+% envSzPix             = [250 250];
+% minOccForEdge        = 50;
+% circleFlag           = false;
+% % these are hard coded for now - not sure they need to be dynamically set
+% minOccForRad         = 0.5;
+% cenFindIterLim       = 4;
+% cenFindOffsetThr     = 3;
+% radiusEstimateMethod = 'largestWellSampledRadius';   %  'fixedPercentileOfDwell';  
+% 
+% p = inputParser;
+% addParameter(p,'envszpix',envSzPix,@isnumeric);
+% addParameter(p,'minoccedge',minOccForEdge,@isscalar);
+% addParameter(p,'circflag',circleFlag,@islogical);
+% addParameter(p,'minoccrad',minOccForRad,@isscalar);
+% addParameter(p,'cenlim',cenFindIterLim,@isscalar);
+% addParameter(p,'cenoffset',cenFindOffsetThr,@isscalar);
+% addParameter(p,'radest',radiusEstimateMethod,@ischar);
+% parse(p,varargin{:});
 
 
 % parse input
@@ -52,25 +62,25 @@ if nargin < 2
         warning('scaNpix::Maps::scalePosition:You don''t seem to enjoy scaling positions. Have to abort here...');
         return;
     else
-        trialIndex    = str2double(uiInput{1});
-        minOccForEdge = str2double(uiInput{2});
-        envSzPix      = [obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{3}), obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{4})];
-        circleFlag    = logical(str2double(uiInput{5}));
+        trialIndex         = str2double(uiInput{1});
+        options.minoccedge = str2double(uiInput{2});
+        options.envSzPix   = [obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{3}), obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{4})];
+        options.circleFlag = logical(str2double(uiInput{5}));
     end
-else 
-    envSzPix      = p.Results.envszpix;
-    minOccForEdge = p.Results.minoccedge;
-    circleFlag    = p.Results.circflag;
+% else 
+%     envSzPix      = p.Results.envszpix;
+%     minOccForEdge = p.Results.minoccedge;
+%     circleFlag    = p.Results.circflag;
 end
 
-if length(envSzPix) == 1 || isnan(envSzPix(2))
+if length(options.envSzPix) == 1 || isnan(options.envSzPix(2))
     envSzPix = [envSzPix(1) envSzPix(1)];
 end
 
-if circleFlag
-    [XYScaled, lowerEdge] = scaleCircEnvs(obj,trialIndex,10,envSzPix(1),minOccForRad,cenFindIterLim,cenFindOffsetThr,radiusEstimateMethod);
+if options.circleFlag
+    [XYScaled, lowerEdge] = scaleCircEnvs(obj,trialIndex,10,options.envSzPix(1),options.minoccrad,options.cenlim,options.cenoffset,options.radest);
 else
-    [XYScaled, lowerEdge] = scaleRectEnvs(obj,trialIndex,minOccForEdge,envSzPix);
+    [XYScaled, lowerEdge] = scaleRectEnvs(obj,trialIndex,options.minoccedge,options.envSzPix);
 end
 
 % For consistency, make sure that all x=nan and all y= nan match up %

@@ -18,7 +18,11 @@ function [meanR,meanDir,thetas,rhos] = rayleighVect(dirMap)
 %
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    dirMap (:,1) {mustBeNumeric}
 
+end
 %%
 binSz   = 2*pi / length(dirMap); % binSz
 
