@@ -1,4 +1,4 @@
-function [dirMaps, dirPosMap] = makeDirMaps(obj, trialInd, addDirFilter, cellInd)
+function [dirMaps, dirPosMap] = makeDirMaps(obj, trialInd, options)
 % makeDirMaps - generate directional firing rate maps from spike times 
 % and heading direction of animal
 %
@@ -36,8 +36,8 @@ function [dirMaps, dirPosMap] = makeDirMaps(obj, trialInd, addDirFilter, cellInd
 arguments
     obj {mustBeA(obj,'scanpix.ephys')}
     trialInd (1,1) {mustBeNumeric}
-    addDirFilter {mustBeNumericOrLogical} = false(size(obj.posData.direction{trialInd},1),1);
-    cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
+    options.addDirFilter {mustBeNumericOrLogical} = false(size(obj.posData.direction{trialInd},1),1);
+    options.cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
 end
 
 %%
@@ -49,14 +49,14 @@ else
 end
 
 % data from object
-HDirections                 = obj.posData.direction{trialInd};
-HDirections(addDirFilter,1) = NaN;
+HDirections                         = obj.posData.direction{trialInd};
+HDirections(options.addDirFilter,1) = NaN;
 %
-spkTimes                    = obj.spikeData.spk_Times{trialInd}(cellInd);
+spkTimes                            = obj.spikeData.spk_Times{trialInd}(options.cellInd);
 
 %% speed filter
 if obj.mapParams.dir.speedFilterFlagDMaps 
-    speedFilter                = obj.posData.speed{trialInd} <= obj.mapParams.dir.speedFilterLimits(1)  | obj.posData.speed{trialInd} > obj.mapParams.dir.speedFilterLimits(2);
+    speedFilter                = obj.posData.speed{trialInd} <= obj.mapParams.dir.speedFilterLimitLow | obj.posData.speed{trialInd} > obj.mapParams.dir.speedFilterLimitHigh;
     HDirections(speedFilter,:) = NaN;
 end
 

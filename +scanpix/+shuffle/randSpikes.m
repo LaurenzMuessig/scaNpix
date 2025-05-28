@@ -1,4 +1,4 @@
-function randST = randSpikes(spikeTimes,trialDur,shift,resetFlag)
+function randST = randSpikes(spikeTimes,trialDur,shift,options)
 % randSpikes - shift spike times by a set amount for some data shuffling
 % package: scanpix.shuffle
 %
@@ -21,9 +21,15 @@ function randST = randSpikes(spikeTimes,trialDur,shift,resetFlag)
 %
 % LM 2024
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+arguments
+    spikeTimes {mustBeA(spikeTimes,'cell')} 
+    trialDur (1,1) {mustBeNumeric} 
+    shift (1,1) {mustBeNumeric} 
+    options.resetFlag (1,1) {mustBeNumericOrLogical} = false;
+    options.circShift (1,1) {mustBeNumericOrLogical} = true;
+end
 
-
-if nargin < 4; resetFlag = false; end
 
 %%
 if length(shift) ~= 1 && length(shift) ~= length(spikeTimes)
@@ -36,11 +42,16 @@ end
 shift = num2cell(shift,2);
 
 %%
-if ~resetFlag
+if ~options.resetFlag
     % shift spiketimes
     randST = cellfun(@(x,y) x + y, spikeTimes, shift,'uni',0);
+    if options.circShift
     % wrap around spike times
-    randST = cellfun(@(x) x - (x > trialDur) .* trialDur, randST,'uni',0);
+        randST = cellfun(@(x) x - (x > trialDur) .* trialDur, randST,'uni',0);
+        % randST = cellfun(@(x) x + (x < 0) .* trialDur, randST,'uni',0);
+    else
+        randST = cellfun(@(x) x(x > 0 & x < trialDur), randST,'uni',0);
+    end
 else
     % undo a shift
     randST = cellfun(@(x,y) x - y, spikeTimes, shift,'uni',0);

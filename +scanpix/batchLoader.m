@@ -26,8 +26,8 @@ arguments
   method (1,:) {mustBeMember(method,{'single','singletrial','exp','singleexp'})} = 'exp'
   objType (1,:) {mustBeMember(objType,{'npix','dacq','bhave'})} = 'npix'
   addMeta (1,:) {mustBeA(addMeta,'cell')} = {}
-  options.paramsobj (1,:) {mustBeA(options.paramsobj,'containers.Map')} = scanpix.helpers.defaultParamsContainer(objType)
-  options.paramsmap (1,:) {mustBeA(options.paramsmap,'struct')} = scanpix.maps.defaultParamsRateMaps
+  options.paramsobj (1,:) {mustBeA(options.paramsobj,'containers.Map')} = scanpix.helpers.defaultParamsContainer(objType);
+  options.paramsmap (1,:) {mustBeA(options.paramsmap,'struct')} = scanpix.maps.defaultParamsRateMaps;
   options.loadpos (1,1) {mustBeNumericOrLogical} = true;
   options.loadspikes (1,1) {mustBeNumericOrLogical} = true;
   options.loadlfp (1,1) {mustBeNumericOrLogical} = false;

@@ -1,4 +1,4 @@
-function [ rMaps, sm_pMaps, sm_spkMaps ] = makeRateMaps(obj, trialInd, mapType, addPosFilter, cellInd)
+function [ rMaps, sm_pMaps, sm_spkMaps ] = makeRateMaps(obj, trialInd, options)
 % makeRateMaps - Make a spatial rate map
 % package: scanpix.maps
 %
@@ -37,9 +37,9 @@ function [ rMaps, sm_pMaps, sm_spkMaps ] = makeRateMaps(obj, trialInd, mapType, 
 arguments
     obj {mustBeA(obj,'scanpix.ephys')}
     trialInd (1,1) {mustBeNumeric}
-    mapType (1,:) {mustBeMember(mapType,{'rate','pos'})} = 'rate';
-    addPosFilter {mustBeNumericOrLogical} = false(size(obj.posData.XY{trialInd},1),1);
-    cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
+    options.mapType (1,:) {mustBeMember(options.mapType,{'rate','pos'})} = 'rate';
+    options.addPosFilter {mustBeNumericOrLogical} = false(size(obj.posData.XY{trialInd},1),1);
+    options.cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
 end
 
 %%
@@ -53,14 +53,14 @@ else
 end
 
 % data from object
-positions                 = obj.posData.XY{trialInd};
-positions(addPosFilter,:) = NaN;
+positions                         = obj.posData.XY{trialInd};
+positions(options.addPosFilter,:) = NaN;
 %
-spkTimes                  = obj.spikeData.spk_Times{trialInd}(cellInd);
+spkTimes                          = obj.spikeData.spk_Times{trialInd}(options.cellInd);
 
 %% speed filter
 if obj.mapParams.rate.speedFilterFlagRMaps 
-    speedFilter              = obj.posData.speed{trialInd} <= obj.mapParams.rate.speedFilterLimits(1) | obj.posData.speed{trialInd} > obj.mapParams.rate.speedFilterLimits(2);
+    speedFilter              = obj.posData.speed{trialInd} <= obj.mapParams.rate.speedFilterLimitLow | obj.posData.speed{trialInd} > obj.mapParams.rate.speedFilterLimitHigh;
     positions(speedFilter,:) = NaN;
 end
 
@@ -91,14 +91,14 @@ unVisPos     = posMapRaw == 0; % keep record of unvisited positions
 rMaps                     = cell(length(spkTimes),1);
 sm_spkMaps                = cell(length(spkTimes),1);
 % if using boxcar filtering only need to do pos map once
-if strcmp(obj.mapParams.rate.smooth,'boxcar') || strcmp(mapType,'pos')
+if strcmp(obj.mapParams.rate.smooth,'boxcar') || strcmp(options.mapType,'pos')
     visMask               = ones(size(posMapRaw));
     visMask(unVisPos)     = 0;
     visMask_sm            = imfilter(visMask, kernel);
     sm_pMaps{1}           = imfilter(posMapRaw, kernel) ./ visMask_sm;
     sm_pMaps{1}(unVisPos) = NaN;
     %
-    if strcmp(mapType,'pos'); return; end
+    if strcmp(options.mapType,'pos'); return; end
 else
     sm_pMaps              = cell(length(spkTimes), 1); % pre-allocate for adaptive smoothing
 end

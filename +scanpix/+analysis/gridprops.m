@@ -45,10 +45,10 @@ function [gridness, Props] = gridprops(autoCorr,fitEllipse,options)
 arguments
     autoCorr {mustBeNumeric}
     fitEllipse (1,1) {mustBeNumericOrLogical} = false;
-    options.thresh (1,1) {mustBeNumeric} = -1;
+    options.thresh {mustBeScalarOrEmpty} = -1;
     options.binAC (1,1) {mustBeNumericOrLogical} = false;
-    options.nBinSteps (1,1) {mustBeNumeric} = 20;
-    options.minPeakSz (1,1) {mustBeNumeric} = 4;
+    options.nBinSteps (1,1) {mustBeNumeric} = 21;
+    options.minPeakSz (1,1) {mustBeNumeric} = 8;
     options.plotEllipse (1,1) {mustBeNumericOrLogical} = false;
     options.ax  {ishghandle(options.ax, 'axes')}
     options.verbose (1,1) {mustBeNumericOrLogical} = false;
@@ -73,9 +73,9 @@ Props.offset            = NaN;
 Props.offsetFull        = nan(3,1);
 Props.fieldSize         = NaN;
 Props.closestPeaksCoord = nan(6,2);
-Props.centralPeakMask   = nan(size(autoCorr));
-Props.gridMask          = nan(size(autoCorr));
-Props.peakMask          = nan(size(autoCorr));
+Props.centralPeakMask   = false(size(autoCorr));
+Props.gridMask          = false(size(autoCorr));
+Props.peakMask          = false(size(autoCorr));
 Props.acReg             = nan(size(autoCorr));
 Props.isEllipseFit      = fitEllipse;
 Props.ellOrient         = NaN;
@@ -95,8 +95,9 @@ if all(isnan(autoCorr));   return;     end
 % autoCorrTemp = autoCorr;
 [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr, options.thresh, options.binAC, options.nBinSteps, options.minPeakSz); 
 
-if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
-    if options.verbose; warning('scaNpix::analysis::gridprops: No peaks found. Skipping grid cell properties calculation'); end
+if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2) 
+    % if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
+    if options.verbose; warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
     return
 end
 
@@ -113,8 +114,8 @@ if fitEllipse
         autoCorr                   = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
         % update peak positions
         [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr,options.thresh,  options.binAC, options.nBinSteps, options.minPeakSz);
-        if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
-            if options.verbose; warning('scaNpix::analysis::gridprops: No peaks found. Skipping grid cell properties calculation'); end
+        if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
+            if options.verbose;  warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
             return
         end
         %
@@ -122,28 +123,28 @@ if fitEllipse
         Props.ellAbScale           = abScale;
         Props.acReg                = autoCorr;
     else
-        if options.verbose; warning('scaNpix::analysis::gridprops: Couldn''t fit am ellipse to peaks of autocorr'); end
+        if options.verbose; warning('scaNpix::analysis::gridprops: Couldn''t fit an ellipse to peaks of spatial AC'); end
         return;
     end
 end
  
 % make central peak mask
-[colsIm, rowsIm]                            = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
-distMap                                     = sqrt((rowsIm-xyCoordMaxBin(1,1)).^2 + (colsIm-xyCoordMaxBin(1,2)).^2);
-centrPeakMask                               = distMap < peakStats(1).MajorAxisLength/2;
+[colsIm, rowsIm]                    = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
+distMap                             = sqrt((rowsIm-ceil(size(autoCorr,2)/2)).^2 + (colsIm-ceil(size(autoCorr,1)/2)).^2);
+centrPeakMask                       = distMap < peakStats(1).MajorAxisLength/2;
 
 % make annulus mask
 if ~isempty(distFromCentre)
-    maxDist                = max(distFromCentre+mean([peakStats.MajorAxisLength])'/2); 
+    annRadius                       = mean(distFromCentre(2:end)+mean([peakStats(2:end).MajorAxisLength])'/2); 
 else
-    maxDist                = floor(length(autoCorr)/2); % set to full AC radius in case no peaks are found
+    annRadius                       = floor(length(autoCorr)/2); % set to full AC radius in case no peaks are found
 end
-annMask                    = ~centrPeakMask;
-annMask(distMap > maxDist) = false;
+annMask                             = ~centrPeakMask;
+annMask(distMap > annRadius)        = false;
 %
-Props.centralPeakMask      = centrPeakMask;
-Props.peakMask             = peakMask | centrPeakMask;
-Props.gridMask             = annMask;
+Props.centralPeakMask               = centrPeakMask;
+Props.peakMask                      = peakMask & ~centrPeakMask;
+Props.gridMask                      = annMask;
 
 %%
 % --------------------------------------------------------------------------------------------------
@@ -174,29 +175,27 @@ Props.gridness = gridness;
 if length(xyCoordMaxBin) == 7
 
     % orientation - define 3 axes Moser style
-    orientation           = atan2(xyCoordMaxBinCentral(2:end,2),xyCoordMaxBinCentral(2:end,1)); %
+    orientation            = atan2(xyCoordMaxBinCentral(2:end,2),xyCoordMaxBinCentral(2:end,1)); %
 
-    [~, sortInd]          = sort(abs(orientation));
-    orientation           = -orientation([sortInd(1:3)]);  % need to flip orientation due to inverted y-axis
+    [~, sortInd]           = sort(abs(orientation));
+    orientation            = -orientation([sortInd(1:3)]);  % need to flip orientation due to inverted y-axis
 
-    Props.orientation     = circ_mean(orientation);
-    Props.orientationFull = orientation;
-    % Props.ax_ind          = sortInd(1:3);
-
+    Props.orientation      = circ_mean(orientation);
+    Props.orientationFull  = orientation;
 
     % wavelength
-    Props.wavelength      = mean(distFromCentre([sortInd(1:3)]),'omitnan'); % wavelength
-    Props.wavelengthFull  = distFromCentre([sortInd(1:3)]);
+    Props.wavelength       = mean(distFromCentre([sortInd(1:3)]),'omitnan'); % wavelength
+    Props.wavelengthFull   = distFromCentre([sortInd(1:3)]);
 
     % offset
-    Props.offsetFull      = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)
-    Props.offset          = min( Props.offsetFull ); %
+    Props.offsetFull        = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)
+    Props.offset            = min( Props.offsetFull ); %
     %
     tmp                     = ceil(xyCoordMaxBin(2:end,:));
     Props.closestPeaksCoord = tmp(sortInd,:);
 
     % field size THIS NEEDS WORK AS NOT MATCHING WITH THE GENERAL ALGORTIHM
-    Props.fieldSize = pi*(peakStats(1).EquivDiameter/2)^2;   
+    Props.fieldSize = pi*(peakStats(1).EquivDiameter/2)^2;
 else
     if options.verbose; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); end
 end
@@ -232,10 +231,17 @@ distFromCentre        = distFromCentre(orderOfClose);
 xyCoordMaxBin         = xyCoordMaxBin(orderOfClose,:);
 xyCoordMaxBinCentral  = xyCoordMaxBinCentral(orderOfClose,:);
 peakStats             = peakStats(orderOfClose);
+%
+insideCentPeakInd                                                 = [false;distFromCentre(2:end) < peakStats(1).MajorAxisLength/2];
+outsideAnnulusPeakInd                                             = [false;distFromCentre(2:end) > mean(distFromCentre(2:end)+mean([peakStats(2:end).MajorAxisLength])'/2)];
+peakStats(insideCentPeakInd | outsideAnnulusPeakInd)              = [];
+xyCoordMaxBin(insideCentPeakInd | outsideAnnulusPeakInd,:)        = [];
+xyCoordMaxBinCentral(insideCentPeakInd | outsideAnnulusPeakInd,:) = [];
+distFromCentre(insideCentPeakInd | outsideAnnulusPeakInd)         = [];
 % remove all but closest 6 peaks from peak mask
-allInd                      = 1:numel(autoCorr);
-setToZero                   = ~ismember(allInd',vertcat(peakStats.PixelIdxList));
-peakMask(allInd(setToZero)) = 0;
+allInd                                    = 1:numel(autoCorr);
+setToZero                                 = ~ismember(allInd',vertcat(peakStats.PixelIdxList));
+peakMask(allInd(setToZero))               = 0;
 
 end
 
@@ -698,7 +704,6 @@ tmpSAC(isnan(sac)) = 0; % leaving the nan's in sac makes them spread during the 
 % regSac=imrotate(sac, -orient, 'bilinear');
 regSac=imrotate(tmpSAC, -orient, 'bilinear');
 
-
 %2)Decide by how much to resize - major axis is x so work on y axis to
 %bring to same scale
 sacSize=size(regSac);
@@ -707,6 +712,7 @@ xEnd=sacSize(2);
 tmp=sacSize(1)/2 - (sacSize(1)/2)*(abScale(2)/abScale(1));
 yStart=1+tmp;
 yEnd=sacSize(1)-tmp;
+
 % LM EDIT: need to add +1 to size in case it's even
 sacSize(rem(sacSize,2) == 0) = sacSize(rem(sacSize,2) == 0) + 1;    
 %3) Do the resample the sac to regularise the grid
@@ -730,7 +736,7 @@ end
 sizeDif=round((size(regSac)-size(sac))/2);
 regSac=regSac(1+sizeDif(1):end-sizeDif(1), 1+sizeDif(2):end-sizeDif(2));
 % LM edit
-regSac(regSac==0) = NaN; % reassign original nan's 
+% regSac(isnan(sac)) = NaN; % reassign original nan's 
 
 end
 

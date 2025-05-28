@@ -128,59 +128,28 @@ switch options.mode
         % this ends up overly complicated but I can't find an easier way to
         % deal with repeating trial types and differences in the sequence
         % of trials
-        dataIndex = zeros(2,length(pattern2extract));
-        minMax    = nan(length(pattern2extract),2);
-        tempInd   = cell(length(pattern2extract),1);
+        % dataIndex = zeros(2,length(pattern2extract));
+        % minMax    = nan(length(pattern2extract),2);
+        % tempInd   = cell(length(pattern2extract),1);
+
         % first get the indices for all trial types
-        for i = 1:length(pattern2extract)
+        for i = 1:length(trialSeqObj)
             if options.exactflag
-                tempInd{i} = find(ismember( trialSeqObj,pattern2extract{i}));
+                tempInd = find(ismember( pattern2extract, trialSeqObj{i}));
             else
-                tempInd{i} = find(~cellfun('isempty',regexp(trialSeqObj,pattern2extract{i},'once')));
+                tempInd = find(~cellfun('isempty',regexp(pattern2extract,trialSeqObj{i},'once')));
             end
-            %            
-            minMax(i,1) = min(tempInd{i});
-            minMax(i,2) = max(tempInd{i} );
-            if i > 1
-                if all(minMax(i,2) < max(minMax(1:i-1,:),[],'omitnan'),2)
-                    minMax(i,:) = NaN;
-                end
-            end
-        end
-
-        remInd           = all(isnan(minMax),2);
-        indBump          = cumsum(remInd);
-        minMax(remInd,:) = [];
-        tempInd(remInd)  = [];
-        indBump(remInd)  = [];
-        % now extract the actual trial indices
-        for i = 1:size(minMax,1)
-
+            % this wouldn't account for a case where e.g. only a post-probe
+            % baseline would be there
             if i == 1
-                if size(minMax,1) == 1
-                    dataIndex(1,i+indBump(i)) = tempInd{i};
-                else
-                    selInd = find(tempInd{i} <= min(unique(minMax(i+1:end,:)),[],'omitnan'),1,'last');
-                    if ~isempty(selInd)
-                        dataIndex(1,i+indBump(i)) = tempInd{i}(selInd);
-                    end
-                end
-            % 
-            elseif i == size(minMax,1)
-                selInd = find(tempInd{i} > dataIndex(1,i-1),1,'first');
-                if ~isempty(selInd)
-                    dataIndex(1,i+indBump(i)) = tempInd{i}(selInd);
-                end
+                dataIndex = tempInd(1);
             else
-                selInd = find(tempInd{i} > max(dataIndex(1,1:i-1),[],'omitnan') & tempInd{i} <= max(minMax(i+1,:),[],'omitnan'),1,'first');
-                if ~isempty(selInd) && ~any(tempInd{i}(selInd) > cellfun(@(x) max(x,[],'omitnan'),tempInd(i+1:end)))
-                    dataIndex(1,i+indBump(i)) = tempInd{i}(selInd);
-                end
+                dataIndex = [dataIndex, tempInd(find(tempInd > max(dataIndex),1,'first'))];
             end
-        end
+        end 
+        dataIndex(2,:) = 0;
         %
-        missingTrials              = find(dataIndex(1,:) == 0 );
-        dataIndex(:,missingTrials) = [];
+        missingTrials  = find(~ismember(1:length(pattern2extract),dataIndex(1,:)));
 end
 
 end
@@ -281,3 +250,52 @@ end
         % end
         % dataIndex(1:length(blsIndex)) = blsIndex;
 
+
+
+        % for i = 1:length(pattern2extract)
+        %     if options.exactflag
+        %         tempInd{i} = find(ismember( trialSeqObj,pattern2extract{i}));
+        %     else
+        %         tempInd{i} = find(~cellfun('isempty',regexp(trialSeqObj,pattern2extract{i},'once')));
+        %     end
+        % 
+        %     %            
+        %     minMax(i,1) = min(tempInd{i});
+        %     minMax(i,2) = max(tempInd{i} );
+        %     if i > 1
+        %         if all(minMax(i,2) < max(minMax(1:i-1,:),[],'omitnan')) || all(minMax(i,2) == max(minMax(1:i-1,:),[],'omitnan'))
+        %             minMax(i,:) = NaN;
+        %         end
+        %     end
+        % end
+        % 
+        % remInd           = all(isnan(minMax),2);
+        % indBump          = cumsum(remInd);
+        % minMax(remInd,:) = [];
+        % tempInd(remInd)  = [];
+        % indBump(remInd)  = [];
+        % % now extract the actual trial indices
+        % for i = 1:size(minMax,1)
+        % 
+        %     if i == 1
+        %         if size(minMax,1) == 1
+        %             dataIndex(1,i+indBump(i)) = tempInd{i};
+        %         else
+        %             selInd = find(tempInd{i} <= min(unique(minMax(i+1:end,:)),[],'omitnan'),1,'last');
+        %             if ~isempty(selInd)
+        %                 dataIndex(1,i+indBump(i)) = tempInd{i}(selInd);
+        %             end
+        %         end
+        %     % 
+        %     elseif i == size(minMax,1)
+        %         selInd = find(tempInd{i} > dataIndex(1,i-1),1,'first');
+        %         if ~isempty(selInd)
+        %             dataIndex(1,i+indBump(i)) = tempInd{i}(selInd);
+        %         end
+        %     else
+        %         selInd = find(tempInd{i} > max(dataIndex(1,1:i-1),[],'omitnan') & tempInd{i} <= max(minMax(i+1,:),[],'omitnan'),1,'first');
+        %         if ~isempty(selInd) && ~any(tempInd{i}(selInd) > cellfun(@(x) max(x,[],'omitnan'),tempInd(i+1:end)))
+        %             dataIndex(1,i+indBump(i)) = tempInd{i}(selInd);
+        %         end
+        %     end
+        % end

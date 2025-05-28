@@ -1,4 +1,4 @@
-function [ lin_rMaps, lin_pMaps ] = makeLinRMaps(obj, trialInd, addPosFilter, cellInd )
+function [ lin_rMaps, lin_pMaps ] = makeLinRMaps(obj, trialInd, options )
 % makeLinRMaps - Make linear rate map
 % Function will do the position linearisation as well
 % package: scanpix.maps
@@ -24,8 +24,8 @@ function [ lin_rMaps, lin_pMaps ] = makeLinRMaps(obj, trialInd, addPosFilter, ce
 arguments
     obj {mustBeA(obj,'scanpix.ephys')}
     trialInd (1,1) {mustBeNumeric}
-    addPosFilter {mustBeNumericOrLogical} = false(size(obj.posData.XY{trialInd},1),1);
-    cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
+    options.addPosFilter {mustBeNumericOrLogical} = false(size(obj.posData.XY{trialInd},1),1);
+    options.cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
 end
 
 %%
@@ -38,13 +38,13 @@ end
 
 %%
 % data from object
-linPos                 = obj.posData.linXY{trialInd};
+linPos                         = obj.posData.linXY{trialInd};
 %
 if isempty(linPos); warning('scaNpix::maps::makeLinRMaps: You need to linearise the pos data before you ask for lineraised rate maps. Duh!'); return; end
 %
-linPos(addPosFilter,:) = NaN;
+linPos(options.addPosFilter,:) = NaN;
 %
-spikeTimes             = obj.spikeData.spk_Times{trialInd}(cellInd);
+spikeTimes                     = obj.spikeData.spk_Times{trialInd}(options.cellInd);
 
 %% make rate maps
 % Make smoothing kernel %
@@ -52,7 +52,7 @@ kernel = fspecial('Gaussian',[1 5*obj.mapParams.lin.smoothKernelSD], obj.mapPara
 
 % speed filter
 if obj.mapParams.lin.speedFilterFlagLMaps
-    speedInd           = obj.posData.speed{trialInd} <= obj.mapParams.lin.speedFilterLimits(1) | obj.posData.speed{trialInd} > obj.mapParams.lin.speedFilterLimits(2);
+    speedInd           = obj.posData.speed{trialInd} <= obj.mapParams.lin.speedFilterLimitLow | obj.posData.speed{trialInd} > obj.mapParams.lin.speedFilterLimitHigh;
     linPos(speedInd,:) = NaN;
 end
   

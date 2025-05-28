@@ -136,8 +136,6 @@ if ~isempty(options.trialPattern)
 else
     [dataInd, tabInd]     = deal(1:length(copyObj.trialNames));
 end
-%
-prmsRate = copyObj.mapParams.rate;
 
 %%
 % populate fields
@@ -278,7 +276,7 @@ switch rowFormat
             end
             %
             if scoreInd(5)
-                mapSeries                      = scanpix.maps.makeMapTimeSeries(copyObj,[0 copyObj.trialMetaData(i).duration/2],i,'prms',prmsRate);
+                mapSeries                      = scanpix.maps.makeMapTimeSeries(copyObj,[0 copyObj.trialMetaData(i).duration/2],i);
                 ResT.intraStab(:,tabInd(c))    = scanpix.analysis.spatialCorrelation(mapSeries{1},mapSeries{2});
             end
 

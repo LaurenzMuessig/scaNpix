@@ -8,14 +8,14 @@ function [peakStats, peakMask] = fieldDetect(map,options)
 %%
 arguments
     map {mustBeNumeric} 
-    options.binMap (1,1) {mustBeNumericOrLogical} = true;
+    options.binMap (1,1) {mustBeNumericOrLogical} = false;
     options.nBinSteps (1,1) {mustBeNumeric} = 11; 
     options.binEdges (1,2) {mustBeNumeric} = [0 max(map(:),[],'omitnan')];
     options.thrMode (1,:) {mustBeMember(options.thrMode,{'abs','rel','none'})} = 'none';
     options.thr {mustBeScalarOrEmpty} = []; 
     options.minWSFieldSz (1,1) {mustBeNumeric} = 16; 
     options.minPeakSz (1,1) {mustBeNumeric} = 8; 
-    options.debugOn (1,1) {mustBeNumericOrLogical} = true;
+    options.debugOn (1,1) {mustBeNumericOrLogical} = false;
 end
 
 
@@ -26,22 +26,20 @@ else
     tmpMap = map;
 end
 
-% regionfill(map,isnan(map));
-
-
-% mask unvisited positions
-tmpMap(isnan(map)) = -Inf;
-% and if desired, background pixels
+% mask NaNs for watershed and, if desired, background pixels
 switch options.thrMode
     case 'abs'
-        tmpMap(tmpMap < options.thr) = -Inf;
+        tmpMap(map < options.thr | isnan(map)) = -Inf;
     case 'rel'
-        tmpMap(tmpMap < max(tmpMap(:),[],'omitnan') * options.thr) = -Inf;
+        options.thr                                  =  max(map(:),[],'omitnan') * options.thr;
+        tmpMap(map < options.thr | isnan(map)) = -Inf;
+    case 'none'
+        tmpMap(isnan(map)) = -Inf;
 end
 
 % segment the map using watershed
 fieldsLabel = watershed(-tmpMap);
-% special case if only a single field is present - watershed returns all 1's in that cxase
+% special case if only a single field is present and the rest of the map is -Inf after thresholding - watershed returns all 1's in that cxase
 if all(fieldsLabel(:))
     fieldsLabel = tmpMap ~= -Inf;
 end
@@ -66,9 +64,18 @@ while ~isempty(tooSmallInd)
     dists(dists == 0) = NaN;
     % closest field
     [~,minInd]        = min(dists(tooSmallInd(1),:),[],'omitnan');
+    if length(minInd) > 1
+        minInd = minInd(1);
+        disp('more than 1 min found');
+    end
     % 
     otherFieldsInd    = ~ismember(structInd,[tooSmallInd(1);minInd]);
-    mergeBorderPix    = fieldBorderPix{tooSmallInd(1)} & fieldBorderPix{minInd} & ~any(cat(3,fieldBorderPix{otherFieldsInd}),3);
+    if ~any(otherFieldsInd)
+        otherFieldsBorders = false(size(tmpMap));
+    else
+        otherFieldsBorders = any(cat(3,fieldBorderPix{otherFieldsInd}),3);
+    end
+    mergeBorderPix    = fieldBorderPix{tooSmallInd(1)} & fieldBorderPix{minInd} & ~otherFieldsBorders;
     % update fields label
     fieldsLabel(mergeBorderPix)                                       = tmpStats(minInd).MaxIntensity;
     fieldsLabel(fieldsLabel == tmpStats(tooSmallInd(1)).MaxIntensity) = tmpStats(minInd).MaxIntensity;
@@ -89,11 +96,15 @@ fLabels    = unique(fieldsLabel)';
 thresholds = nan(size(map));
 for i = fLabels(2:end)   
     % thresholds(fieldsLabel == i) = max(map(fieldsLabel == i),[],'omitnan')/2;
-    thresholds(fieldsLabel == i) = prctile(map(fieldsLabel == i),68);
+    currThresh = max(options.thr,prctile(map(fieldsLabel == i),75));
+    % if currThresh > options.thr
+        % thresholds(fieldsLabel == i) = prctile(map(fieldsLabel == i),75);
+        thresholds(fieldsLabel == i) = currThresh;
+    % end
 end
 % generate peak mask and do a bit of cleaning up
 tmpMask               = map > thresholds;
-tmpMask               = imclose(tmpMask,strel('square',3)); % merge peaks that are too close to each other
+tmpMask               = imclose(tmpMask,strel('square',2)); % merge peaks that are too close to each other
 % remove pixel bridges 
 tmpMask(isnan(map))   = 1;
 tmpMask               = ~bwmorph(~tmpMask,'bridge');        
@@ -101,11 +112,13 @@ tmpMask(isnan(map))   = 0;
 % now we split fields that are only connected on diagonal of 2 pixels
 CC                    = bwconncomp(tmpMask,4);      
 peakMask              = labelmatrix(CC);
-% 
-peakStats                                                 = regionprops(peakMask,map,'WeightedCentroid','Area','PixelIdxList','MajorAxisLength','EquivDiameter');
+% final stats of found peaks 
+peakStats                                                 = regionprops(peakMask,map,'WeightedCentroid','Area','PixelIdxList','MajorAxisLength','EquivDiameter','Centroid');
+% remove fields that are too small
 tooSmallFields                                            = [peakStats.Area] < options.minPeakSz;
 peakMask(vertcat(peakStats(tooSmallFields).PixelIdxList)) = 0;
-peakStats([peakStats.Area] < options.minPeakSz)           = [];
+peakMask                                                  = peakMask > 0;
+peakStats(tooSmallFields)                                 = [];
 
 
 %% debug plot
@@ -119,6 +132,8 @@ if options.debugOn
     hold on
     scatter(gca,peakX,peakY,48,'filled','r');
     hold off
+end
+
 end
 
 
@@ -181,7 +196,4 @@ end
 %             hold off
 %         end
 % end
-
-
-end
 

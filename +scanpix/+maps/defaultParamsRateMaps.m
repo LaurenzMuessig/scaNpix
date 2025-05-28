@@ -14,13 +14,13 @@ function prms = defaultParamsRateMaps
 %% params for maps
 
 %% general
-speedFilterLimitLow              = 2.5;
-speedFilterLimitHigh             = 400;
+speedFilterLimits                = [2.5 400];
 showWaitBar                      = false;
 
 %% rate maps
 prms.rate.speedFilterFlagRMaps   = 1;    % y/n
-prms.rate.speedFilterLimits      = [speedFilterLimitLow speedFilterLimitHigh];
+prms.rate.speedFilterLimitLow    = speedFilterLimits(1);
+prms.rate.speedFilterLimitHigh   = speedFilterLimits(2);
 prms.rate.binSizeSpat            = 2.5;  % spatial bin size in cm^2
 prms.rate.smooth                 = 'adaptive'; % 'boxcar; 'adaptive'
 prms.rate.kernel                 = 5;    % size smoothing kernel (in bins)
@@ -30,7 +30,8 @@ prms.rate.showWaitBar            = showWaitBar;
 
 %% dir maps
 prms.dir.speedFilterFlagDMaps    = 1;    % y/n
-prms.dir.speedFilterLimits       = [speedFilterLimitLow speedFilterLimitHigh];
+prms.dir.speedFilterLimitLow     = speedFilterLimits(1);
+prms.dir.speedFilterLimitHigh    = speedFilterLimits(2);
 prms.dir.binSizeDir              = 6;    % in degrees
 prms.dir.dirSmoothKern           = 5;    % smooth across that many bins
 prms.dir.showWaitBar             = showWaitBar;
@@ -51,7 +52,8 @@ prms.lin.binSizeLinMaps          = 2.5; % bin size (cm^2)
 prms.lin.smoothFlagLinMaps       = 1;  % y/n
 prms.lin.smoothKernelSD          = 2;  % SD, in bins
 prms.lin.speedFilterFlagLMaps    = 1;  % y/n
-prms.lin.speedFilterLimits       = [speedFilterLimitLow speedFilterLimitHigh];
+prms.lin.speedFilterLimitLow     = speedFilterLimits(1);
+prms.lin.speedFilterLimitHigh    = speedFilterLimits(2);
 prms.lin.posIsCircular           = 0;
 prms.lin.remTrackEnds            = 0;  % Remove this many bins from each end of the linear track. Set to 0 to remove none.
 prms.lin.showWaitBar             = showWaitBar;
@@ -83,7 +85,7 @@ prms.sac.sigma                   = 1.5;
 prms.gridProps.binAC             = false;     % 
 prms.gridProps.nBinSteps         = 21;     % 
 prms.gridProps.thresh            = -1;  % 
-prms.gridProps.minPeakSz         = 4;    % 
+prms.gridProps.minPeakSz         = 8;    % 
 prms.gridProps.plotEllipse       = false;         
 prms.gridProps.verbose           = false; 
 prms.gridProps.legacyMode        = false; 

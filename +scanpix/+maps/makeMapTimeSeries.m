@@ -28,9 +28,9 @@ for i = 1:size(timeInt,1)
 
     switch options.type
         case 'rate'
-            mapSeries{1,i}      = scanpix.maps.makeRateMaps(obj, trialInd, 'rate', ~keepInd, options.cellind );
+            mapSeries{1,i}   = scanpix.maps.makeRateMaps(obj, trialInd, 'addPosFilter', ~keepInd, 'cellInd', options.cellind );
         case 'dir'
-            mapSeries{1,i}      = scanpix.maps.makeDirMaps(obj, trialInd, ~keepInd, options.cellind );
+            mapSeries{1,i}   = scanpix.maps.makeDirMaps(obj, trialInd, 'addDirFilter', ~keepInd, 'cellInd', options.cellind );
         case 'speed'
             % to do
     end

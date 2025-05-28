@@ -1070,9 +1070,9 @@ classdef ephys < handle
                     for i = trialInd
                         %
                         if strcmpi(mapType,'pos')
-                            [ ~, obj.maps(1).pos{i}, ~ ]                                      = scanpix.maps.makeRateMaps(obj, i, mapType );
+                            [ ~, obj.maps(1).pos{i}, ~ ]                                      = scanpix.maps.makeRateMaps(obj, i, 'mapType', mapType );
                         else
-                            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj, i, mapType );
+                            [ obj.maps(1).rate{i}, obj.maps(1).pos{i}, obj.maps(1).spike{i} ] = scanpix.maps.makeRateMaps(obj, i );
                         end
                     end
                     
@@ -1157,7 +1157,7 @@ classdef ephys < handle
             c = 1;
             switch lower(score)
                 case {'spatialinfo','si'}
-                    if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
+                    if isempty(obj.maps(1).rate) || any(cellfun('isempty',obj.maps(1).rate(trialInd)))
                         warning('scaNpix::ephys::getSpatialProps::spatialInfo:You need to make rate maps before demanding their spatial info.');
                         spatProps = [];
                         return
@@ -1169,36 +1169,19 @@ classdef ephys < handle
                     spatProps = nan(size(obj.cell_ID,1),length(trialInd));
                     
                     for i = trialInd
-                        % sample rate for positions
-                        if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                            prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                        else
-                            prms.posFs  = obj.params('posFs');
-                        end
-                        prms.envSize = obj.trialMetaData(i).envSize ./ 100 .* obj.trialMetaData(i).ppm;
+                       
                         % need to get a boxcar pos map as a canonical estimate of dwell in case of adaptively smoothed maps
                         if strcmp(prms.smooth,'adaptive')
-                            [ ~, posMap, ~ ] = scanpix.maps.makeRateMaps(obj.spikeData.spk_Times{i}, obj.posData.XY{i}, [], obj.trialMetaData(i).ppm, obj.posData.speed{i}, prms);
+                            [ ~, posMap, ~ ] = scanpix.maps.makeRateMaps(obj, i, 'mapType', 'pos');
                         else
                             posMap = obj.maps(1).pos{i};
                         end
-                        % get mean rates
-                        % if nargin < 4
-                        %     if prms.speedFilterFlagRMaps
-                        %         speedLims = [prms.speedFilterLimitLow prms.speedFilterLimitHigh];
-                        %     else
-                        %         speedLims = 'none';
-                        %     end
-                        %     meanRates     = scanpix.analysis.getMeanRate(obj.spikeData.spk_Times{i},prms.posFs,obj.posData.speed{i},speedLims);
-                        % else
-                        %     meanRates     = varargin{1};
-                        % end
                         % SI
                         spatProps(:,c) = scanpix.analysis.spatial_info(obj.maps(1).rate{i},cell2mat(posMap));
                         c = c + 1;
                     end
                 case {'raleighvect','rv'}
-                    if isempty(obj.maps(1).dir) || isempty(obj.maps(1).dir{1})
+                    if isempty(obj.maps(1).dir) || any(cellfun('isempty',obj.maps(1).dir(trialInd)))
                         warning('scaNpix::ephys::getSpatialProps::rVect:You need to make dir maps before demanding their rayleigh vector lengths.');
                         spatProps = [];
                         return
@@ -1210,7 +1193,7 @@ classdef ephys < handle
                         c = c + 1;
                     end
                 case {'gridprops','grid','gridness'}
-                    if isempty(obj.maps(1).sACs) || isempty(obj.maps(1).sACs{1})
+                    if isempty(obj.maps(1).sACs) || any(cellfun('isempty',obj.maps(1).sACs(trialInd)))
                         warning('scaNpix::ephys::getSpatialProps::gridProps:You need to make spatial ACs before demanding grid properties.');
                         spatProps = [];
                         return
@@ -1228,7 +1211,7 @@ classdef ephys < handle
                         c = c + 1;
                     end
                 case {'borderscore','bs'}
-                    if isempty(obj.maps(1).rate) || isempty(obj.maps(1).rate{1})
+                    if isempty(obj.maps(1).rate) || any(cellfun('isempty',obj.maps(1).rate(trialInd)))
                         warning('scaNpix::ephys::getSpatialProps::borderScore:You need to make rate maps before demanding their border score.');
                         spatProps = [];
                         return

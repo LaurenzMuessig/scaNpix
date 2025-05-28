@@ -77,10 +77,10 @@ nMissFrames      = length(missFrames);
 if ~isempty(missFrames)
     fprintf('Note: There are %i missing frames in tracking data for %s.\n', nMissFrames, obj.trialMetaData(trialIterator).filename);
     
-    temp                   = zeros(length(led)+nMissFrames, 2, obj.trialMetaData(trialIterator).nLEDs);
-    temp(missFrames,:,:)   = nan;
-    temp(temp(:,1)==0,:,:) = led;
-    led                    = temp;
+    temp                     = zeros(length(led)+nMissFrames, 2, obj.trialMetaData(trialIterator).nLEDs);
+    temp(missFrames,:,:)     = nan;
+    temp(temp(:,1)==0,:,:)   = led;
+    led                      = temp;
     
     % interpolate sample times
     interp_sampleT           = interp1(double(frameCount), sampleT, missFrames);
@@ -170,14 +170,6 @@ for i = 1:2
     smLight(:,:,i)      = tmpSmooth ./ nanFact;
     smLight(nanInd,:,i) = NaN; % reassign NaNs back
 end
-% Get position from smoothed individual lights %%
-wghtLightFront = (1-obj.params('posHead'));
-wghtLightBack  = obj.params('posHead');
-xy             = smLight(:,:,1) .* wghtLightFront + smLight(:,:,2) .* wghtLightBack;  %
-
-% get direction data
-correction     = obj.trialMetaData(trialIterator).LEDorientation(1); %To correct for light pos relative to rat subtract angle of large light
-dirData        = mod((180/pi) .* atan2(smLight(:,2,1)-smLight(:,2,2), smLight(:,1,1)-smLight(:,1,2)) - correction, 360); %
 
 % some sanity checks for the data loading
 scanpix.npixUtils.dataLoadingReport(length(sampleT),length(obj.spikeData.sampleT{trialIterator}),obj.trialMetaData(trialIterator).BonsaiCorruptFlag);
@@ -186,9 +178,7 @@ obj.trialMetaData(trialIterator).log.SyncMismatchPosAP = length(sampleT)-length(
 % align pos data with sync data
 endIdxNPix                                = min( [ length(obj.spikeData.sampleT{trialIterator}), find(obj.spikeData.sampleT{trialIterator} < obj.trialMetaData(trialIterator).duration,1,'last') + 1]);
 obj.spikeData.sampleT{trialIterator}      = obj.spikeData.sampleT{trialIterator}(1:endIdxNPix);
-sampleT                                   = sampleT(1:endIdxNPix);
-xy                                        = xy(1:endIdxNPix,:);
-obj.posData(1).direction{trialIterator}   = dirData(1:endIdxNPix);
+smLight                                   = smLight(1:endIdxNPix,:,:);
 
 % interpolate positions to pos fs exactly - this will speed up map making significantly 
 if obj.trialMetaData(trialIterator).log.InterpPos2PosFs 
@@ -197,31 +187,43 @@ if obj.trialMetaData(trialIterator).log.InterpPos2PosFs
     newT        = linspace(0,sampleTimes(end),length(sampleTimes))'; %
     realFs      = length(sampleTimes) / sampleTimes(end);
 
-    if length(xy) - length(sampleTimes) == 1
+    if size(smLight,1) - length(sampleTimes) == 1
         newTint            = newT(2) - newT(1);
         % newT(end+1) = newT(end) + 1/obj.params('posFs');
         % sampleTimes(end+1) = sampleTimes(end) + 1/obj.params('posFs');
         newT(end+1)        = newT(end) + newTint;
         sampleTimes(end+1) = sampleTimes(end) + newTint;
-    elseif length(xy) - length(sampleTimes) > 1
+    elseif size(smLight,1) - length(sampleTimes) > 1
         error('scaNpix::npixUtils::loadPosNPix:Something went wrong here. Mismatch of n of pos frames and sync pulses for %s!',obj.trialnames{trialIterator});
     end
     obj.trialMetaData(trialIterator).log.InterpPosSampleTimes = newT;
     obj.trialMetaData(trialIterator).log.InterpPosFs          = realFs;
     obj.trialMetaData(trialIterator).posFs                    = realFs;
     %
-    for i = 1:2
-        xy(:,i) = interp1(sampleTimes, xy(:,i), newT);
+    for i = 1:size(smLight,3)
+        for j = 1:2
+            smLight(:,j,i) = interp1(sampleTimes, smLight(:,j,i), newT);
+        end
     end
 end
-    
-% pos data
-obj.posData(1).XYraw{trialIterator}        = xy;
-obj.posData(1).XY{trialIterator}           = [floor(xy(:,1)) + 1, floor(xy(:,2)) + 1];
-obj.posData(1).sampleT{trialIterator}      = sampleT; % this is redundant as we don't want to use the sample times from the PG camera
 
-obj.trialMetaData(trialIterator).ppm       = ppm(1);
-obj.trialMetaData(trialIterator).ppm_org   = ppm(2);
+% Get position from smoothed individual lights %% 
+wghtLightFront = (1-obj.params('posHead'));
+wghtLightBack  = obj.params('posHead');
+xy             = smLight(:,:,1) .* wghtLightFront + smLight(:,:,2) .* wghtLightBack;  %
+
+% get direction data
+correction     = obj.trialMetaData(trialIterator).LEDorientation(1); %To correct for light pos relative to rat subtract angle of large light
+dirData        = mod((180/pi) .* atan2(smLight(:,2,1)-smLight(:,2,2), smLight(:,1,1)-smLight(:,1,2)) - correction, 360); %
+
+% pos data output
+obj.posData(1).XYraw{trialIterator}       = xy;
+obj.posData(1).XY{trialIterator}          = [floor(xy(:,1)) + 1, floor(xy(:,2)) + 1];
+obj.posData(1).sampleT{trialIterator}     = sampleT(1:endIdxNPix); % this is redundant as we don't want to use the sample times from the PG camera
+obj.posData(1).direction{trialIterator}   = dirData;
+
+obj.trialMetaData(trialIterator).ppm      = ppm(1);
+obj.trialMetaData(trialIterator).ppm_org  = ppm(2);
 
 % scale position
 if ~isempty(obj.trialMetaData(trialIterator).envSize )
@@ -233,7 +235,11 @@ end
 
 % running speed
 pathDists                                  = sqrt( diff(xy(:,1)).^2 + diff(xy(:,2)).^2 ) ./ ppm(1) .* 100; % distances in cm
-obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
+if obj.trialMetaData(trialIterator).log.InterpPos2PosFs
+    obj.posData(1).speed{trialIterator}    = pathDists ./ (1/realFs); % cm/s
+else
+    obj.posData(1).speed{trialIterator}    = pathDists ./ diff(obj.spikeData(1).sampleT{trialIterator}); % cm/s
+end
 obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
 
 fprintf('  DONE!\n');
