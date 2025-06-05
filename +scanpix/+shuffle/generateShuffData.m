@@ -59,17 +59,13 @@ ResShuf = makeTable(0,maxNtrials); % preallocate
 
 age    = cell2mat(cellfun(@(x) x.trialMetaData(1).age, objData, 'UniformOutput',0))';
 nCells = cell2mat(cellfun(@(x) length(x.spikeData.spk_Times{1}),objData,'uni',0))';
-nStep  = options.mindur - 2*(options.minshift) + 1;
-% for population shuffle figure out how many shifts/cell we need to reach n
-% of population
-if strcmp(mode,'pop')
-    nShiftCellsByAge = nan(size(age,1),1);
-    for i = 1:size(options.age,1)
-        nShiftCellsByAge(age >= options.age(i,1) & age <= options.age(i,2)) = ceil( options.nshuf / sum(nCells(age >= options.age(i,1) & age <= options.age(i,2))));
-    end
-elseif strcmp(mode,'cell')
-    nShiftCellsByAge = NaN; % needed as dummy for parfor execution
+nStep  = options.mindur - 2 * options.minshift + 1;
+% for population shuffle figure out how many shifts/cell we need to reach n of population
+nShiftCellsByAge = nan(size(age,1),1);
+for i = 1:size(options.age,1)
+    nShiftCellsByAge(age >= options.age(i,1) & age <= options.age(i,2)) = ceil( options.nshuf / sum(nCells(age >= options.age(i,1) & age <= options.age(i,2))));
 end
+
 % start parallel pool
 checkParPool = gcp('nocreate');
 if isempty(checkParPool)
@@ -92,12 +88,15 @@ parfor j = 1:length(objData)
     if copyObj.mapParams.rate.showWaitBar
         [copyObj.mapParams.rate.showWaitBar,copyObj.mapParams.dir.showWaitBar] = deal(false);
     end
+    
     % work out n shifts per cell
-    if strcmp(mode,'pop')
-        nShiftCells = nShiftCellsByAge(j);
-    elseif strcmp(mode,'cell')
-        nShiftCells = nStep;
+    switch mode
+        case 'pop'
+            nShiftCells = nShiftCellsByAge(j);
+        case 'cell'
+            nShiftCells = nStep;
     end
+
     % select trials for the shuffling
     if strcmp(trialSelectMode,'rand')
 %         ind = ismember({copyObj.trialMetaData.trialType},options.trialtype);
@@ -172,9 +171,11 @@ parfor j = 1:length(objData)
             for m = 1:length(scores)
                 if strcmp(scores{m},'gridness')
                     tmp = copyObj.getSpatialProps(scores{m}, k);
-                    tmpT.(scores{m})(:,k) = num2cell([vertcat(tmpT.(scores{m}){:,k}),max(tmp(:,1),tmp(:,4),'omitnan')],2);
+                    % tmpT.(scores{m})(:,k) = num2cell([vertcat(tmpT.(scores{m}){:,k}),max(tmp(:,1),tmp(:,4),'omitnan')],2);
+                    tmpT.gridness(:,k)     = num2cell([vertcat(tmpT.gridness{:,k}),tmp(:,1)],2);
+                    tmpT.gridness_ell(:,k) = num2cell([vertcat(tmpT.gridness_ell{:,k}),tmp(:,4)],2);
                 else
-                    tmpT.(scores{m})(:,k) = num2cell([vertcat(tmpT.(scores{m}){:,k}),copyObj.getSpatialProps(scores{m}, k)],2);
+                    tmpT.(scores{m})(:,k)  = num2cell([vertcat(tmpT.(scores{m}){:,k}),copyObj.getSpatialProps(scores{m}, k)],2);
                 end
             end
 
@@ -207,15 +208,16 @@ function T = makeTable(nCells,maxTrials)
 
 scoreDum  = nan(1,maxTrials);
 varList   =   {
-    'rat',         NaN; ...
-    'dataset',     cell(1,1); ...
-    'age',         NaN; ...
-    'cellID',      NaN; ...
+    'rat',          NaN; ...
+    'dataset',      cell(1,1); ...
+    'age',          NaN; ...
+    'cellID',       NaN; ...
 
-    'SI',          cell(size(scoreDum)); ...
-    'RV',          cell(size(scoreDum)); ...
-    'gridness',    cell(size(scoreDum)); ...
-    'borderScore', cell(size(scoreDum)); ...
+    'SI',           cell(size(scoreDum)); ...
+    'RV',           cell(size(scoreDum)); ...
+    'gridness',     cell(size(scoreDum)); ...
+    'gridness_ell', cell(size(scoreDum)); ...
+    'borderScore',  cell(size(scoreDum)); ...
 
     };
 varList = varList';

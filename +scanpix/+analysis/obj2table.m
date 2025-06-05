@@ -129,10 +129,10 @@ ResT.Properties.VariableNames = varList(1,:);
 
 %% assigning index
 if ~isempty(options.trialPattern)
-    [dataInd, missTrials] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},options.trialPattern,'bslKey',options.bslKey,'exactflag',options.exactflag,'ignKey',options.ignKey,'getFlankBSL', options.getFlankBSL,'mode',options.mode);
+    [tabInd, dataInd] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},options.trialPattern,'bslKey',options.bslKey,'exactflag',options.exactflag,'ignKey',options.ignKey,'getFlankBSL', options.getFlankBSL,'mode',options.mode);
     dataInd               = dataInd(1,:);
-    tabInd                = 1:length(dataInd)+length(missTrials);
-    tabInd(missTrials)    = [];
+    % tabInd                = 1:length(dataInd)+length(missTrials);
+    % tabInd(missTrials)    = [];
 else
     [dataInd, tabInd]     = deal(1:length(copyObj.trialNames));
 end

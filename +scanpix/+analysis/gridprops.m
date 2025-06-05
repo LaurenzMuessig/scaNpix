@@ -53,6 +53,7 @@ arguments
     options.ax  {ishghandle(options.ax, 'axes')}
     options.verbose (1,1) {mustBeNumericOrLogical} = false;
     options.legacyMode (1,1) {mustBeNumericOrLogical} = false;
+    options.peakCoords (:,2) {mustBeNumeric}
 end
 
 %% 
@@ -72,6 +73,7 @@ Props.orientationFull   = nan(3,1);
 Props.offset            = NaN;
 Props.offsetFull        = nan(3,1);
 Props.fieldSize         = NaN;
+Props.peakCoords        = nan(7,2);
 Props.closestPeaksCoord = nan(6,2);
 Props.centralPeakMask   = false(size(autoCorr));
 Props.gridMask          = false(size(autoCorr));
@@ -93,14 +95,19 @@ if all(isnan(autoCorr));   return;     end
 
 % ---- Find central peak in auto corr --- %
 % autoCorrTemp = autoCorr;
-[xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr, options.thresh, options.binAC, options.nBinSteps, options.minPeakSz); 
+if fitEllipse && isfield(options,'peakCoords')
+    % this allows passing the peak coords from regular gridness calculation - this will save running the peak finding again and save comp time when e.g. doing shuffling
+    xyCoordMaxBin = options.peakCoords;
+else
+    [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr, options.thresh, options.binAC, options.nBinSteps, options.minPeakSz);
+    Props.peakCoords = xyCoordMaxBin(1:min(7,size(xyCoordMaxBin,1)),:);
 
-if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2) 
-    % if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
-    if options.verbose; warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
-    return
+    if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
+        % if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
+        if options.verbose; warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
+        return
+    end
 end
-
 % Regularise by fitting ellipse to AC 
 if fitEllipse
     if options.plotEllipse
@@ -114,6 +121,9 @@ if fitEllipse
         autoCorr                   = regularise_eliptic_grid( autoCorr, abScale, orient*180/pi  );
         % update peak positions
         [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr,options.thresh,  options.binAC, options.nBinSteps, options.minPeakSz);
+
+        Props.peakCoords = xyCoordMaxBin(1:min(7,size(xyCoordMaxBin,1)),:);
+        
         if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
             if options.verbose;  warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
             return

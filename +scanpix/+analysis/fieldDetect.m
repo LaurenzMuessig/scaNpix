@@ -31,7 +31,7 @@ switch options.thrMode
     case 'abs'
         tmpMap(map < options.thr | isnan(map)) = -Inf;
     case 'rel'
-        options.thr                                  =  max(map(:),[],'omitnan') * options.thr;
+        options.thr                            =  max(map(:),[],'omitnan') * options.thr;
         tmpMap(map < options.thr | isnan(map)) = -Inf;
     case 'none'
         tmpMap(isnan(map)) = -Inf;
@@ -104,7 +104,7 @@ for i = fLabels(2:end)
 end
 % generate peak mask and do a bit of cleaning up
 tmpMask               = map > thresholds;
-tmpMask               = imclose(tmpMask,strel('square',2)); % merge peaks that are too close to each other
+tmpMask               = imclose(tmpMask,strel('square',3)); % merge peaks that are too close to each other
 % remove pixel bridges 
 tmpMask(isnan(map))   = 1;
 tmpMask               = ~bwmorph(~tmpMask,'bridge');        

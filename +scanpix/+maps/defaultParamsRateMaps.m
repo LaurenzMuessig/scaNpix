@@ -75,6 +75,8 @@ prms.speed.confInt               = 95;    % confidence interval
 prms.speed.showWaitBar           = showWaitBar;
 
 %% spatial autocorellograms
+% using the Mosers way to compute the 2D autocorrelation produces much better results than using the functions that Caswell wrote - both
+% methods produce the same AC for some rate maps but not generally. I don't understand why. 
 prms.sac.method                  = 'moser'; 
 prms.sac.removeMinOverlap        = true;
 prms.sac.smooth                  = false;
@@ -82,9 +84,11 @@ prms.sac.hSize                   = 5;
 prms.sac.sigma                   = 1.5;
 
 %% grid props
-prms.gridProps.binAC             = false;     % 
-prms.gridProps.nBinSteps         = 21;     % 
-prms.gridProps.thresh            = -1;  % 
+% after many rounds of testing and looking at results, it seems the best results for finding the grid peaks in a noisy AC is to use watershedding (with a few tricks to avoid oversegmentation) 
+% on a binned version of the AC that is threshholded at r=0 
+prms.gridProps.binAC             = true;     % 
+prms.gridProps.nBinSteps         = 21;     % bin size = 0.1 
+prms.gridProps.thresh            = 0;  % 
 prms.gridProps.minPeakSz         = 8;    % 
 prms.gridProps.plotEllipse       = false;         
 prms.gridProps.verbose           = false; 

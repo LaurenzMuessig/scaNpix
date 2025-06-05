@@ -1,4 +1,4 @@
-function [dataIndex, missingTrials] = matchTrialSeq2Pattern(trialSeqObj,pattern2extract,options)  
+function [patternIndex, dataIndex, missingTrials] = matchTrialSeq2Pattern(trialSeqObj,pattern2extract,options)  
 % matchTrialSeq2Pattern - match a pattern of trial types to the trials run for a specific dataset 
 % package: scanpix.helpers
 %
@@ -125,19 +125,30 @@ switch options.mode
             return;
         end
         
-        % this ends up overly complicated but I can't find an easier way to
-        % deal with repeating trial types and differences in the sequence
-        % of trials
-        % dataIndex = zeros(2,length(pattern2extract));
-        % minMax    = nan(length(pattern2extract),2);
-        % tempInd   = cell(length(pattern2extract),1);
 
-        % first get the indices for all trial types
+        % first get the indices for the output pattern
         for i = 1:length(trialSeqObj)
             if options.exactflag
                 tempInd = find(ismember( pattern2extract, trialSeqObj{i}));
             else
                 tempInd = find(~cellfun('isempty',regexp(pattern2extract,trialSeqObj{i},'once')));
+            end
+            % this wouldn't account for a case where e.g. only a post-probe
+            % baseline would be there
+            if i == 1
+                patternIndex = tempInd(1);
+            else
+                patternIndex = [patternIndex, tempInd(find(tempInd > max(patternIndex),1,'first'))];
+            end
+        end 
+        
+        %
+        trialsInData = pattern2extract(patternIndex);
+        for i = 1:length(trialsInData)
+            if options.exactflag
+                tempInd = find(ismember( trialSeqObj, trialsInData{i}));
+            else
+                tempInd = find(~cellfun('isempty',regexp(trialSeqObj,trialsInData{i},'once')));
             end
             % this wouldn't account for a case where e.g. only a post-probe
             % baseline would be there
@@ -149,7 +160,7 @@ switch options.mode
         end 
         dataIndex(2,:) = 0;
         %
-        missingTrials  = find(~ismember(1:length(pattern2extract),dataIndex(1,:)));
+        missingTrials  = find(~ismember(1:length(pattern2extract),patternIndex));
 end
 
 end

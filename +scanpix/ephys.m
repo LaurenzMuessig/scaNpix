@@ -1143,7 +1143,7 @@ classdef ephys < handle
         end
         
         %%
-        function spatProps = getSpatialProps(obj, score, trialInd, varargin)
+        function spatProps = getSpatialProps(obj, score, trialInd)
             %
             if strcmp(obj.type,'bhave')
                 warning('scaNpix::ephys::addMaps:This ain''t gonna work for behavioural data. I guess you had to try...');
@@ -1205,7 +1205,7 @@ classdef ephys < handle
                     %
                     for i = trialInd
                         [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,options{:}),obj.maps(1).sACs{i},'uni',0);
-                        [~, ellProps]     = cellfun(@(x) scanpix.analysis.gridprops(x,true,options{:}),obj.maps(1).sACs{i},'uni',0);
+                        [~, ellProps]     = cellfun(@(x, y) scanpix.analysis.gridprops(x,true,options{:},'peakCoords',y.peakCoords),obj.maps(1).sACs{i},props,'uni',0);
                         % for now just output the basics
                         spatProps(:,:,c) = [cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0)), cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0))];
                         c = c + 1;

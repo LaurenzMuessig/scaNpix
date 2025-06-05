@@ -5,7 +5,7 @@ arguments
     autoCorr {mustBeNumeric}
     options.thresh (1,1) {mustBeNumeric} = -1;
     options.binAC (1,1) {mustBeNumericOrLogical} = false;
-    options.nBinSteps (1,1) {mustBeNumeric} = 20;
+    options.nBinSteps (1,1) {mustBeNumeric} = 21;
     options.minPeakSz (1,1) {mustBeNumeric} = 8;
     options.axArray (1,3) {mustBeA(options.axArray,'cell')} = scanpix.plot.multPlot([1 3],'plotsize',[150 150],'plotsep',[75 40]); 
 end
@@ -13,7 +13,7 @@ end
 
 %%
 [~, Props]    = scanpix.analysis.gridprops(autoCorr,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz);
-[~, ellProps] = scanpix.analysis.gridprops(autoCorr,true,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz,'plotEllipse',true,'ax',options.axArray{2});
+[~, ellProps] = scanpix.analysis.gridprops(autoCorr,true,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz,'plotEllipse',true,'ax',options.axArray{2},'peakCoords', Props.peakCoords);
 
 %%
 for i = 1:2
