@@ -131,7 +131,7 @@ switch options.mode
             if options.exactflag
                 tempInd = find(ismember( pattern2extract, trialSeqObj{i}));
             else
-                tempInd = find(~cellfun('isempty',regexp(pattern2extract,trialSeqObj{i},'once')));
+                tempInd = find(~cellfun('isempty',regexp(trialSeqObj{i},pattern2extract,'once')));
             end
             % this wouldn't account for a case where e.g. only a post-probe
             % baseline would be there
