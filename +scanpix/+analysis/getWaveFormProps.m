@@ -1,4 +1,4 @@
-function spikeProps = getWaveFormProps(obj, sampleRate, options)
+function spikeProps = getWaveFormProps(obj, options)
 % getWaveFormProps - Characterise waveforms 
 % ATM only works for dacq class objects
 % Calculate mean waveform/channel for each cell as well as a few properties (spike width (peak-trough), mean rate and mean 
@@ -43,7 +43,7 @@ function spikeProps = getWaveFormProps(obj, sampleRate, options)
 %%
 arguments
     obj {mustBeA(obj,'scanpix.ephys')}
-    sampleRate (1,1) {mustBeNumeric}
+    % sampleRate (1,1) {mustBeNumeric}
     options.acWin (1,1) {mustBeNumeric} = 50;
     options.acBin (1,1) {mustBeNumeric} = 1; % in degrees
     options.save (1,1) {mustBeNumericOrLogical} = false; 
@@ -107,7 +107,7 @@ for i = 1:length(obj.trialNames)
             continue;
         else
             maxAmp{i}(j)    = peakAmp - troughAmp;
-            spkWidth{i}(j)  = (troughInd - peakInd) * (1/sampleRate*1000); % in ms
+            spkWidth{i}(j)  = (troughInd - peakInd) * (1/obj.params('APFs')*1000); % in ms
         end
          
         % additional params
@@ -123,7 +123,7 @@ for i = 1:length(obj.trialNames)
     spikeProps(:,6,i)   = maxAmp{i};
     
     % save spikeprops file
-    if options.saveFlag
+    if options.save
         tmp = squeeze(spikeProps(:,:,i));
         save([obj.dataPath{i} 'spikeProps_' obj.trialNames{i}],'tmp');
     end

@@ -48,14 +48,17 @@ end
 %
 
 %%
-copyObj = obj.deepCopy;
+% copyObj = obj.deepCopy;
 
 %% prefiltering
-ind = false(size(copyObj.cell_ID,1),1);
+ind = false(size(obj.cell_ID,1),1);
 if isfield(options,'minspikes')
-    tmp                                       = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),copyObj.spikeData.spk_Times,'uni',0);
+    tmp                                       = cellfun(@(x) cellfun(@(x) length(x),x,'uni',0),obj.spikeData.spk_Times,'uni',0);
     nSpikes                                   = cell2mat(horzcat(tmp{:}));
-    ind(all(nSpikes < options.minspikes,2)) = true;
+    ind(all(nSpikes < options.minspikes,2))   = true;
+    copyObj                                   = obj.deepCopy;
+else
+    copyObj                                   = obj;
 end
 
 % apply filter
@@ -130,11 +133,9 @@ ResT.Properties.VariableNames = varList(1,:);
 %% assigning index
 if ~isempty(options.trialPattern)
     [tabInd, dataInd] = scanpix.helpers.matchTrialSeq2Pattern({copyObj.trialMetaData.trialType},options.trialPattern,'bslKey',options.bslKey,'exactflag',options.exactflag,'ignKey',options.ignKey,'getFlankBSL', options.getFlankBSL,'mode',options.mode);
-    dataInd               = dataInd(1,:);
-    % tabInd                = 1:length(dataInd)+length(missTrials);
-    % tabInd(missTrials)    = [];
+    dataInd           = dataInd(1,:);
 else
-    [dataInd, tabInd]     = deal(1:length(copyObj.trialNames));
+    [dataInd, tabInd] = deal(1:length(copyObj.trialNames));
 end
 
 %%

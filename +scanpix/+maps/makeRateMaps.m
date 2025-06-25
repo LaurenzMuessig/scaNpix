@@ -71,13 +71,12 @@ binSizePix = floor( obj.trialMetaData(trialInd).ppm/100 * obj.mapParams.rate.bin
 % positions = bsxfun(@minus,positions, floor( min(positions,[],1)/binSizePix )*binSizePix ); 
 if ~obj.trialMetaData(trialInd).PosIsFitToEnv{1}
     positions = positions - min(positions) + eps; % if you have't fit the positions to the environment and your environment is badly sampled along some edge(s), the resulting ratemap will not be binned correctly
-end
-% bin
-posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
-% get size in bins
-if isempty(obj.trialMetaData(trialInd).envSize)
-    nBins    = [max(posBinned(:,1)) max(posBinned(:,2))];  % get env size from positions - will be off if env isn't sampled to full extent
+    % bin
+    posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
+    nBins    = [max(posBinned(:,1)) max(posBinned(:,2))];
 else
+    % bin
+    posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
     envSzPix = obj.trialMetaData(trialInd).envSize ./ 100 .* obj.trialMetaData(trialInd).ppm;
     nBins    = fliplr( ceil( envSzPix ./ binSizePix ) ); %+ min(posBinned)-1; 
 end

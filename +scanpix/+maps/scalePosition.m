@@ -74,7 +74,7 @@ if nargin < 2
 end
 
 if length(options.envSzPix) == 1 || isnan(options.envSzPix(2))
-    envSzPix = [envSzPix(1) envSzPix(1)];
+    options.envSzPix = [options.envSzPix(1) options.envSzPix(1)];
 end
 
 if options.circleFlag

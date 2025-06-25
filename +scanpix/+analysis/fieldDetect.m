@@ -96,11 +96,7 @@ fLabels    = unique(fieldsLabel)';
 thresholds = nan(size(map));
 for i = fLabels(2:end)   
     % thresholds(fieldsLabel == i) = max(map(fieldsLabel == i),[],'omitnan')/2;
-    currThresh = max(options.thr,prctile(map(fieldsLabel == i),75));
-    % if currThresh > options.thr
-        % thresholds(fieldsLabel == i) = prctile(map(fieldsLabel == i),75);
-        thresholds(fieldsLabel == i) = currThresh;
-    % end
+    thresholds(fieldsLabel == i) =  max(options.thr,prctile(map(fieldsLabel == i),75));
 end
 % generate peak mask and do a bit of cleaning up
 tmpMask               = map > thresholds;
