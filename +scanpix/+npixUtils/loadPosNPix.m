@@ -217,8 +217,8 @@ correction     = obj.trialMetaData(trialIterator).LEDorientation(1); %To correct
 dirData        = mod((180/pi) .* atan2(smLight(:,2,1)-smLight(:,2,2), smLight(:,1,1)-smLight(:,1,2)) - correction, 360); %
 
 % pos data output
-obj.posData(1).XYraw{trialIterator}       = xy;
-obj.posData(1).XY{trialIterator}          = [floor(xy(:,1)) + 1, floor(xy(:,2)) + 1];
+obj.posData(1).XYraw{trialIterator}       = led;
+obj.posData(1).XY{trialIterator}          = xy; %[floor(xy(:,1)) + 1, floor(xy(:,2)) + 1];
 obj.posData(1).sampleT{trialIterator}     = sampleT(1:endIdxNPix); % this is redundant as we don't want to use the sample times from the PG camera
 obj.posData(1).direction{trialIterator}   = dirData;
 

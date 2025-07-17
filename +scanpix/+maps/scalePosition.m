@@ -35,26 +35,6 @@ arguments
     options.radest (1,:) {mustBeMember(options.radest,{'largestWellSampledRadius','fixedPercentileOfDwell'})} = 'largestWellSampledRadius';
 end
 
-% envSzPix             = [250 250];
-% minOccForEdge        = 50;
-% circleFlag           = false;
-% % these are hard coded for now - not sure they need to be dynamically set
-% minOccForRad         = 0.5;
-% cenFindIterLim       = 4;
-% cenFindOffsetThr     = 3;
-% radiusEstimateMethod = 'largestWellSampledRadius';   %  'fixedPercentileOfDwell';  
-% 
-% p = inputParser;
-% addParameter(p,'envszpix',envSzPix,@isnumeric);
-% addParameter(p,'minoccedge',minOccForEdge,@isscalar);
-% addParameter(p,'circflag',circleFlag,@islogical);
-% addParameter(p,'minoccrad',minOccForRad,@isscalar);
-% addParameter(p,'cenlim',cenFindIterLim,@isscalar);
-% addParameter(p,'cenoffset',cenFindOffsetThr,@isscalar);
-% addParameter(p,'radest',radiusEstimateMethod,@ischar);
-% parse(p,varargin{:});
-
-
 % parse input
 if nargin < 2
     uiInput = inputdlg({'trialIndex','dwell thresh','Env. size X','Env. size Y (optional)','circleFlag'},'',1,{'','50','62.5','','1'});
@@ -67,10 +47,6 @@ if nargin < 2
         options.envSzPix   = [obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{3}), obj.trialMetaData(trialIndex).ppm / 100 * str2double(uiInput{4})];
         options.circleFlag = logical(str2double(uiInput{5}));
     end
-% else 
-%     envSzPix      = p.Results.envszpix;
-%     minOccForEdge = p.Results.minoccedge;
-%     circleFlag    = p.Results.circflag;
 end
 
 if length(options.envSzPix) == 1 || isnan(options.envSzPix(2))
