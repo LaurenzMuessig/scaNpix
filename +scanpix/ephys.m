@@ -39,6 +39,7 @@ classdef ephys < handle
         trialNames(1,:)       string
         cell_ID(:,4)          double %{mustBePositive, mustBeNonNan, mustBeNonzero}
         cell_Label(:,1)       string
+        histo_reconstruct     struct
     end
     
     properties % trial data %
@@ -664,6 +665,55 @@ classdef ephys < handle
             % pre-allocate some data (e.g. part that isn't loaded), such
             % that all properties have same size
             obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
+
+            % try and load histological reconstrction data
+            obj.read_histology;
+        end
+
+        %%
+        function read_histology(obj,path2File)
+            % read_histology - read in xml file with the reconstructed brain regions 
+            % Method for ephys class objects
+            % this file needs to be named 'histology.xml' and adhere to the format standards
+            %
+            % Syntax: obj.read_histology
+            %         obj.read_histology(Some/Path/Goes/Here)
+            %
+            % Inputs (optional):
+            %    path2File - path on disk where file is located (w/o
+            %                filename)
+            %
+            % Outputs:
+            %
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            if nargin == 1
+                pathOnMachine = scanpix.helpers.swapServerOSPath(obj.dataPath{1}); % might need to swap server location in case we load at later stage
+            else
+                pathOnMachine = path2File;
+            end
+
+            if exist(fullfile(pathOnMachine,'histology.xml'),'file') ~= 2
+                 warning('scaNpix::ephys::read_histology:Can''t find the xml file with the histogy data. Chill out, generate that file and try again.');
+                return;
+            end
+            % read xml file
+            xmlData           = scanpix.fxchange.xml_read(fullfile(pathOnMachine,'histology.xml'));
+            % file could contain multiple brain regions
+            fNames            = fieldnames(xmlData.brain_region);
+            fNames            = fNames(~strcmp(fNames,'COMMENT')); % skip COMMENT field
+            %
+            activeProbeLength = max(obj.chanMap(1).ycoords) - min(obj.chanMap(1).ycoords) + 20; % +20 => 1 channel spacing on an NP 1.0 probe 
+            for i = 1:length(fNames)
+                
+                currPropVals                                  = xmlData.brain_region.(fNames{i}) / 100;
+                %
+                obj.histo_reconstruct(1).(fNames{i}).depth    = [currPropVals(1) currPropVals(2)] .* activeProbeLength + xmlData.deepest_chan; % brain region spans this section on the probe
+                
+                chanInd                                       = obj.chanMap(1).ycoords >= obj.histo_reconstruct.(fNames{i}).depth(1) & obj.chanMap(1).ycoords <= obj.histo_reconstruct.(fNames{i}).depth(2); 
+                obj.histo_reconstruct(1).(fNames{i}).channels = obj.chanMap(1).chanMap(chanInd); % brain region spans these channels on the probe
+            end
+
         end
     end
     
