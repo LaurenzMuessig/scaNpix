@@ -76,18 +76,18 @@ obj.load({‘all},’SomeDataFileName’); % load all types data for trial ’So
 
 ### Other object methods
 • for information on the syntax for using the _obj.methods_, please refer to the descriptions in _scanpix.ephys_
-      *	_changeParams_: change params of the current object (either object params or map params)
-      *	_saveParams_: save params of the current object to disk (either object params or map params)
-      *	_addMetaData_: Add a new field/value pair to the object's metadata
-      *	_addData_: Add new data to the current object
-      *	_deleteData_: delete data (trials or cells) from the current object
-      *	_reorderData_: reorder the sequence of trials within current object
-      *	_load_: load data
-      *	_read_histology_: read an xml file with the result of the histology reconstruction (neuropixels only)
-      *	_deepCopy_: create a deep copy of the current object
-      *	_addMaps_: add various types of maps (e.g. rate, dir, etc) to the current object 
-      *	_getSpatialProps_: fetch various types of spatial properties (e.g. spatial information, gridness, etc) for the cells in the current object
-      *	_loadWaves_: load waveforms (neuropixels only as fro dacq these will be loaded during raw data loading)
+ * _changeParams_: change params of the current object (either object params or map params)
+ * _saveParams_: save params of the current object to disk (either object params or map params)
+ * _addMetaData_: Add a new field/value pair to the object's metadata
+ * _addData_: Add new data to the current object
+ * _deleteData_: delete data (trials or cells) from the current object
+ * _reorderData_: reorder the sequence of trials within current object
+ * _load_: load data
+ * _read_histology_: read an xml file with the result of the histology reconstruction (neuropixels only)
+ * _deepCopy_: create a deep copy of the current object
+ * _addMaps_: add various types of maps (e.g. rate, dir, etc) to the current object
+ * _getSpatialProps_: fetch various types of spatial properties (e.g. spatial information, gridness, etc) for the cells in the current object
+ * _loadWaves_: load waveforms (neuropixels only as fro dacq these will be loaded during raw data loading)
          
 
 
