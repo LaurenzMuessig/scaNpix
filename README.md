@@ -33,8 +33,24 @@ We first create a data object by grabbing some basic parameters (see also sectio
 
 ### Syntax: 
 ```
-obj = scanpix.ephys(someInput);
+ obj = scanpix.ephys;
+ obj = scanpix.ephys(type);
+ obj = scanpix.ephys(type,prmsMode);
+ obj = scanpix.ephys(type,prmsMode,setDirFlag);
 ```
+### Inputs (type):
+* _type_ (string/character)
+
+     * type of data - _'dacq'_, _'npix'_, _'nexus'_ (not implemented currently) or _'bhave'_ (behavioural data, i.e. no recording data)
+  
+*	_prmsMode_ (string/character)
+   
+      *	'default' - uses default parameters defined in _scanpix.helpers.defaultParamsContainer_ (default), 'ui' - opens UI dialogue to select object params; 'file' - load object params from file
+
+ *	_setDirFlag_ (logical)
+   
+      *	true (default)/false - skip UI set file selection dialogue if false. This stops dialogue pop ups when e.g. batchloading data from disk
+
 Then we can use the class's load method to load the actual data, like so:
 
 ```
@@ -45,6 +61,7 @@ obj.load(loadMode, varargin);
 * _loadMode_ (cell array)
 
      * controls what part(s) of the data will be loaded into object. Either _{‘all’}_ or any combination of _{‘pos’,’spikes’,’lfp’}_
+     * you can add either of two additional strings: _'nosync'_ to indicate that no sync file with the camera timestamps should be loaded (neuropixel data only; useful when you want to load a concatonated file) or _'reload'_ which will reload the specified data without changing any of the other data (neuropixel data only; this is e.g. useful if you want to load a different version of the spike sorting output that is located inside a different directory) 
   
 *	_varargin_ (comma separated list of strings)
    
@@ -58,7 +75,21 @@ obj.load({‘all},’SomeDataFileName’); % load all types data for trial ’So
 ```
 
 ### Other object methods
-* _add more info here_
+• for information on the syntax for using the _obj.methods_, please refer to the descriptions in _scanpix.ephys_
+
+      *	_changeParams_: change params of the current object (either object params or map params)
+      *	_saveParams_: save params of the current object to disk (either object params or map params)
+      *	_addMetaData_: Add a new field/value pair to the object's metadata
+      *	_addData_: Add new data to the current object
+      *	_deleteData_: delete data (trials or cells) from the current object
+      *	_reorderData_: reorder the sequence of trials within current object
+      *	_load_: load data
+      *	_read_histology_: read an xml file with the result of the histology reconstruction (neuropixels only)
+      *	_deepCopy_: create a deep copy of the current object
+      *	_addMaps_: add various types of maps (e.g. rate, dir, etc) to the current object 
+      *	_getSpatialProps_: fetch various types of spatial properties (e.g. spatial information, gridness, etc) for the cells in the current object
+      *	_loadWaves_: load waveforms (neuropixels only as fro dacq these will be loaded during raw data loading)
+         
 
 
 ## 3. Do something exciting with the data you loaded into Matlab
