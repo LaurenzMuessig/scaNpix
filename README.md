@@ -76,7 +76,6 @@ obj.load({‘all},’SomeDataFileName’); % load all types data for trial ’So
 
 ### Other object methods
 • for information on the syntax for using the _obj.methods_, please refer to the descriptions in _scanpix.ephys_
-
       *	_changeParams_: change params of the current object (either object params or map params)
       *	_saveParams_: save params of the current object to disk (either object params or map params)
       *	_addMetaData_: Add a new field/value pair to the object's metadata
