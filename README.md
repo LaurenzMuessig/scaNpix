@@ -312,7 +312,7 @@ If you want to use your own custom values by default you should edit them within
    * _speedFilterLimitsHigh_ – upper limit for speed in cm/s (_default=400_); gets set automatically from general params   
    * _binSizeSpat_ – bin size for spatial rate maps in cm<sup>2</sup> (_default=2.5_) 
    * _smooth_ – type of smoothing; _'adaptive'_ (default) or _'boxcar’_
-   * _kernel – size of boxcar kernel for smoothing (_default=5_)
+   * _kernel_ – size of boxcar kernel for smoothing (_default=5_)
    * _alpha_ – alpha parameter for adaptive smoothing in seconds (_default=200_; probably shouldn’t be changed)
    * _trimNaNs_ - trim rows or columns in map that are all _NaN_ (_default=false_)
    * _showWaitBar_ - show waitbar (_default=false_); gets set automatically from general params 
