@@ -72,7 +72,7 @@ Props.orientation       = NaN;
 Props.orientationFull   = nan(3,1);
 Props.offset            = NaN;
 Props.offsetFull        = nan(3,1);
-Props.fieldSize         = NaN;
+Props.fieldSize         = nan(7,2);
 Props.peakCoords        = nan(7,2);
 Props.closestPeaksCoord = nan(6,2);
 Props.centralPeakMask   = false(size(autoCorr));
@@ -100,13 +100,13 @@ if fitEllipse && isfield(options,'peakCoords')
     xyCoordMaxBin = options.peakCoords;
 else
     [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr, options.thresh, options.binAC, options.nBinSteps, options.minPeakSz);
-    Props.peakCoords = xyCoordMaxBin(1:min(7,size(xyCoordMaxBin,1)),:);
+    Props.peakCoords = xyCoordMaxBin;
 
-    if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
-        % if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
-        if options.verbose; warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
-        return
-    end
+    % if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
+    %     % if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
+    %     if options.verbose; warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
+    %     return
+    % end
 end
 % Regularise by fitting ellipse to AC 
 if fitEllipse
@@ -124,7 +124,7 @@ if fitEllipse
 
         Props.peakCoords = xyCoordMaxBin(1:min(7,size(xyCoordMaxBin,1)),:);
         
-        if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
+        if isempty(peakStats) %|| peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
             if options.verbose;  warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
             return
         end
@@ -141,42 +141,52 @@ end
 % make central peak mask
 [colsIm, rowsIm]                    = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
 distMap                             = sqrt((rowsIm-ceil(size(autoCorr,2)/2)).^2 + (colsIm-ceil(size(autoCorr,1)/2)).^2);
-centrPeakMask                       = distMap < peakStats(1).MajorAxisLength/2;
-
-% make annulus mask
-if ~isempty(distFromCentre)
-    annRadius                       = mean(distFromCentre(2:end)+mean([peakStats(2:end).MajorAxisLength])'/2); 
-else
-    annRadius                       = floor(length(autoCorr)/2); % set to full AC radius in case no peaks are found
+% centrPeakMask                       = distMap < peakStats(1).MajorAxisLength/2;
+peakMaskRadius = mean(distFromCentre(2:end))/2;
+if isnan(peakMaskRadius) || peakMaskRadius > length(autoCorr)/4
+    peakMaskRadius =  length(autoCorr)/4;
 end
-annMask                             = ~centrPeakMask;
-annMask(distMap > annRadius)        = false;
+centrPeakMask                       = distMap < peakMaskRadius;
 %
 Props.centralPeakMask               = centrPeakMask;
 Props.peakMask                      = peakMask & ~centrPeakMask;
-Props.gridMask                      = annMask;
 
-%%
+
 % --------------------------------------------------------------------------------------------------
 % ---- GRIDNESS ------------------------------------------------------------------------------------
 % --------------------------------------------------------------------------------------------------
+
+% make all rotated sac's
 rotAngle = [60, 120, 30, 90, 150];
-annCorr  = nan(1,length(rotAngle));
-% loop over rotations
+autoCorr_rot = nan(length(autoCorr),length(autoCorr),length(rotAngle));
 for i=1:length(rotAngle)
-    autoCorr_rot = imrotate(autoCorr, rotAngle(i), 'bilinear', 'crop');
-    nanMask      = ~isnan(autoCorr) & ~isnan(autoCorr_rot); % 
-    annCorr(i)   = corr2(autoCorr(annMask & nanMask),autoCorr_rot(annMask & nanMask));
+    autoCorr_rot(:,:,i) = imrotate(autoCorr,rotAngle(i), 'bilinear', 'crop');
 end
 
-if any(isnan(annCorr))
-    if options.verbose; warning('scaNpix::analysis::gridprops: Some of the correlations for computing gridness return NaNs - likely means that the central peak is too big to return any meaningful values.'); end
-    return;
+% loop over radii to find optimal size for gridness calc.
+if isempty(peakStats)
+    initAnnWidth = peakMaskRadius/2;
+else
+    initAnnWidth = peakStats(1).EquivDiameter;
 end
-
-% gridnesss (as per ususal)
-gridness       = min(annCorr(1:2)) - max(annCorr(3:end));
-Props.gridness = gridness;
+firstStep = min(peakMaskRadius + initAnnWidth,ceil(length(autoCorr)/2));
+radii     = floor(firstStep):ceil(length(autoCorr)/2);
+%
+annCorr = nan(length(radii),length(rotAngle));
+for i = 1:length(radii)
+    % create annulus for current step
+    tmpAnnMask = ~centrPeakMask & distMap < radii(i);
+    % loop over rotations
+    for j = 1:length(rotAngle)
+        % correlate annuli across rotated versions of autocorr
+        nanMask      = ~isnan(autoCorr) & ~isnan(autoCorr_rot(:,:,j)); % 
+        annCorr(i,j) = corr2(autoCorr(tmpAnnMask & nanMask),autoCorr_rot(find(tmpAnnMask & nanMask) + numel(tmpAnnMask)*(j-1)));
+    end
+end
+% gridness
+[gridness, maxInd] = max(min(annCorr(:,1:2),[],2) - max(annCorr(:,3:end),[],2));
+Props.gridness     = gridness; 
+Props.gridMask     = ~centrPeakMask & distMap < radii(maxInd);
 
 %%
 % --------------------------------------------------------------------------------------------------
@@ -204,8 +214,8 @@ if length(xyCoordMaxBin) == 7
     tmp                     = ceil(xyCoordMaxBin(2:end,:));
     Props.closestPeaksCoord = tmp(sortInd,:);
 
-    % field size THIS NEEDS WORK AS NOT MATCHING WITH THE GENERAL ALGORTIHM
-    Props.fieldSize = pi*(peakStats(1).EquivDiameter/2)^2;
+    % field size 
+    Props.fieldSize         = pi .* ([peakStats.EquivDiameter]./2).^2;
 else
     if options.verbose; warning('scaNpix::analysis::gridprops:Not enough peaks detected for grid property calculation.'); end
 end

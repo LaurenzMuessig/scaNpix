@@ -26,7 +26,7 @@ arguments
 end
 
 %%
-switch lower(options.method)
+switch options.method
     case 'moser'
         interpBlRm(isnan(interpBlRm))     = 0;
         interpCompRm(isnan(interpCompRm)) = 0;

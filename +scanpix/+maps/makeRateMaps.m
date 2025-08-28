@@ -73,12 +73,12 @@ if ~obj.trialMetaData(trialInd).PosIsFitToEnv{1}
     positions = positions - min(positions) + eps; % if you have't fit the positions to the environment and your environment is badly sampled along some edge(s), the resulting ratemap will not be binned correctly
     % bin
     posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
-    nBins    = [max(posBinned(:,1)) max(posBinned(:,2))];
+    nBins     = [max(posBinned(:,1)) max(posBinned(:,2))];
 else
     % bin
     posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
-    envSzPix = obj.trialMetaData(trialInd).envSize ./ 100 .* obj.trialMetaData(trialInd).ppm;
-    nBins    = fliplr( ceil( envSzPix ./ binSizePix ) ); %+ min(posBinned)-1; 
+    envSzPix  = obj.trialMetaData(trialInd).envSize ./ 100 .* obj.trialMetaData(trialInd).ppm;
+    nBins     = fliplr( ceil( envSzPix ./ binSizePix ) ); %+ min(posBinned)-1; 
 end
 
 % raw pos map

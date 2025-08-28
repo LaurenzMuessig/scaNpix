@@ -32,7 +32,7 @@ fNameOut = scanpix.helpers.checkSaveFile(fNameOut);
   
 %% 
 hSlider = findall(figHandle,'style','slider'); % check if plot is scrollable
-if ~isempty(hSlider)
+if  matlab.graphics.internal.mlprintjob.containsUIElements(figHandle) %~isempty(hSlider)
     % a bit more involved for scrollable plot
     hCanvas     = findall(figHandle,'type','uipanel');
     canvasUnits = get(hCanvas,'units'); % keep record (although safe to assume it's pixels)
@@ -41,11 +41,12 @@ if ~isempty(hSlider)
     figSz       = get(hCanvas,'position');
     set(hCanvas,'units',canvasUnits); % reset units
     % temporarily hide sliders
-    hSlider     = findall(figHandle,'style','slider');
     set(hSlider,'visible','off');
     % set the paper properties
     set(figHandle,'PaperPositionMode','auto','PaperUnits','centimeters','PaperType','<custom>','PaperSize',[ figSz(3:4) ]); 
     set(figHandle,'PaperPosition',[0 0 1 1].*get(figHandle,'PaperPosition')); % need to make sure we start paper at [0,0]
+    % exportapp(figHandle.Parent,fNameOut);
+    % exportgraphics(figHandle,fNameOut,'ContentType','vector')
 else
     figureUnits = get(figHandle,'units'); % keep record
     set(figHandle,'units','centimeters');

@@ -686,19 +686,22 @@ classdef ephys < handle
             % Outputs:
             %
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
+
+            if strcmp(obj.type,'dacq'); return; end % doesn't work for tetrode data
+            %
             if nargin == 1
                 pathOnMachine = scanpix.helpers.swapServerOSPath(obj.dataPath{1}); % might need to swap server location in case we load at later stage
             else
                 pathOnMachine = path2File;
             end
 
-            if exist(fullfile(pathOnMachine,'histology.xml'),'file') ~= 2
-                 warning('scaNpix::ephys::read_histology:Can''t find the xml file with the histogy data. Chill out, generate that file and try again.');
+            metaXMLFileInfo = dir(fullfile(obj.dataPath{1},'*hist*.xml'));
+            if isempty(metaXMLFileInfo)
+                warning('scaNpix::ephys::read_histology:Can''t find the xml file with the histogy data. Chill out, generate that file and try again.');
                 return;
             end
             % read xml file
-            xmlData           = scanpix.fxchange.xml_read(fullfile(pathOnMachine,'histology.xml'));
+            xmlData           = scanpix.fxchange.xml_read(fullfile(pathOnMachine,metaXMLFileInfo.name));
             % file could contain multiple brain regions
             fNames            = fieldnames(xmlData.brain_region);
             fNames            = fNames(~strcmp(fNames,'COMMENT')); % skip COMMENT field

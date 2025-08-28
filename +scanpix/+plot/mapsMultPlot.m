@@ -11,7 +11,7 @@ function mapsMultPlot(data,type,varargin)
 %% 
 
 %% parse input
-defaultCellIDStr      = strrep(string(strcat('c_',num2str((1:size(data{1}))'))),' ','');
+defaultCellIDStr      = strrep(string(strcat('c_',num2str((1:length(data{1}))'))),' ','');
 defaultCMap           = 'jet';
 defaultNSteps         = 11; 
 defaultPlotSize       = [75 75];  % pixel

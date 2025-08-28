@@ -36,7 +36,7 @@ else
 end
 
 % first load xml file
-metaXMLFileInfo = dir(fullfile(obj.dataPath{trialIterator},'*.xml'));
+metaXMLFileInfo = dir(fullfile(obj.dataPath{trialIterator},'*meta*.xml'));
 metaXMLFile     = scanpix.fxchange.xml_read(fullfile(obj.dataPath{trialIterator},metaXMLFileInfo.name)); %
 
 f = fieldnames(metaXMLFile);

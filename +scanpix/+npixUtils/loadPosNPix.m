@@ -157,18 +157,7 @@ kernel = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( o
 % doing the smoothing with convolution directly rather than imfilter will prevent spreading of NaNs in the data
 smLight = nan(size(led));
 for i = 1:2
-    currLED             = led(:,:,i);
-    nanInd              = isnan(currLED(:,1));
-    % replace NaNs and do conv
-    currLED(nanInd,:)   = 0;
-    tmpSmooth           = conv2(currLED,kernel,'same');
-    % get normalisiation factor for each sample based on NaNs in windows
-    nanFact             = ones(length(currLED),2);
-    nanFact(nanInd,:)   = 0;
-    nanFact             = conv2(nanFact,kernel,'same');
-    % smoothed position
-    smLight(:,:,i)      = tmpSmooth ./ nanFact;
-    smLight(nanInd,:,i) = NaN; % reassign NaNs back
+    smLight(:,:,i) = scanpix.helpers.smoothWithNaNs(led(:,:,i),kernel);
 end
 
 % some sanity checks for the data loading
