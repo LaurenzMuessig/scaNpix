@@ -11,6 +11,6 @@ switch obj.type
         labels = strrep(string(strcat('clu_',num2str(obj.cell_ID(:,1)))),' ','');
     case 'dacq'
         labels = string(strcat('c',strip(cellstr(num2str(obj.cell_ID(:,1)))),'t',strip(cellstr(num2str(obj.cell_ID(:,2)))))); 
-        endo
+end
     
 end
