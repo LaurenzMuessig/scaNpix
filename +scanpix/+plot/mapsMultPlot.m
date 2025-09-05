@@ -102,7 +102,7 @@ for n = 1:nFigs
                         if i == mapIndex(1)
                             axLims = max(cell2mat(cellfun(@size,vertcat(data{1,:,j}),'UniformOutput',false)),2);
                         end
-                        set(hAx,'ydir','normal','xlim',[0 axLims(2)],'ylim',[0 axLims(1)]);
+                        set(hAx,'xlim',[0 axLims(2)],'ylim',[0 axLims(1)]);
                         % plotPeakRateFlag = true;
                     elseif  strcmp(type{j},'dir')
                         scanpix.plot.plotDirMap(data{1,k,j}{i},hAx);

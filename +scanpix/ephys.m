@@ -703,20 +703,34 @@ classdef ephys < handle
             % read xml file
             xmlData           = scanpix.fxchange.xml_read(fullfile(pathOnMachine,metaXMLFileInfo.name));
             % file could contain multiple brain regions
-            fNames            = fieldnames(xmlData.brain_region);
-            fNames            = fNames(~strcmp(fNames,'COMMENT')); % skip COMMENT field
+            brainRegions      = fieldnames(xmlData.brain_region);
+            brainRegions      = brainRegions(~strcmp(brainRegions,'COMMENT')); % skip COMMENT field
             %
             activeProbeLength = max(obj.chanMap(1).ycoords) - min(obj.chanMap(1).ycoords) + 20; % +20 => 1 channel spacing on an NP 1.0 probe 
-            for i = 1:length(fNames)
+            for i = 1:length(brainRegions)
                 
-                currPropVals                                  = xmlData.brain_region.(fNames{i}) / 100;
+                fNames        = fieldnames(xmlData.brain_region.(brainRegions{i}));
+                fNames        = fNames(~strcmp(fNames,'COMMENT')); % skip COMMENT field
+                if ~all(ismember({'probe_coverage','region_coverage'},fNames))
+                    warning('scaNpix::ephys::read_histology:For each brain region you need to include the fields ''probe_coverage'' and ''region_coverage'' in the xml file. I can''t work like that');
+                    return
+                end
                 %
-                obj.histo_reconstruct(1).(fNames{i}).depth    = [currPropVals(1) currPropVals(2)] .* activeProbeLength + xmlData.deepest_chan; % brain region spans this section on the probe
-                
-                chanInd                                       = obj.chanMap(1).ycoords >= obj.histo_reconstruct.(fNames{i}).depth(1) & obj.chanMap(1).ycoords <= obj.histo_reconstruct.(fNames{i}).depth(2); 
-                obj.histo_reconstruct(1).(fNames{i}).channels = obj.chanMap(1).chanMap(chanInd); % brain region spans these channels on the probe
-            end
+                for j = 1:length(fNames)
 
+                    if strcmp(fNames{j},'probe_coverage')
+                        currPropVals                                           = xmlData.brain_region.(brainRegions{i}).probe_coverage ./ 100;
+                        obj.histo_reconstruct(1).(brainRegions{i}).depth       = [currPropVals(1) currPropVals(2)] .* activeProbeLength + xmlData.deepest_chan; % brain region spans this section on the probe
+                        %
+                        chanInd                                                = obj.chanMap(1).ycoords >= obj.histo_reconstruct.(brainRegions{i}).depth(1) & obj.chanMap(1).ycoords <= obj.histo_reconstruct.(brainRegions{i}).depth(2);
+                        obj.histo_reconstruct(1).(brainRegions{i}).channels    = obj.chanMap(1).chanMap(chanInd); % brain region spans these channels on the probe
+                    elseif strcmp(fNames{j},'region_coverage')
+                        obj.histo_reconstruct(1).(brainRegions{i}).coverage    = xmlData.brain_region.(brainRegions{i}).region_coverage ./ 100;
+                    else
+                        obj.histo_reconstruct(1).(brainRegions{i}).(fNames{j}) = xmlData.brain_region.(brainRegions{i}).(fNames{j});
+                    end
+                end
+            end
         end
     end
     
