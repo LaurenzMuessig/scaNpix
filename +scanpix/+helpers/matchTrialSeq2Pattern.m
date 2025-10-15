@@ -47,8 +47,8 @@ switch options.mode
         end
         %
         if ~checkValid
-            dataIndex     = [];
-            missingTrials = 1:length([pattern2extract{:}]);
+            [dataIndex,patternIndex] = deal([]);
+            missingTrials             = 1:length([pattern2extract{:}]);
             return;
         end
 
@@ -120,7 +120,7 @@ switch options.mode
     case 'exact'
         % graceful exit
         if options.exactflag && ~all(ismember( unique(pattern2extract),trialSeqObj ))
-            dataIndex     = [];
+            [dataIndex,patternIndex] = deal([]);
             missingTrials = 1:length(pattern2extract);
             return;
         end

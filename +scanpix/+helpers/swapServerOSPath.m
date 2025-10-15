@@ -4,8 +4,8 @@ function pathSwapped = swapServerOSPath(path2swap,options)
 %%
 arguments
     path2swap (1,:) {mustBeText}
-    options.win (1,:) {mustBeText} = 'S:\';
-    options.linux (1,:) {mustBeText} = '/mnt/laurenz/s1/';
+    options.win (1,:) {mustBeText} =  'S:\'; % 'S:\'; 'Q:\'
+    options.linux (1,:) {mustBeText} = '/mnt/laurenz/s1/'; %'/mnt/laurenz/s2/' '/mnt/laurenz/s1/'
 end
 
 

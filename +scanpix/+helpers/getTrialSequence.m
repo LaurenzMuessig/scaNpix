@@ -21,7 +21,7 @@ function trialData = getTrialSequence(method,dataDir,trialTypes,options)
  
 %%
 arguments
-  method (1,:) {mustBeMember(method,{'all','any','seq'})} = 'any';
+  method (1,:) {mustBeMember(method,{'all','any','seq','selection'})} = 'any';
   dataDir (1,:) {mustBeFolder(dataDir)} = 'S:\1postDoc\Neuropixels\rawData\';
   trialTypes (1,:) {mustBeA(trialTypes,'cell')} = {};
   options.exactflag (1,1) {mustBeNumericOrLogical} = true;
@@ -54,14 +54,12 @@ for i = 1:length(pathXMLFiles)
 end
 
 %%
-% check if current dataset contains trial sequence
-if strcmp(method,'all')
-    trialTypes = currTrialTypes;
-end
-%    
+% check if current dataset contains trial sequence 
 switch method
-    case {'any','all'}
-        trialInd       = ismember(currTrialTypes, trialTypes);
+    case 'all'
+        trialInd       = true(size(currTrialTypes));
+    case 'any'
+        trialInd       = ismember(currTrialTypes, trialTypes)';
         if options.excludeflag
             trialInd   = ~trialInd;
             if sum(trialInd) == 0
@@ -69,6 +67,13 @@ switch method
                 return;
             end
         end
+    case 'selection'
+        if all(ismember(trialTypes,currTrialTypes))
+            trialInd = ismember(currTrialTypes, trialTypes)';
+        else
+            trialData = cell(0,4);
+            return;
+        end    
     case 'seq'
         trialInd = scanpix.helpers.matchTrialSeq2Pattern(currTrialTypes,trialTypes,'exactflag',options.exactflag,'bslkey',options.bslKey,'ignKey',options.ignKey,'mode',options.mode,'getFlankBSL',options.getFlankBSL);
         if isempty(trialInd); trialData = cell(0,4); return; end
@@ -82,7 +87,9 @@ currTrialTypes = currTrialTypes(trialInd(1,:));
 trialData      = strcat({pathBinFiles(:).folder}, filesep)'; %
 trialData(:,2) = {pathBinFiles(:).name};                     %
 trialData(:,3) = currTrialTypes;
-trialData(:,4) = num2cell(logical(trialInd(2,:)),1);
+if size(trialInd,1) > 1
+    trialData(:,4) = num2cell(logical(trialInd(2,:)),1);
+end
 
 
 end

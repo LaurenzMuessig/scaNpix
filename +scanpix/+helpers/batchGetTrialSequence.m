@@ -26,7 +26,7 @@ function trialData = batchGetTrialSequence(trialTypes,dirParent,options)
 arguments
   trialTypes (1,:) {mustBeA(trialTypes,'cell')} = {};
   dirParent (1,:) {mustBeFolder} = 'S:\1postDoc\Neuropixels\rawData\';
-  options.method (1,:) {mustBeMember(options.method,{'all','any','seq'})} = 'any';
+  options.method (1,:) {mustBeMember(options.method,{'all','any','seq','selection'})} = 'any';
   options.exactflag (1,1) {mustBeNumericOrLogical} = true;
   options.excludeflag (1,1) {mustBeNumericOrLogical} = false;
   options.mode (1,:)  {mustBeMember(options.mode,{'pattern','exact'})} = 'pattern';

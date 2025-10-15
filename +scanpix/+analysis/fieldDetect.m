@@ -30,11 +30,14 @@ end
 switch options.thrMode
     case 'abs'
         tmpMap(map < options.thr | isnan(map)) = -Inf;
+        thr                                   = options.thr;
     case 'rel'
-        options.thr                            =  max(map(:),[],'omitnan') * options.thr;
+        thr                                    =  max(map(:),[],'omitnan') * options.thr;
         tmpMap(map < options.thr | isnan(map)) = -Inf;
     case 'none'
         tmpMap(isnan(map)) = -Inf;
+        thr                = -max(map(:),[],'omitnan');
+
 end
 
 % segment the map using watershed
@@ -96,7 +99,7 @@ fLabels    = unique(fieldsLabel)';
 thresholds = nan(size(map));
 for i = fLabels(2:end)   
     % thresholds(fieldsLabel == i) = max(map(fieldsLabel == i),[],'omitnan')/2;
-    thresholds(fieldsLabel == i) =  max(options.thr,prctile(map(fieldsLabel == i),75)); 
+    thresholds(fieldsLabel == i) =  max(thr,prctile(map(fieldsLabel == i),75)); 
 end
 % generate peak mask and do a bit of cleaning up
 tmpMask               = map > thresholds;

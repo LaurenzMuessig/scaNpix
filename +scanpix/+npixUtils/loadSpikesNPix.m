@@ -135,7 +135,7 @@ if ~loadFromPhy
     clu_Depth      = clu_Depth(~indEmpty);
 end
 % sort by depth
-[clu_Depth, indSort] = sort(clu_Depth,'ascend'); % should be changed to descent to be sorted naturally
+[clu_Depth, indSort] = sort(clu_Depth,'ascend'); % should be changed to descend to be sorted naturally
 spikeTimesFin        = spikeTimesFin(indSort);
 
 %% output

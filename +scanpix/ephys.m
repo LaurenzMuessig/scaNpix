@@ -695,7 +695,7 @@ classdef ephys < handle
                 pathOnMachine = path2File;
             end
 
-            metaXMLFileInfo = dir(fullfile(obj.dataPath{1},'*hist*.xml'));
+            metaXMLFileInfo = dir(fullfile(pathOnMachine,'*hist*.xml'));
             if isempty(metaXMLFileInfo)
                 warning('scaNpix::ephys::read_histology:Can''t find the xml file with the histogy data. Chill out, generate that file and try again.');
                 return;
@@ -720,16 +720,23 @@ classdef ephys < handle
 
                     if strcmp(fNames{j},'probe_coverage')
                         currPropVals                                           = xmlData.brain_region.(brainRegions{i}).probe_coverage ./ 100;
-                        obj.histo_reconstruct(1).(brainRegions{i}).depth       = [currPropVals(1) currPropVals(2)] .* activeProbeLength + xmlData.deepest_chan; % brain region spans this section on the probe
+                        obj.histo_reconstruct(1).(brainRegions{i}).depth       = [max(currPropVals(1) * activeProbeLength + xmlData.deepest_chan - 50,xmlData.deepest_chan) min(currPropVals(2) .* activeProbeLength + xmlData.deepest_chan + 50,activeProbeLength + xmlData.deepest_chan)]; % brain region spans this section on the probe +/- 50um
                         %
                         chanInd                                                = obj.chanMap(1).ycoords >= obj.histo_reconstruct.(brainRegions{i}).depth(1) & obj.chanMap(1).ycoords <= obj.histo_reconstruct.(brainRegions{i}).depth(2);
-                        obj.histo_reconstruct(1).(brainRegions{i}).channels    = obj.chanMap(1).chanMap(chanInd); % brain region spans these channels on the probe
+                        obj.histo_reconstruct(1).(brainRegions{i}).channels    = [obj.chanMap(1).chanMap(chanInd) obj.chanMap(1).ycoords(chanInd)]; % brain region spans these channels on the probe
+
+                        % keep the channel ordering as per the object
+                        cellInd                                                = obj.cell_ID(:,2) >= obj.histo_reconstruct.(brainRegions{i}).depth(1) & obj.cell_ID(:,2) <= obj.histo_reconstruct.(brainRegions{i}).depth(2);
+                        obj.histo_reconstruct(1).(brainRegions{i}).cells       = obj.cell_ID(cellInd,1:2); % these cells are in the brain region
                     elseif strcmp(fNames{j},'region_coverage')
                         obj.histo_reconstruct(1).(brainRegions{i}).coverage    = xmlData.brain_region.(brainRegions{i}).region_coverage ./ 100;
                     else
                         obj.histo_reconstruct(1).(brainRegions{i}).(fNames{j}) = xmlData.brain_region.(brainRegions{i}).(fNames{j});
                     end
                 end
+                % rescale the relative position of each channel in terms of the coverage of the probe of a particular brain region
+                obj.histo_reconstruct(1).(brainRegions{i}).channels(:,3)       = rescale(obj.histo_reconstruct(1).(brainRegions{i}).channels(:,2),obj.histo_reconstruct(1).(brainRegions{i}).coverage(1),obj.histo_reconstruct(1).(brainRegions{i}).coverage(2),'InputMin',obj.histo_reconstruct(1).(brainRegions{i}).depth(1),'InputMax',obj.histo_reconstruct(1).(brainRegions{i}).depth(2)); 
+                obj.histo_reconstruct(1).(brainRegions{i}).cells(:,3)          = rescale(obj.histo_reconstruct(1).(brainRegions{i}).cells(:,2),obj.histo_reconstruct(1).(brainRegions{i}).coverage(1),obj.histo_reconstruct(1).(brainRegions{i}).coverage(2),'InputMin',obj.histo_reconstruct(1).(brainRegions{i}).depth(1),'InputMax',obj.histo_reconstruct(1).(brainRegions{i}).depth(2)); 
             end
         end
     end
