@@ -560,9 +560,10 @@ classdef ephys < handle
             % see also: obj.loadMetaData; obj.loadPosData; obj.loadSpikeData; obj.loadLFPData
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            reloadFlag = false;
-            noSyncFlag = false;
+            reloadFlag       = false;
+            noSyncFlag       = false;
             check0spikeCells = false;
+            loadStr          = {'all','pos','spikes','lfp'};
             
             if strcmp(obj.type,'init')
                 warning('scaNpix::ephys::load: You haven''t set the data type for the object yet (and probably neither the param space. Are you serious?');
@@ -575,13 +576,13 @@ classdef ephys < handle
             end
             
             if nargin < 2
-                str = {'all','pos','spikes','lfp'};
-                [select, loadCheck] = listdlg('PromptString','Select what data to load:','ListString',str,'ListSize',[160 100]);
+                
+                [select, loadCheck] = listdlg('PromptString','Select what data to load:','ListString',loadStr,'ListSize',[160 100]);
                 if ~loadCheck
                     warning('scaNpix::ephys::load: No data selected. Nothing is loaded. Boring...');
                     return;
                 else
-                    loadMode = str(select);
+                    loadMode = loadStr(select);
                 end
             end
             
@@ -598,6 +599,9 @@ classdef ephys < handle
                 noSyncFlag = true;
                 loadMode   = loadMode(~strcmpi(loadMode,'nosync'));
             end
+            
+            %make sure order is always pos before spikes
+            loadMode = loadStr(ismember(loadStr,loadMode));
             
             if nargin < 3
                 loadStr = obj.trialNames;

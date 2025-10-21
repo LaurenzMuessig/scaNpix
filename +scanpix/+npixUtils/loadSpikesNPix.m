@@ -148,7 +148,7 @@ else
 end
 
 % what about reload?
-if reloadFlag || trialIterator == 1
+if reloadFlag || trialIterator == 1 || isempty(obj.cell_ID)
     good_clusts    = good_clusts(indSort);
     cluLabel       = cluLabel(indSort);
     clu_Ch         = clu_Ch(indSort);
