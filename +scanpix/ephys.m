@@ -668,7 +668,8 @@ classdef ephys < handle
             
             % pre-allocate some data (e.g. part that isn't loaded), such
             % that all properties have same size
-            obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
+            % obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
+            obj.preallocEmpty({'posData','spikeData','lfpData','bhaveData','maps'});
 
             % try and load histological reconstrction data
             obj.read_histology;
@@ -1015,7 +1016,8 @@ classdef ephys < handle
             
         end
         %%
-        function preallocEmpty(obj,noLoadProps,loadProps)
+        % function preallocEmpty(obj,noLoadProps,loadProps)
+        function preallocEmpty(obj,loadProps)
             % preallocEmpty - preallocate empty properties in ephys class object
             % (e.g. from things that weren't loaded) that have a trial based structure
             % (i.e. all raw data like positions, spiketimes etc.)
@@ -1032,16 +1034,16 @@ classdef ephys < handle
             % Outputs:
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
-            if nargin < 3
+            if nargin < 2
                 loadProps   = {};
             end
             
             % these will never get loaded automatically by normal loading routine
-            if noLoadProps
-                obj.posData.linXY = cell(1,length(obj.trialNames));
-                obj.maps          = structfun(@(x) cell(1,length(obj.trialNames)),obj.maps,'uni',0);
-            end
-            
+            % if noLoadProps
+            %     % obj.posData.linXY = cell(1,length(obj.trialNames));
+            %     % obj.maps          = structfun(@(x) cell(1,length(obj.trialNames)),obj.maps,'uni',0);
+            % end
+            % 
             % this could actually have a hard coded list instead of supplying as input?
             if ~isempty(loadProps)
                 for i = 1:length(loadProps)
@@ -1142,7 +1144,7 @@ classdef ephys < handle
            
             %%
             % make some maps
-            switch lower(mapType)
+            switch mapType
                 case {'pos','rate'}
                     
                     for i = trialInd
@@ -1178,7 +1180,7 @@ classdef ephys < handle
                         obj.maps(1).linPos{i} = num2cell(posMap,2);
                     end
                     
-                case 'sac'
+                case {'sac','sACs'}
                     
                     if any(cellfun('isempty', obj.maps(1).rate(trialInd)))
                         warning('scaNpix::ephys::addMaps:You need to generate rate maps before demanding spatial autocorrelograms.')

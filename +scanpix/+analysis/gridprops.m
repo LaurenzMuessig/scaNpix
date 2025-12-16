@@ -143,13 +143,16 @@ end
 distMap                             = sqrt((rowsIm-ceil(size(autoCorr,2)/2)).^2 + (colsIm-ceil(size(autoCorr,1)/2)).^2);
 % centrPeakMask                       = distMap < peakStats(1).MajorAxisLength/2;
 peakMaskRadius = mean(distFromCentre(2:end))/2;
+initAnnWidth   = max(distFromCentre(2:end));
 if isnan(peakMaskRadius) || peakMaskRadius > length(autoCorr)/4
-    peakMaskRadius =  length(autoCorr)/4;
+    peakMaskRadius = length(autoCorr)/4;
+    initAnnWidth   = length(autoCorr)/2;
 end
 centrPeakMask                       = distMap < peakMaskRadius;
 %
-Props.centralPeakMask               = centrPeakMask;
-Props.peakMask                      = peakMask & ~centrPeakMask;
+Props.centralPeakMask                     = centrPeakMask;
+Props.peakMask                            = peakMask;
+Props.peakMask(peakStats(1).PixelIdxList) = 0;
 
 
 % --------------------------------------------------------------------------------------------------
@@ -164,11 +167,11 @@ for i=1:length(rotAngle)
 end
 
 % loop over radii to find optimal size for gridness calc.
-if isempty(peakStats)
-    initAnnWidth = peakMaskRadius/2;
-else
-    initAnnWidth = peakStats(1).EquivDiameter;
-end
+% if isempty(peakStats)
+%     initAnnWidth = peakMaskRadius/2;
+% else
+%     initAnnWidth = peakStats(1).EquivDiameter;
+% end
 firstStep = min(peakMaskRadius + initAnnWidth,ceil(length(autoCorr)/2));
 radii     = floor(firstStep):ceil(length(autoCorr)/2);
 %

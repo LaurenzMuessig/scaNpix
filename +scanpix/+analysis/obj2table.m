@@ -86,11 +86,14 @@ varList   =   {
 
                 'nSpks',        scoreDum; ...
                 'meanRate',     scoreDum; ...
+                'meanRateSpeedFilt',     scoreDum; ...
                 %'peakRate',    scoreDum; ...
 
                 'rateMap',      cell(size(scoreDum)); ...
                 'posMap',       cell(size(scoreDum)); ...
                 'dirMap',       cell(size(scoreDum)); ...
+                'sACs',         cell(size(scoreDum)); ...
+                'sACs_reg',     cell(size(scoreDum)); ...
 
                 'linMap',       cell(size(scoreDum)); ...
                 'linPos',       cell(size(scoreDum)); ...
@@ -233,6 +236,7 @@ switch rowFormat
         end
 
         % loop over trials
+        if scoreInd(3); gridPropsOptions = scanpix.helpers.struct2params(copyObj.mapParams.gridProps); end
         c = 1;
         for i = dataInd
             % get true mean rate in case of speed filtering
@@ -241,7 +245,8 @@ switch rowFormat
             else
                 posFs  = copyObj.params('posFs');
             end
-            ResT.meanRate(:,tabInd(c))  = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims); % NEED TO THINK ABOUT WEHETHER THIS IS A GOOD IDEA? 
+            ResT.meanRate(:,tabInd(c))          = cellfun(@(x) length(x),copyObj.spikeData.spk_Times{i}) ./ copyObj.trialMetaData(i).duration; % NEED TO THINK ABOUT WEHETHER THIS IS A GOOD IDEA? 
+            ResT.meanRateSpeedFilt(:,tabInd(c)) = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims); % NEED TO THINK ABOUT WEHETHER THIS IS A GOOD IDEA? 
             %
             if scoreInd(1)
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
@@ -259,14 +264,23 @@ switch rowFormat
                 if any(cellfun('isempty',copyObj.maps.sACs(dataInd)))
                     copyObj.addMaps('sac',dataInd);
                 end
-                tmpGridProps                        = copyObj.getSpatialProps('gridprops', i);
-                ResT.gridness(:,tabInd(c))          = tmpGridProps(:,1);
-                ResT.gridness_ell(:,tabInd(c))      = tmpGridProps(:,4);
+
+                [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,gridPropsOptions{:}),copyObj.maps(1).sACs{i},'uni',0);
+                [~, ellProps]     = cellfun(@(x, y) scanpix.analysis.gridprops(x,true,gridPropsOptions{:},'peakCoords',y.peakCoords),copyObj.maps(1).sACs{i},props,'uni',0);
+                % collect the basics
+                gridProps     = cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0));
+                gridProps_ell = cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0));
+                % tmpGridProps                        = copyObj.getSpatialProps('gridprops', i);
+                ResT.gridness(:,tabInd(c))          = gridProps(:,1);
+                ResT.gridness_ell(:,tabInd(c))      = gridProps_ell(:,1);
+                ResT.sACs(:,tabInd(c))              = copyObj.maps.sACs{i};
+                ResT.sACs_reg(:,tabInd(c))          = cellfun(@(x) x.acReg,ellProps,'uni',0);
+                % add grid props if desired
                 if options.addgridprops
-                    ResT.gridScale(:,tabInd(c))     = tmpGridProps(:,2);
-                    ResT.gridOr(:,tabInd(c))        = tmpGridProps(:,3);
-                    ResT.gridScale_ell(:,tabInd(c)) = tmpGridProps(:,5);
-                    ResT.gridOr_ell(:,tabInd(c))    = tmpGridProps(:,6);
+                    ResT.gridScale(:,tabInd(c))     = gridProps(:,2);
+                    ResT.gridOr(:,tabInd(c))        = gridProps(:,3);
+                    ResT.gridScale_ell(:,tabInd(c)) = gridProps_ell(:,2);
+                    ResT.gridOr_ell(:,tabInd(c))    = gridProps_ell(:,3);
                 end
             end
             if scoreInd(4)
@@ -412,7 +426,7 @@ end
 
 %%
 if ~options.addgridprops || ~ismember('gridness', ResT.Properties.VariableNames)
-    ResT = removevars(ResT,{'gridScale','gridScale_ell','gridOr','gridOr_ell'});
+    ResT = removevars(ResT,{'gridScale','gridScale_ell','gridOr','gridOr_ell','sACs','sACs_reg'});
 end
 
 ResT = removevars(ResT,scores(~scoreInd));

@@ -1,4 +1,4 @@
-function [phaseOffset, dirOffset] = getPhaseOffset(crossCorr,options)
+function [phaseOffset, dirOffset] = getPhaseOffset(crossCorr,method,options)
 % Calculate the offset in spatial phase between 2 grid cells. According to
 % Tocker et al., Hippocampus (2015)
 % In practice works by Voronoi segementing the spatial autocorr. of the
@@ -28,95 +28,127 @@ function [phaseOffset, dirOffset] = getPhaseOffset(crossCorr,options)
 
 arguments
     crossCorr {mustBeNumeric}
+    method (1,:) {mustBeMember(method,{'voronoi','crosscor'})} = 'crosscor';
     options.corrThr (1,1) {mustBeNumeric} = 0; 
+    options.maxOffset (1,1) {mustBeNumeric} = sqrt( (size(crossCorr,1)/2)^2 + (size(crossCorr,2)/2)^2); 
     options.debug (1,1) {mustBeNumericOrLogical} = false;  
 end
 
-%% Voronoi segmentation of autocorr from cross corr
-% get auto corr of cross corr
-ccAuto = scanpix.analysis.spatialCrosscorr(crossCorr, crossCorr);
 
-% only use central portion of auto corr
+%%
 centralPoint         = ceil([size(crossCorr,2)/2,size(crossCorr,1)/2]); %m,n pair
-dx                   = -centralPoint(1)+1:centralPoint(2)-1;
-RC0                  = ceil(size(ccAuto)/2);
-ccAuto               = ccAuto(RC0(1)+dx, RC0(2)+dx);
-% use watershed to segment AC into peaks
-peakStats            = scanpix.analysis.fieldDetect(ccAuto);
-xyCoordMaxBin        = reshape([peakStats.Centroid], 2,[])'; %
-xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
-%find central peak
-distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;
-[~, orderOfClose]    = sort(distFromCentre);
-closestInd           = orderOfClose(1);
 
-% [V,C,XY]=VoronoiLimit(xyCoordMaxBin(:,1),xyCoordMaxBin(:,2),'figure','off')
-% voronoi segmentation
-try
-    [V,C] = voronoin(xyCoordMaxBin);
-catch
-    warning('scaNpix::analysis::getPhaseOffset: Can''t compute Voronoi segmentation. Peaks in cross corr are probably not separated well by ''corrThreshold''.');
-    [phaseOffset, dirOffset] = deal(NaN);
-    return
+%%
+switch method
+    case 'voronoi'
+        %% Voronoi segmentation of autocorr from cross corr
+        % get auto corr of cross corr
+        ccAuto = scanpix.analysis.spatialCrosscorr(crossCorr, crossCorr);
+
+        % only use central portion of auto corr
+        dx                   = -centralPoint(1)+1:centralPoint(2)-1;
+        RC0                  = ceil(size(ccAuto)/2);
+        ccAuto               = ccAuto(RC0(1)+dx, RC0(2)+dx);
+        % use watershed to segment AC into peaks
+        [peakStats, peakMask]            = scanpix.analysis.fieldDetect(ccAuto);%,"binMap",true,"thr",0,"nBinSteps",21,"thrMode","abs","binEdges",[-1 1]);
+
+        xyCoordMaxBin        = reshape([peakStats.Centroid], 2,[])'; %
+        xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
+        %find central peak
+        distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;
+        [~, orderOfClose]    = sort(distFromCentre);
+        closestInd           = orderOfClose(1);
+
+        % [V,C,XY]=VoronoiLimit(xyCoordMaxBin(:,1),xyCoordMaxBin(:,2),'figure','off')
+        % voronoi segmentation
+        try
+            [V,C] = voronoin(xyCoordMaxBin);
+        catch
+            warning('scaNpix::analysis::getPhaseOffset: Can''t compute Voronoi segmentation. Peaks in cross corr are probably not separated well by ''corrThreshold''.');
+            [phaseOffset, dirOffset] = deal(NaN);
+            return
+        end
+        % in case the voronoi cell that contains centre is unbounded, we terminate
+        % here. This means the segmentation didn't return a fully bounded central tile
+        if any(C{closestInd} == 1)
+            warning('scaNpix::analysis::getPhaseOffset: Central Voronoi cell is unbounded. Abort mission to segment!');
+            [phaseOffset, dirOffset] = deal(NaN);
+            return
+        end
+
+        % find peak bin in central Voronoi cell of cross corr
+        [colsIm, rowsIm]   = meshgrid(1:size(crossCorr,1), 1:size(crossCorr,2));
+        in                 = inpolygon(rowsIm,colsIm,V(C{closestInd},2),V(C{closestInd},1));
+        %
+        crossCorrTemp = crossCorr;
+        crossCorrTemp(~in) = NaN;
+        %
+        [maxVal, maxInd]   = max(crossCorrTemp(:),[],'omitnan');
+        % if tmpStats.MaxIntensity < options.corrThr
+        if maxVal < options.corrThr
+            phaseOffset = pi;
+            dirOffset   = NaN;
+            warning('No peak found in central Voronoi cell - phaseOffset set to NaN.');
+            return
+        end
+        %
+        [closestPeakCoords(2), closestPeakCoords(1)] = ind2sub(size(crossCorr),maxInd);
+        % this is the line between centre and AC edge, cutting through 'closestPeakCoords'
+        dirOffset = mod(atan2(closestPeakCoords(2) - centralPoint(2),closestPeakCoords(1) - centralPoint(1)),2*pi);
+        % dirOffset = mod(atan2(tmpStats.WeightedCentroid(2) - centralPoint(2),tmpStats.WeightedCentroid(1) - centralPoint(1)),2*pi);
+        xTmp      = centralPoint(1) * cos(dirOffset) + centralPoint(1);
+        yTmp      = centralPoint(2) * sin(dirOffset) + centralPoint(2);
+
+        % need to loop over all voronoi cell sides
+        distVoronoi = NaN;
+        for i = 1:length(C{closestInd})
+
+            if i == length(C{closestInd})
+                ind2 = 1;
+            else
+                ind2 = i+1;
+            end
+            % intersection of voronoi cell and line through peak bin - can break when we found intersection
+            [xi,yi] = linexline([centralPoint(1) xTmp], [centralPoint(2) yTmp], [V(C{closestInd}(i),1) V(C{closestInd}(ind2),1)], [V(C{closestInd}(i),2),V(C{closestInd}(ind2),2)]);
+
+            if ~isnan(xi); distVoronoi = ( (centralPoint(1)-xi)^2 + (centralPoint(2)-yi)^2 )^0.5; break; end
+        end
+
+        % phase offset
+        centreDist  = ( (closestPeakCoords(1)-centralPoint(1))^2 + (closestPeakCoords(2)-centralPoint(2))^2 )^0.5;
+        % centreDist  = ( (tmpStats.WeightedCentroid(2)-centralPoint(1))^2 + (tmpStats.WeightedCentroid(1)-centralPoint(2))^2 )^0.5;
+        phaseOffset = pi*(centreDist/distVoronoi);
+
+        % in case there is no phase offset, we don't want to return dirOffset=0
+        if isnan(distVoronoi) || centreDist == 0
+            dirOffset = NaN;
+        end
+
+    case 'crosscor'
+
+        crossCorrResc = rescale(crossCorr,0,2,'InputMin',-1,'InputMax',1);
+        crossCorrResc(crossCorr < options.corrThr) = NaN;
+        [peakStats, peakMask] = scanpix.analysis.fieldDetect(crossCorrResc,"binMap",true,"nBinSteps",21,"binEdges",[0 2]);
+        if isempty(peakStats)
+            [phaseOffset, dirOffset] = deal(NaN);
+            return
+        end
+        xyCoordMaxBin        = reshape([peakStats.Centroid], 2,[])'; %
+        xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [length(xyCoordMaxBin), 1]);
+        %find central peak
+        distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;
+        [~, orderOfClose]    = sort(distFromCentre);
+        closestInd           = orderOfClose(1);
+        closestPeakCoords    = peakStats(closestInd).WeightedCentroid;
+        phaseOffset          = ( (closestPeakCoords(1)-centralPoint(1))^2 + (closestPeakCoords(2)-centralPoint(2))^2 )^0.5;
+
+        if all(round(closestPeakCoords) == centralPoint) || phaseOffset > options.maxOffset   
+             % phaseOffset is within central bin
+            [phaseOffset, dirOffset] = deal(NaN);
+        else
+            dirOffset   = mod(atan2(closestPeakCoords(2) - centralPoint(2),closestPeakCoords(1) - centralPoint(1)),2*pi);
+        end
 end
-% in case the voronoi cell that contains centre is unbounded, we terminate
-% here. This means the segmentation didn't return a fully bounded central tile 
-if any(C{closestInd} == 1)
-    warning('scaNpix::analysis::getPhaseOffset: Central Voronoi cell is unbounded. Abort mission to segemnt!');
-    [phaseOffset, dirOffset] = deal(NaN);
-    return
-end
-
-% find peak bin in central Voronoi cell of cross corr
-[colsIm, rowsIm]   = meshgrid(1:size(crossCorr,1), 1:size(crossCorr,2));
-in                 = inpolygon(rowsIm,colsIm,V(C{closestInd},2),V(C{closestInd},1));
-%
-crossCorrTemp = crossCorr;
-crossCorrTemp(~in) = NaN;
-% tmpMap = scanpix.maps.binAnyRMap(crossCorr,'nsteps',21,'cmapEdge',[-1 1]);
-% tmpStats              = regionprops(in,tmpMap,'WeightedCentroid','MaxIntensity');
-% % tmpStats.MaxIntensity = tmpStats.MaxIntensity - 1;
-%
-[maxVal, maxInd]   = max(crossCorrTemp(:),[],'omitnan');
-% if tmpStats.MaxIntensity < options.corrThr
-if maxVal < options.corrThr
-    phaseOffset = pi;
-    dirOffset   = NaN;
-    warning('No peak found in central Voronoi cell - phaseOffset set to NaN.');
-    return
-end
-%
-[closestPeakCoords(2), closestPeakCoords(1)] = ind2sub(size(crossCorr),maxInd);
-% this is the line between centre and AC edge, cutting through 'closestPeakCoords' 
-dirOffset = mod(atan2(closestPeakCoords(2) - centralPoint(2),closestPeakCoords(1) - centralPoint(1)),2*pi);
-% dirOffset = mod(atan2(tmpStats.WeightedCentroid(2) - centralPoint(2),tmpStats.WeightedCentroid(1) - centralPoint(1)),2*pi);
-xTmp      = centralPoint(1) * cos(dirOffset) + centralPoint(1);
-yTmp      = centralPoint(2) * sin(dirOffset) + centralPoint(2);
-
-% need to loop over all voronoi cell sides
-distVoronoi = NaN;
-for i = 1:length(C{closestInd})
-    
-    if i == length(C{closestInd})
-        ind2 = 1;
-    else
-        ind2 = i+1;
-    end
-    % intersection of voronoi cell and line through peak bin - can break when we found intersection
-    [xi,yi] = linexline([centralPoint(1) xTmp], [centralPoint(2) yTmp], [V(C{closestInd}(i),1) V(C{closestInd}(ind2),1)], [V(C{closestInd}(i),2),V(C{closestInd}(ind2),2)]);
-    
-    if ~isnan(xi); distVoronoi = ( (centralPoint(1)-xi)^2 + (centralPoint(2)-yi)^2 )^0.5; break; end      
-end
-
-% phase offset
-centreDist  = ( (closestPeakCoords(1)-centralPoint(1))^2 + (closestPeakCoords(2)-centralPoint(2))^2 )^0.5;
-% centreDist  = ( (tmpStats.WeightedCentroid(2)-centralPoint(1))^2 + (tmpStats.WeightedCentroid(1)-centralPoint(2))^2 )^0.5;
-phaseOffset = pi*(centreDist/distVoronoi);
-
-% in case there is no phase offset, we don't want to return dirOffset=0 
-if isnan(distVoronoi) || centreDist == 0
-    dirOffset = NaN;
-end                     
 
 %% plot results for checking/debugging
 if options.debug
@@ -126,23 +158,27 @@ if options.debug
     axis square
     axis off
     hold on
-    voronoi(xyCoordMaxBin(:,1),xyCoordMaxBin(:,2));
-    plot([centralPoint(2) closestPeakCoords(1)],[centralPoint(2) closestPeakCoords(2)],'k-','LineWidth',3);
+    % voronoi(xyCoordMaxBin(:,1),xyCoordMaxBin(:,2));
+    plot([centralPoint(1) closestPeakCoords(1)],[centralPoint(2) closestPeakCoords(2)],'k-','LineWidth',3);
+    plot([centralPoint(1) centralPoint(1)],[0 size(crossCorr,2)],'w--','LineWidth',1);
+    plot([0 size(crossCorr,1)],[centralPoint(2) centralPoint(2)],'w--','LineWidth',1);
     % plot([centralPoint(1) tmpStats.WeightedCentroid(1)],[centralPoint(2) tmpStats.WeightedCentroid(2)],'k-','LineWidth',3);
-    title(sprintf('cross_corr; phaseOffset=%.1f',phaseOffset));
+    title(sprintf('cross_corr; phOff=%.1f; dOff=%.1f',phaseOffset,dirOffset),'Interpreter','none');
     hold off
     
-    subplot(1,2,2);
-    imagesc(ccAuto); colormap(jet); 
-    axis square
-    axis off
-    hold on
-    voronoi(xyCoordMaxBin(:,1),xyCoordMaxBin(:,2));
-    if ~isnan(dirOffset)
-        plot([ceil(size(ccAuto,2)/2) xi],[ceil(size(ccAuto,1)/2) yi],'k-','LineWidth',3);
+    if strcmp(method,'voronoi')
+        subplot(1,2,2);
+        imagesc(ccAuto); colormap(jet);
+        axis square
+        axis off
+        hold on
+        voronoi(xyCoordMaxBin(:,1),xyCoordMaxBin(:,2));
+        if ~isnan(dirOffset)
+            plot([ceil(size(ccAuto,2)/2) xi],[ceil(size(ccAuto,1)/2) yi],'k-','LineWidth',3);
+        end
+        title('cross corr sac');
+        hold off
     end
-    title('cross corr sac');
-    hold off
  
 end
     

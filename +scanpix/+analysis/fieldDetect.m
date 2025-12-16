@@ -103,7 +103,9 @@ for i = fLabels(2:end)
 end
 % generate peak mask and do a bit of cleaning up
 tmpMask               = map > thresholds;
-tmpMask               = imclose(tmpMask,strel('square',3)); % merge peaks that are too close to each other
+tmpMask               = bwareaopen(tmpMask, options.minPeakSz); % rmove peaks that are too small
+tmpMask               = imclose(tmpMask,strel('diamond',3));
+% tmpMask               = imdilate(tmpMask,strel('diamond',3)); % merge peaks that are too close to each other
 % remove pixel bridges 
 tmpMask(isnan(map))   = 1;
 tmpMask               = ~bwmorph(~tmpMask,'bridge');        
