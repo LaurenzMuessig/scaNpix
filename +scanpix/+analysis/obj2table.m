@@ -37,7 +37,7 @@ arguments
 end
 
 %%
-scores   = {'SI','RV','gridness','borderScore','intraStab'};
+scores   = {'SI','RV','gridness','borderScore','intraStab','speedScore'};
 scoreInd = ismember(scores, options.scores);
 %  
 if options.addlfp && strcmp(rowFormat,'dataset')
@@ -86,14 +86,15 @@ varList   =   {
 
                 'nSpks',        scoreDum; ...
                 'meanRate',     scoreDum; ...
+                'peakRate',     scoreDum; ...
                 'meanRateSpeedFilt',     scoreDum; ...
-                %'peakRate',    scoreDum; ...
 
                 'rateMap',      cell(size(scoreDum)); ...
                 'posMap',       cell(size(scoreDum)); ...
                 'dirMap',       cell(size(scoreDum)); ...
                 'sACs',         cell(size(scoreDum)); ...
                 'sACs_reg',     cell(size(scoreDum)); ...
+                'speedMap',     cell(size(scoreDum)); ...
 
                 'linMap',       cell(size(scoreDum)); ...
                 'linPos',       cell(size(scoreDum)); ...
@@ -111,6 +112,9 @@ varList   =   {
                 'intraStab',    scoreDum; ...
                 % 'interStab',   nan; ...        % 
                 'borderScore',  scoreDum; ...
+                'speedScore',   scoreDum; ...
+
+                'sparsity',     scoreDum; ...
 
                 %
                 'objectPos',    cell(size(scoreDum)); ...
@@ -217,7 +221,12 @@ switch rowFormat
                 copyObj.addMaps('dir',dataInd);
             end
             ResT.dirMap(:,tabInd)  = horzcat(copyObj.maps.dir{dataInd});
-
+            %
+            if any(cellfun('isempty',copyObj.maps.speed(dataInd)))
+                copyObj.addMaps('speed',dataInd);
+            end
+            tmp = cellfun(@(x) x(:,1),copyObj.maps.speed(dataInd),'UniformOutput',false);
+            ResT.speedMap(:,tabInd) = horzcat(tmp{:});
              % lin maps are special case - need to be pre-made to avoideovercomplicating things
             if any(strcmpi(ResT.envType(1,tabInd),'sqtrack'))
                 % NEEDS WORK
@@ -237,6 +246,7 @@ switch rowFormat
 
         % loop over trials
         if scoreInd(3); gridPropsOptions = scanpix.helpers.struct2params(copyObj.mapParams.gridProps); end
+        
         c = 1;
         for i = dataInd
             % get true mean rate in case of speed filtering
@@ -245,8 +255,11 @@ switch rowFormat
             else
                 posFs  = copyObj.params('posFs');
             end
-            ResT.meanRate(:,tabInd(c))          = cellfun(@(x) length(x),copyObj.spikeData.spk_Times{i}) ./ copyObj.trialMetaData(i).duration; % NEED TO THINK ABOUT WEHETHER THIS IS A GOOD IDEA? 
-            ResT.meanRateSpeedFilt(:,tabInd(c)) = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims); % NEED TO THINK ABOUT WEHETHER THIS IS A GOOD IDEA? 
+            ResT.meanRate(:,tabInd(c))          = cellfun(@(x) length(x),copyObj.spikeData.spk_Times{i}) ./ copyObj.trialMetaData(i).duration; %
+            ResT.peakRate(:,tabInd(c))          = cellfun(@(x) max(x(:),[],'omitnan'),copyObj.maps.rate{i}); %
+            ResT.meanRateSpeedFilt(:,tabInd(c)) = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims); % 
+            %
+            ResT.sparsity(:,tabInd(c))          = cell2mat(cellfun(@(x,y) scanpix.analysis.getSparsity(x,y), copyObj.maps.rate{i},ResT.posMap(:,tabInd(c)),'UniformOutput',false));
             %
             if scoreInd(1)
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
@@ -294,6 +307,13 @@ switch rowFormat
                 mapSeries                      = scanpix.maps.makeMapTimeSeries(copyObj,[0 copyObj.trialMetaData(i).duration/2],i);
                 ResT.intraStab(:,tabInd(c))    = scanpix.analysis.spatialCorrelation(mapSeries{1},mapSeries{2});
             end
+            %
+            if scoreInd(6)
+                if any(cellfun('isempty',copyObj.maps.speed(dataInd)))
+                    copyObj.addMaps('speed',dataInd);
+                end
+                ResT.speedScore(:,tabInd(c))  = cell2mat(copyObj.maps.speed{i}(:,2));
+            end
 
             if isfield(copyObj.trialMetaData,'objectPos') && ~isempty(copyObj.trialMetaData(i).objectPos)
                 if copyObj.trialMetaData(i).PosIsScaled
@@ -312,7 +332,7 @@ switch rowFormat
         end
         %
         if all(cellfun('isempty',ResT.objectPos(:)))
-            ResT                      = removevars(ResT,{'objectPos'});
+            ResT = removevars(ResT,{'objectPos'});
         end
         %
         if options.addwfprops

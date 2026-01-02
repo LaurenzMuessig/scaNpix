@@ -124,10 +124,10 @@ if fitEllipse
 
         Props.peakCoords = xyCoordMaxBin(1:min(7,size(xyCoordMaxBin,1)),:);
         
-        if isempty(peakStats) %|| peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
-            if options.verbose;  warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
-            return
-        end
+        % if isempty(peakStats) %|| peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
+        %     if options.verbose;  warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
+        %     return
+        % end
         %
         Props.ellOrient            = orient;
         Props.ellAbScale           = abScale;
@@ -148,17 +148,19 @@ if isnan(peakMaskRadius) || peakMaskRadius > length(autoCorr)/4
     peakMaskRadius = length(autoCorr)/4;
     initAnnWidth   = length(autoCorr)/2;
 end
-centrPeakMask                       = distMap < peakMaskRadius;
+centrPeakMask                             = distMap < peakMaskRadius;
 %
 Props.centralPeakMask                     = centrPeakMask;
 Props.peakMask                            = peakMask;
-Props.peakMask(peakStats(1).PixelIdxList) = 0;
-
-
-% --------------------------------------------------------------------------------------------------
-% ---- GRIDNESS ------------------------------------------------------------------------------------
-% --------------------------------------------------------------------------------------------------
-
+if ~isempty(peakStats)
+    Props.peakMask(peakStats(1).PixelIdxList) = 0;
+end
+% 
+% 
+% % --------------------------------------------------------------------------------------------------
+% % ---- GRIDNESS ------------------------------------------------------------------------------------
+% % --------------------------------------------------------------------------------------------------
+% 
 % make all rotated sac's
 rotAngle = [60, 120, 30, 90, 150];
 autoCorr_rot = nan(length(autoCorr),length(autoCorr),length(rotAngle));
@@ -186,10 +188,11 @@ for i = 1:length(radii)
         annCorr(i,j) = corr2(autoCorr(tmpAnnMask & nanMask),autoCorr_rot(find(tmpAnnMask & nanMask) + numel(tmpAnnMask)*(j-1)));
     end
 end
-% gridness
+%
 [gridness, maxInd] = max(min(annCorr(:,1:2),[],2) - max(annCorr(:,3:end),[],2));
 Props.gridness     = gridness; 
 Props.gridMask     = ~centrPeakMask & distMap < radii(maxInd);
+
 
 %%
 % --------------------------------------------------------------------------------------------------

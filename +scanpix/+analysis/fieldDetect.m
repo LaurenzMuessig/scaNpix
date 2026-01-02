@@ -30,7 +30,7 @@ end
 switch options.thrMode
     case 'abs'
         tmpMap(map < options.thr | isnan(map)) = -Inf;
-        thr                                   = options.thr;
+        thr                                    = options.thr;
     case 'rel'
         thr                                    =  max(map(:),[],'omitnan') * options.thr;
         tmpMap(map < options.thr | isnan(map)) = -Inf;
@@ -67,10 +67,6 @@ while ~isempty(tooSmallInd)
     dists(dists == 0) = NaN;
     % closest field
     [~,minInd]        = min(dists(tooSmallInd(1),:),[],'omitnan');
-    if length(minInd) > 1
-        minInd = minInd(1);
-        disp('more than 1 min found');
-    end
     % 
     otherFieldsInd    = ~ismember(structInd,[tooSmallInd(1);minInd]);
     if ~any(otherFieldsInd)
@@ -105,7 +101,7 @@ end
 tmpMask               = map > thresholds;
 tmpMask               = bwareaopen(tmpMask, options.minPeakSz); % rmove peaks that are too small
 tmpMask               = imclose(tmpMask,strel('diamond',3));
-% tmpMask               = imdilate(tmpMask,strel('diamond',3)); % merge peaks that are too close to each other
+% tmpMask               = imclose(tmpMask,strel('square',3)); % merge peaks that are too close to each other
 % remove pixel bridges 
 tmpMask(isnan(map))   = 1;
 tmpMask               = ~bwmorph(~tmpMask,'bridge');        
