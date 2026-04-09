@@ -130,12 +130,35 @@ setFile.log             = struct();
 if isempty(obj.trialMetaData)
     obj.trialMetaData = setFile;
 else
-    obj.trialMetaData(trialIterator) = setFile;
+    % need to it the long way in case we added metaData from an xml file 
+    f = fieldnames(setFile);
+    for i = 1:length(f)
+        obj.trialMetaData(trialIterator).(f{i}) = setFile.(f{i});
+    end
+
+    % obj.trialMetaData(trialIterator) = setFile;
 end
 
-if isempty(obj.dataSetName)
+% try and load a metadata xml file
+scanpix.dacqUtils.loadMetaDACQ(obj, trialIterator);
+
+if isempty(obj.dataSetName) && isfield(obj.trialMetaData, 'animal') && isfield(obj.trialMetaData,'date')
+    obj.dataSetName = ['r' num2str(obj.trialMetaData(1).animal) '_' num2str(obj.trialMetaData(1).date)];
+elseif isempty(obj.dataSetName)
     obj.dataSetName = ['r_' obj.trialNames{trialIterator}(1:6)]; %%%%% THIS NEEDS FIX ONCE WE ARE CLEAR HOW TO HANDLE METADATA IN DACQ
 end
+
+% if isempty(obj.dataSetName)
+%     if ischar(metaXMLFile.animal)
+%         ratIDStr    = metaXMLFile.animal;
+%     else
+%         ratIDStr    = ['r' num2str(metaXMLFile.animal)];
+%     end
+%     %
+%     anFolderInd     = regexp(obj.dataPath{1},ratIDStr,'once');
+%     dateStr         = regexp(obj.dataPath{1}(anFolderInd+length(ratIDStr):end),'(?<=(/|\\))\d+(_\d)?(?=(/|\\))','match','once');
+%     obj.dataSetName = [ratIDStr '_' dateStr];
+% end
 
 end
 

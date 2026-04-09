@@ -69,16 +69,34 @@ binSizePix = floor( obj.trialMetaData(trialInd).ppm/100 * obj.mapParams.rate.bin
 % % bin positions
 % % note to comparison to old Scan - to replicate the exact map from the original version you would have to do the following:
 % positions = bsxfun(@minus,positions, floor( min(positions,[],1)/binSizePix )*binSizePix ); 
-if ~obj.trialMetaData(trialInd).PosIsFitToEnv{1}
-    positions = positions - min(positions) + eps; % if you have't fit the positions to the environment and your environment is badly sampled along some edge(s), the resulting ratemap will not be binned correctly
-    % bin
-    posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
-    nBins     = [max(posBinned(:,1)) max(posBinned(:,2))];
-else
+if obj.trialMetaData(trialInd).PosIsFitToEnv{1}
+    
     % bin
     posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
     envSzPix  = obj.trialMetaData(trialInd).envSize ./ 100 .* obj.trialMetaData(trialInd).ppm;
     nBins     = fliplr( ceil( envSzPix ./ binSizePix ) ); %+ min(posBinned)-1; 
+    
+elseif obj.params('scalePos2CamWin') 
+
+    if obj.trialMetaData(trialInd).PosIsScaled
+        scaleFact = obj.trialMetaData(trialInd).ppm / obj.trialMetaData(trialInd).ppm_org;  
+    else
+        scaleFact = 1;
+    end
+    %
+    xMin = obj.trialMetaData(trialInd).xmin * scaleFact;
+    xMax = obj.trialMetaData(trialInd).xmax * scaleFact;
+    yMin = obj.trialMetaData(trialInd).ymin * scaleFact;
+    yMax = obj.trialMetaData(trialInd).ymax * scaleFact;
+
+    positions = positions - [xMin yMin];
+    posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
+    nBins     = [ceil( (xMax - xMin) ./ binSizePix) ceil( (yMax - yMin) ./ binSizePix) ];
+else
+    positions = positions - min(positions) + eps; % if you have't fit the positions to the environment and your environment is badly sampled along some edge(s), the resulting ratemap will not be binned correctly
+    % bin
+    posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
+    nBins     = [max(posBinned(:,1)) max(posBinned(:,2))];
 end
 
 % raw pos map
@@ -108,8 +126,11 @@ if obj.mapParams.rate.showWaitBar; hWait = waitbar(0); end
 for i = 1:length(spkTimes)
     
     if isempty(spkTimes{i})
-        rMaps{i}             = zeros(size(posMapRaw));
-        rMaps{i}(unVisPos)   = NaN;
+        rMaps{i}                = zeros(size(posMapRaw));
+        rMaps{i}(unVisPos)      = NaN;
+        %
+        sm_spkMaps{i}           = zeros(size(posMapRaw));
+        sm_spkMaps{i}(unVisPos) = NaN;
         % need a dummy pos map for cells with 0 spikes when using adaptive smooth
         if strcmp(obj.mapParams.rate.smooth,'adaptive')
             tmpPos           = posMapRaw;    
@@ -149,22 +170,10 @@ end
 if obj.mapParams.rate.showWaitBar; close(hWait); end
 
 if obj.mapParams.rate.trimNaNs
-    rMaps      = trimNaNs(rMaps);
-    sm_spkMaps = trimNaNs(sm_spkMaps);
-    sm_pMaps   = trimNaNs(sm_pMaps);
+    rMaps      = scanpix.helpers.trimMaps(rMaps);
+    sm_spkMaps = scanpix.helpers.trimMaps(sm_spkMaps);
+    sm_pMaps   = scanpix.helpers.trimMaps(sm_pMaps);
 end
-
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-function maps = trimNaNs(maps)
-
-nanIndC1 = find(sum(isnan(maps{1}),1) ~= size(maps{1},1),1,'first');
-nanIndC2 = find(sum(isnan(maps{1}),1) ~= size(maps{1},1),1,'last');
-nanIndR1 = find(sum(isnan(maps{1}),2) ~= size(maps{1},2),1,'first');
-nanIndR2 = find(sum(isnan(maps{1}),2) ~= size(maps{1},2),1,'last');
-maps     = cellfun(@(x) x(nanIndR1:nanIndR2,nanIndC1:nanIndC2),maps,'uni',0);
 
 end
 

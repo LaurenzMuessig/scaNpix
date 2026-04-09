@@ -215,7 +215,7 @@ obj.trialMetaData(trialIterator).ppm      = ppm(1);
 obj.trialMetaData(trialIterator).ppm_org  = ppm(2);
 
 % scale position
-if ~isempty(obj.trialMetaData(trialIterator).envSize )
+if ~obj.params('scalePos2CamWin') && ~isempty(obj.trialMetaData(trialIterator).envSize )
     boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
     scanpix.maps.scalePosition(obj, trialIterator,'envSzPix', boxExt,'circleFlag',circleFlag);
 else

@@ -31,7 +31,7 @@ arguments
     options.mindur (1,1) {mustBeNumeric} = 600;    %
     options.minspikes {mustBeScalarOrEmpty} = []; 
     options.age (:,2) {mustBeNumeric} = [20 25; 26 40];
-    options.scores {mustBeA(options.scores,'cell')} = {'SI','RV','gridness','borderScore','speed'};
+    options.scores {mustBeA(options.scores,'cell')} = {'SI','RV','gridness','borderScore','speedScore'};
     options.trialSelectMode (1,:) {mustBeMember(options.trialSelectMode ,{'all','type','rand','pattern'})}  = 'all';
     options.trialtype (1,:) {mustBeText} = 'fam';
 end
@@ -166,7 +166,7 @@ parfor j = 1:length(objData)
                 copyObj.addMaps('dir',k);
             end
 
-             if any(strcmp(scores,'speed'))
+             if any(strcmp(scores,'speedScore'))
                 copyObj.addMaps('speed',k);
             end
             
@@ -178,7 +178,7 @@ parfor j = 1:length(objData)
                     % tmpT.(scores{m})(:,k) = num2cell([vertcat(tmpT.(scores{m}){:,k}),max(tmp(:,1),tmp(:,4),'omitnan')],2);
                     tmpT.gridness(:,k)     = num2cell([vertcat(tmpT.gridness{:,k}),tmp(:,1)],2);
                     tmpT.gridness_ell(:,k) = num2cell([vertcat(tmpT.gridness_ell{:,k}),tmp(:,4)],2);
-                elseif strcmp(scores{m},'speed')
+                elseif strcmp(scores{m},'speedScore')
                      tmpT.(scores{m})(:,k) = num2cell([vertcat(tmpT.(scores{m}){:,k}),cell2mat(copyObj.maps.speed{k}(:,2))],2);
                 else
                     tmpT.(scores{m})(:,k)  = num2cell([vertcat(tmpT.(scores{m}){:,k}),copyObj.getSpatialProps(scores{m}, k)],2);
@@ -224,7 +224,7 @@ varList   =   {
     'gridness',     cell(size(scoreDum)); ...
     'gridness_ell', cell(size(scoreDum)); ...
     'borderScore',  cell(size(scoreDum)); ...
-    'speedScore',        cell(size(scoreDum)); ...
+    'speedScore',   cell(size(scoreDum)); ...
 
     };
 varList = varList';

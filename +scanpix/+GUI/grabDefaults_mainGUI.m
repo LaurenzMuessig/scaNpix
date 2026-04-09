@@ -46,6 +46,7 @@ switch lower(defType)
         defStruct.outputDir        = [cd filesep];
         defStruct.filename_suffix  = char(datetime('today','format','yyMMdd'));
         defStruct.WF_loadMode      = 'file';
+        defStruct.save_VTCdata     = false;
     case 'maps'
         defStruct                     = scanpix.maps.defaultParamsRateMaps;
         defStruct.rate.showWaitBar    = true;

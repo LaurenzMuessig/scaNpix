@@ -39,7 +39,7 @@ end
 
 
 %% plot
-confInt = [map(:,2) + map(:,3:4); NaN NaN];
+confInt = [map(:,2) - map(:,3), map(:,2) + map(:,3); NaN NaN];
 xVals = 1:size(map(:,2),1)+1;
 plot(hAx,xVals(1:end-1)',map(:,2),'r-',[xVals'; xVals'],confInt(:),'r:');
 hAx.Children(1).LineWidth = 1;

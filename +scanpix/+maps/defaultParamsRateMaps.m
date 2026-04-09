@@ -45,7 +45,7 @@ prms.linpos.durThrCohRun          = 2;   % In seconds
 prms.linpos.filtSigmaForRunDir    = 3;    % Units=sec. Sigma of the Gaussian filter to pre-filter the data before finding CW and CCW runs. Kernel is 2*sigma in length.
 prms.linpos.durThrJump            = 2;    % In seconds
 prms.linpos.gradThrForJumpSmooth  = 2.5;
-prms.linpos.runDimension          = [];                  % This is the dimension to run (X=1, Y=2); will be estimated if empty (lin track only parameter) 
+prms.linpos.runDimension          = [];           % This is the dimension to run (X=1, Y=2); will be estimated if empty (lin track only parameter) 
 prms.linpos.dirTolerance          = 70 * pi/180;  % Tolerance for heading direction, relative to arm direction, for calculating run direction (degrees, but will switch to radians)
 % linear map params
 prms.lin.binSizeLinMaps          = 2.5; % bin size (cm^2)

@@ -16,7 +16,7 @@ end
 %%
 if options.rep
     % expand time series in case time interval should be repeated
-    timeInt = [ ( timeInt(1):timeInt(2)-timeInt(1):obj.trialMetaData(trialInd).duration-timeInt(2) )', ( timeInt(2):timeInt(2)-timeInt(1):obj.trialMetaData(trialInd).duration )' ];
+    timeInt = [ ( timeInt(1):timeInt(2)-timeInt(1):obj.trialMetaData(trialInd).duration-timeInt(2)+timeInt(1) )', ( timeInt(2):timeInt(2)-timeInt(1):obj.trialMetaData(trialInd).duration )' ];
 end
 %
 mapSeries = cell(1,size(timeInt,1));

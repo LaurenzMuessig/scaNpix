@@ -140,6 +140,11 @@ for i = 1:length(nTetrodes)
     temp_SA                  = accumarray(temp(temp~=0), temp2(temp~=0), [max(unique(temp)) 1],@(x) {x});
     temp_SA                  = cellfun(@(x) shiftdim( reshape(x,50,4,[] ), 2),temp_SA, 'UniformOutput',0); % restore old format ('reshape') & bring into same format as 'temp_ST' ('shiftdim')
     temp_SA                  = temp_SA(ind_empty);
+    %
+    if ~obj.params('loadAllWFs')
+        singleSpikeInd           = cellfun(@(x) size(x,3),temp_SA) ~= 4;
+        temp_SA(~singleSpikeInd) = cellfun(@(x) squeeze(mean(x,1,'omitnan')),temp_SA(~singleSpikeInd),'UniformOutput',0);
+    end
     % accumulate output data
     spikeTimes(end+1:end+length(temp_ST),1) = temp_ST;
     waveforms(end+1:end+length(temp_ST),1)  = temp_SA;

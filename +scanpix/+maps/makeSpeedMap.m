@@ -52,15 +52,25 @@ validBins         = speedHist > obj.mapParams.speed.minBinProp * sum(speedHist);
 occCounts         = accumarray(ind(ind~=0), 1, [size(speedHist,2) 1])./ obj.trialMetaData(trialInd).posFs;
 %
 speedMaps         = cell(length(obj.spikeData.spk_Times{trialInd}),2);
-
+speedBins         = obj.mapParams.speed.binSizeSpeed/2:obj.mapParams.speed.binSizeSpeed:obj.mapParams.speed.maxSpeed-obj.mapParams.speed.binSizeSpeed/2;
+%
 if obj.mapParams.speed.showWaitBar; hWait = waitbar(0); end
 
 for i = 1:length(spkTimes)
+
+    %
+    if isempty(spkTimes{i})
+        speedMaps{i,1}      = nan(length(speedBins),4);
+        speedMaps{i,1}(:,1) = speedBins;
+        speedMaps{i,2}      = NaN;  
+        continue; 
+    end
+
     % inst firing rate
-    instSpikeCount               = histcounts(ceil(spkTimes{i} * obj.trialMetaData(trialInd).posFs),0:length(obj.posData.speed{trialInd})); %.* prms.posFs;
+    instSpikeCount               = accumarray(ceil(spkTimes{i} .* obj.trialMetaData(trialInd).posFs),1,size(obj.posData.speed{trialInd}));
 
     % mean rate / speed bin 
-    speedMaps{i,1}(:,1)          = obj.mapParams.speed.binSizeSpeed/2:obj.mapParams.speed.binSizeSpeed:obj.mapParams.speed.maxSpeed-obj.mapParams.speed.binSizeSpeed/2;
+    speedMaps{i,1}(:,1)          = speedBins;
     spikeCounts                  = accumarray(ind(ind~=0),instSpikeCount(ind~=0)',[length(speedHist) 1]);
     % maybe non-valid bins should be excluded from smoothing? 
     speedMaps{i,1}(:,2)          = imfilter(spikeCounts./occCounts,fspecial('gaussian',[ceil(obj.mapParams.speed.smKernelLength/obj.mapParams.speed.binSizeSpeed) 1],3/obj.mapParams.speed.binSizeSpeed));
@@ -71,7 +81,7 @@ for i = 1:length(spkTimes)
     % speed score (r speed vs instantaneous firing rate)
     % kernel = ones(1,ceil(obj.mapParams.speed.smKernelLength * obj.trialMetaData(trialInd).posFs)) ./ (obj.mapParams.speed.smKernelLength * obj.trialMetaData(trialInd).posFs); % Kropf uses kernel of 250ms
     kernel         = fspecial('gaussian',[ceil(0.25 * obj.trialMetaData(trialInd).posFs) 1],2); % Kropf et al. use kernel of 250ms
-    instFRate      = imfilter(instSpikeCount',kernel,'replicate');
+    instFRate      = imfilter(instSpikeCount,kernel,'replicate');
     speedMaps{i,2} = corr(obj.posData.speed{trialInd}(~isnan(obj.posData.speed{trialInd})),instFRate(~isnan(obj.posData.speed{trialInd})));
 
     % add Kropf et al. normalisation

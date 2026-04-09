@@ -60,7 +60,7 @@ end
 hWait         = waitbar(0); 
 plotCount     = 1;
 
-[axArr, hScroll] = scanpix.plot.multPlot([length(spikeTimes) length(spikeTimes)],'plotsize',p.Results.plotsize,'plotsep',p.Results.plotsep,'offsetbase',p.Results.offsetbase,'figname',p.Results.figname);
+[axArr, hScroll] = scanpix.plot.multPlot([length(spikeTimes) length(spikeTimes)],'plotsize',p.Results.plotsize,'plotsep',p.Results.plotsep,'offset',p.Results.offsetbase,'figname',p.Results.figname);
 nPlots           = numel(axArr)/2;
 
 hScroll.hFig.Visible = 'off';

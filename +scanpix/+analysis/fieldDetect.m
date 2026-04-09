@@ -33,10 +33,10 @@ switch options.thrMode
         thr                                    = options.thr;
     case 'rel'
         thr                                    =  max(map(:),[],'omitnan') * options.thr;
-        tmpMap(map < options.thr | isnan(map)) = -Inf;
+        tmpMap(map < thr | isnan(map))         = -Inf;
     case 'none'
         tmpMap(isnan(map)) = -Inf;
-        thr                = -max(map(:),[],'omitnan');
+        thr                = max(map(:),[],'omitnan');
 
 end
 
@@ -99,23 +99,34 @@ for i = fLabels(2:end)
 end
 % generate peak mask and do a bit of cleaning up
 tmpMask               = map > thresholds;
-tmpMask               = bwareaopen(tmpMask, options.minPeakSz); % rmove peaks that are too small
-tmpMask               = imclose(tmpMask,strel('diamond',3));
+tmpMask               = bwareaopen(tmpMask, options.minPeakSz); % remove peaks that are too small
+tmpMask               = imclose(tmpMask,strel('square',3));
 % tmpMask               = imclose(tmpMask,strel('square',3)); % merge peaks that are too close to each other
 % remove pixel bridges 
-tmpMask(isnan(map))   = 1;
-tmpMask               = ~bwmorph(~tmpMask,'bridge');        
+% tmpMask(isnan(map))   = 1;
+% tmpMask               = ~bwmorph(~tmpMask,'bridge');        
 tmpMask(isnan(map))   = 0;
 % now we split fields that are only connected on diagonal of 2 pixels
 CC                    = bwconncomp(tmpMask,4);      
 peakMask              = labelmatrix(CC);
 % final stats of found peaks 
-peakStats                                                 = regionprops(peakMask,map,'WeightedCentroid','Area','PixelIdxList','MajorAxisLength','EquivDiameter','Centroid');
+peakStats                                         = regionprops(peakMask,map,'WeightedCentroid','Area','PixelIdxList','MajorAxisLength','EquivDiameter','Centroid','PixelList','PixelValues');
 % remove fields that are too small
-tooSmallFields                                            = [peakStats.Area] < options.minPeakSz;
-peakMask(vertcat(peakStats(tooSmallFields).PixelIdxList)) = 0;
-peakMask                                                  = peakMask > 0;
-peakStats(tooSmallFields)                                 = [];
+tooSmallFields                                    = [peakStats.Area] < options.minPeakSz;
+oneBinWideFields                                  = cellfun(@(x) any(x~=0),cellfun(@(x) all(diff(x,[],1)==0),{peakStats.PixelList},'UniformOutput',false));
+remInd                                            = tooSmallFields | oneBinWideFields;
+peakMask(vertcat(peakStats(remInd).PixelIdxList)) = 0;
+peakMask                                          = peakMask > 0;
+peakStats(remInd)                                 = [];
+
+% get location of absolute field peak as well
+for i = 1 : length(peakStats)
+    
+    % Find index of max value
+    [~, maxIdx]          = max(peakStats(i).PixelValues,[],'omitnan');
+    peakStats(i).peakLoc = peakStats(i).PixelList(maxIdx,:); 
+end
+
 
 
 %% debug plot

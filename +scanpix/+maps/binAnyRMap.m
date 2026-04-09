@@ -46,17 +46,20 @@ switch lower(options.colmap)
         temp   = scanpix.maps.highContGrayColMap;
         ind    = round(linspace(1,length(temp),options.nsteps));
         cMap   = temp(ind,:);   
-        nSteps = options.nsteps;
     case 'poulter'
         cMap   = scanpix.maps.cm_Poulter;
-        nSteps = size(cMap,1);
     otherwise
         try
             cMap   = feval( str2func(options.colmap), options.nsteps );
-            nSteps = options.nsteps;
         catch
             error(['''' options.colmap ''' not yet supported as colormap. Why don''t you add it yourself?']);
         end
+end
+
+if size(cMap,1) > options.nsteps
+    nSteps = size(cMap,1);
+else
+    nSteps = options.nsteps;
 end
 
 %% bin rMap
