@@ -89,7 +89,7 @@ elseif obj.params('scalePos2CamWin')
     yMin = obj.trialMetaData(trialInd).ymin * scaleFact;
     yMax = obj.trialMetaData(trialInd).ymax * scaleFact;
 
-    positions = positions - [xMin yMin];
+    % positions = positions - [xMin yMin];
     posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
     nBins     = [ceil( (xMax - xMin) ./ binSizePix) ceil( (yMax - yMin) ./ binSizePix) ];
 else

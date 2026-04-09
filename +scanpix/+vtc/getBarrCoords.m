@@ -33,12 +33,6 @@ if ~isempty(obj.trialMetaData(trInd).objectPos)
     % in case pos is fitted to visited environment or embedded in camera window need to adjust coordinates further
     if obj.trialMetaData(trInd).PosIsFitToEnv{1}
         coords = coords - obj.trialMetaData(trInd).PosIsFitToEnv{2};
-    
-    elseif obj.params('scalePos2CamWin')
-        xMin = obj.trialMetaData(trInd).xmin * scaleFact;
-        yMin = obj.trialMetaData(trInd).ymin * scaleFact;
-        %
-        coords = coords - [xMin yMin];
     end
     % also generate a binned version of the corrdinates (bin size of rate maps)
     binSizePix    = floor( obj.trialMetaData(trInd).ppm/100 * obj.mapParams.rate.binSizeSpat );

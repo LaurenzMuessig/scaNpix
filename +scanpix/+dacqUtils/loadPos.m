@@ -201,7 +201,7 @@ elseif n_leds == 2
     dir        = mod((180/pi)*( atan2(-smLightFront(pos,2)+smLightBack(pos,2), +smLightFront(pos,1)-smLightBack(pos,1)) ) - obj.trialMetaData(trialIterator).lightBearing(1), 360);
     obj.posData(1).direction{trialIterator} = dir(:);
     % Get position from smoothed individual lights %%  % TW, 12/09/08
-    wghtLightFront = 1- obj.params('posHead');
+    wghtLightFront = 1 - obj.params('posHead');
     wghtLightBack  = obj.params('posHead');
     xy(pos, :)     = (smLightFront(pos, :).*wghtLightFront + smLightBack(pos, :).*wghtLightBack);  %%% CB added code todo headPos other than 0.5.
     obj.posData(1).XY{trialIterator} = xy;

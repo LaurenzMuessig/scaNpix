@@ -201,12 +201,10 @@ classdef ephys < handle
             
             switch lower(type)
                 case 'container'
-                    prmsMap = obj.params; %#ok<SAGROW>
-                    outStr  = 'prmsMap';
+                    prmsOut = obj.params; 
                     suggest = 'MyParams';
                 case 'maps'
-                    prms    = obj.mapParams; %#ok<SAGROW>
-                    outStr  = 'prms';
+                    prmsOut    = obj.mapParams; 
                     suggest = 'MyRateMapParams';
                 otherwise
                     ME = MException('scaNpix:ephys::saveParams:InvalidType', ['''' type ''' is not a valid type of parameter group you can save. Try ''container'' or ''maps'' instead']);
@@ -229,7 +227,7 @@ classdef ephys < handle
                 end
             end
             
-            save( fullfile(classFolder.path,'files',[ fileName{:} '.mat' ]), outStr);
+            save( fullfile(classFolder.path,'files',[ fileName{:} '.mat' ]), prmsOut);
         end
         
         %%
