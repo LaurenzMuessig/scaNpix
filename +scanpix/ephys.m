@@ -1187,8 +1187,13 @@ classdef ephys < handle
                     options = scanpix.helpers.struct2params(obj.mapParams.sac);
                     for i = trialInd
                         % we don't want to smooth the AC but use smoothed rate map as input
-
-                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x,options{:}),obj.maps.rate{i},'uni',0);
+                        if obj.params('scalePos2CamWin')
+                            tmp = cellfun(@(x) scanpix.helpers.trimMaps(x,NaN), obj.maps.rate{i}, 'UniformOutput',false);
+                        else
+                            tmp = obj.maps.rate{i};
+                        end
+                        %
+                        obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x,options{:}),tmp,'uni',0);
                     end
                     
                 case 'objvect'
