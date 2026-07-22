@@ -76,7 +76,7 @@ if obj.trialMetaData(trialInd).PosIsFitToEnv{1}
     envSzPix  = obj.trialMetaData(trialInd).envSize ./ 100 .* obj.trialMetaData(trialInd).ppm;
     nBins     = fliplr( ceil( envSzPix ./ binSizePix ) ); %+ min(posBinned)-1; 
     
-elseif obj.params('scalePos2CamWin') 
+elseif isKey(obj.params,'scalePos2CamWin') && obj.params('scalePos2CamWin') 
 
     if obj.trialMetaData(trialInd).PosIsScaled
         scaleFact = obj.trialMetaData(trialInd).ppm / obj.trialMetaData(trialInd).ppm_org;  
@@ -84,13 +84,12 @@ elseif obj.params('scalePos2CamWin')
         scaleFact = 1;
     end
     %
-    xMin = obj.trialMetaData(trialInd).xmin * scaleFact;
-    xMax = obj.trialMetaData(trialInd).xmax * scaleFact;
-    yMin = obj.trialMetaData(trialInd).ymin * scaleFact;
-    yMax = obj.trialMetaData(trialInd).ymax * scaleFact;
-
-    % positions = positions - [xMin yMin];
     posBinned = fliplr( ceil( positions ./ binSizePix ) ); % swap xy to image coordinates
+    %
+    xMin      = obj.trialMetaData(trialInd).xmin * scaleFact;
+    xMax      = obj.trialMetaData(trialInd).xmax * scaleFact;
+    yMin      = obj.trialMetaData(trialInd).ymin * scaleFact;
+    yMax      = obj.trialMetaData(trialInd).ymax * scaleFact;
     nBins     = [ceil( (xMax - xMin) ./ binSizePix) ceil( (yMax - yMin) ./ binSizePix) ];
 else
     positions = positions - min(positions) + eps; % if you have't fit the positions to the environment and your environment is badly sampled along some edge(s), the resulting ratemap will not be binned correctly
@@ -158,7 +157,7 @@ for i = 1:length(spkTimes)
         case 'boxcar'
             % smooth
             sm_spkMaps{i}                          = imfilter(spkMapRaw,kernel) ./ visMask_sm;
-            sm_spkMaps{1}(unVisPos)                = NaN;
+            sm_spkMaps{i}(unVisPos)                = NaN;
             %rate map
             rMaps{i}                               = sm_spkMaps{i} ./ sm_pMaps{1};   
         case 'adaptive'

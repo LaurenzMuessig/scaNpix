@@ -20,21 +20,17 @@ function plotWaveform(waveforms,options)
 %% parse input
 arguments
     waveforms {mustBeNumeric} 
-    options.ax {ishghandle(options.ax, 'axes')}
+    options.ax {ishghandle(options.ax, 'axes')} = axes;
     options.maxWaves (1,1) {mustBeNumeric} = 250; 
     options.linew (1,1) {mustBeNumeric} = 3; 
     options.plotAllWaves (1,1) {mustBeNumericOrLogical} = true;
 end
 
-% 
+%% 
 if isempty(waveforms)
     return;
 end
 %
-if ~isfield(options,'ax')
-    options.ax = axes;
-end
-
 
 %% plot
 if size(waveforms,3) == 1

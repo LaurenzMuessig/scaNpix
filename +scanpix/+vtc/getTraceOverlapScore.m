@@ -26,7 +26,7 @@ if ~islogical(BFMask)
     BFMask   = BFMask==1;
 end
 
-
+%%
 overlapMask = poPrMask & BFMask;
 ovLpPoInBF  = sum( poPrFRMap(overlapMask) ) / sum( poPrFRMap(BFMask) );
 ovLPBFInPo  = sum( poPrFRMap(overlapMask) ) / sum( poPrFRMap(poPrMask) );

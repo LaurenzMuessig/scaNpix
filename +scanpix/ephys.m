@@ -1172,7 +1172,6 @@ classdef ephys < handle
                         linPos(~dirInd(:,2),3)  = NaN;
                         obj.posData(1).linXY{i} = linPos;
 
-                        % I REMOVED CODE THAT USES UI TO FETCH METADATA FOR LIN TRACK DATA
                         %
                         [obj.maps(1).lin{i}, posMap ] = scanpix.maps.makeLinRMaps(obj, i );
                         obj.maps(1).linPos{i} = num2cell(posMap,2);
@@ -1187,7 +1186,7 @@ classdef ephys < handle
                     options = scanpix.helpers.struct2params(obj.mapParams.sac);
                     for i = trialInd
                         % we don't want to smooth the AC but use smoothed rate map as input
-                        if obj.params('scalePos2CamWin')
+                        if isKey(obj.params,'scalePos2CamWin') && obj.params('scalePos2CamWin')
                             tmp = cellfun(@(x) scanpix.helpers.trimMaps(x,NaN), obj.maps.rate{i}, 'UniformOutput',false);
                         else
                             tmp = obj.maps.rate{i};

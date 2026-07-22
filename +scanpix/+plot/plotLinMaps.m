@@ -1,37 +1,27 @@
-function plotLinMaps( linMap, varargin )
+function plotLinMaps( linMap, options )
 % plotLinMaps: plot a linearised rate map
 %
 %
 % LM 2021
 
-%% parse
-defaultMapType = 'rate';
-defaultColMap  = 'parula';
-defaulthAx     = [];
-
-p = inputParser;
-checkAx = @(x) ishghandle(x, 'axes') || @isempty;
-addOptional(p,'ax',defaulthAx, checkAx);
-addParameter(p,'type',defaultMapType,@ischar);
-addParameter(p,'colmap',defaultColMap,@ischar);
-parse(p,varargin{:});
-
-if isempty(p.Results.ax)
-    hAx = axes;
-else
-    hAx = p.Results.ax;
+%%
+arguments
+    linMap 
+    options.ax {ishghandle(options.ax, 'axes')} = axes;
+    options.type (1,:) {mustBeMember(options.type,{'rate','cellpos'})} = 'rate';
+    options.colmap (1,:) {mustBeText} = 'parula';
 end
 
 %% plot
-switch lower(p.Results.type)
+switch options.type
     case 'rate'
         %% plot
-        area(hAx,1:length(linMap),linMap,'edgecolor','k','facecolor','r');
+        area(options.ax,1:length(linMap),linMap,'edgecolor','k','facecolor','r');
         maxY = max(linMap)*1.1;
         if maxY == 0
             maxY = 1;
         end
-        set(hAx,'xTick','','ytick',[0 maxY],'yticklabel',{'0' sprintf('%2.1f',maxY)},'ylim',[0 maxY],'xlim',[1 length(linMap)]);
+        set(options.ax,'xTick','','ytick',[0 maxY],'yticklabel',{'0' sprintf('%2.1f',maxY)},'ylim',[0 maxY],'xlim',[1 length(linMap)]);
         %plot arm transitions
         % c = round( [0.25 0.5 0.75].*size(linMaps{1},2) );  % This marks quarters of track (arms)
         % hold on
@@ -41,11 +31,11 @@ switch lower(p.Results.type)
         % hold off
     case 'cellpos'
         linMapsNormed = scanpix.maps.normLinMaps(linMap);
-        imagesc(hAx,linMapsNormed);
-        eval(['colormap(hAx,' p.Results.colmap ')']);
-        set(hAx,'xTick',[0.5 size(linMapsNormed,2)+0.5],'xticklabel',[],'ytick',[0.5 size(linMapsNormed,1)-0.5],'yticklabel',[0,size(linMapsNormed,1)],'ylim',[0.5 size(linMapsNormed,1)+0.5],'xlim',[0.5 size(linMapsNormed,2)+0.5]);
+        imagesc(options.ax,linMapsNormed);
+        eval(['colormap(hAx,' options.colmap ')']);
+        set(options.ax,'xTick',[0.5 size(linMapsNormed,2)+0.5],'xticklabel',[],'ytick',[0.5 size(linMapsNormed,1)-0.5],'yticklabel',[0,size(linMapsNormed,1)],'ylim',[0.5 size(linMapsNormed,1)+0.5],'xlim',[0.5 size(linMapsNormed,2)+0.5]);
     otherwise
-        error(['scaNpix::plot::plotLinMap:'  p.Results.type ' is not a valid option for plotting linearised rate maps. Try ''rate''  or ''cellpos''.' ]);
+        error(['scaNpix::plot::plotLinMap:'  options.type ' is not a valid option for plotting linearised rate maps. Try ''rate''  or ''cellpos''.' ]);
 end
 
 

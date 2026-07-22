@@ -56,8 +56,8 @@ end
 offsets       = offsetBase;
 for i = 1:length(waveForms)
     % mean +/- STD
-    meanWF    = squeeze(nanmean(waveForms{i},1));
-    stdWFs    = squeeze(nanstd(waveForms{i},[],1));   
+    meanWF    = squeeze(mean(waveForms{i},1,'omitnan'));
+    stdWFs    = squeeze(std(waveForms{i},[],1,'omitnan'));   
     maxVal    = ceil((1.05 * ceil( max(meanWF(:)) + max(stdWFs(:)) ))/10)*10; % for plot axis limits
     minVal    = floor((1.05 * floor( min(meanWF(:)) - max(stdWFs(:)) ))/10)*10; % for plot axis limits
     for j = 1:size(meanWF,2)

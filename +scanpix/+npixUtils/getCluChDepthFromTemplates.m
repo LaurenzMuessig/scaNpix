@@ -37,7 +37,7 @@ templateDepths = sum(bsxfun(@times,tempChanAmps,chanPos(:,2)'),2)./sum(tempChanA
 
 % closest channel to template depth 
 [~, maxChanInd] = min(abs(templateDepths-chanPos(:,2)'),[],2);
-maxChan = chanPos(maxChanInd,1);
+maxChan         = chanPos(maxChanInd,1);
 
 end
 

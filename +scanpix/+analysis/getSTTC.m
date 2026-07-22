@@ -11,7 +11,6 @@ arguments
 end
 
 %%
-
 if isempty(st1) || isempty(st2)
     sttc = NaN;
     return

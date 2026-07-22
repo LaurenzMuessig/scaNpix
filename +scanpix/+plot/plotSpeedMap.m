@@ -1,4 +1,4 @@
-function plotSpeedMap(map,varargin)
+function plotSpeedMap(map,options)
 % plotSpeedMap - plot speed map
 % package: scanpix.plot
 %
@@ -15,46 +15,29 @@ function plotSpeedMap(map,varargin)
 % LM 2021
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% parse input
-defaulthAx      = [];
-defaultMaxSpeed = [];
-
-p = inputParser;
-checkAx = @(x) ishghandle(x, 'axes') || @isempty;
-addOptional(p,'ax',defaulthAx, checkAx);
-addParameter(p,'maxspeed',defaultMaxSpeed,@isscalar);
-parse(p,varargin{:});
-
-if isempty(p.Results.ax)
-    hAx = axes;
-else
-    hAx = p.Results.ax;
+%%
+arguments
+    map {mustBeNumeric}
+    options.ax  {ishghandle(options.ax, 'axes')} = axes;
+    options.maxspeed (1,1) {mustBeNumeric} = 40;
 end
-
-if isempty(p.Results.maxspeed)
-    maxSpeed = map(end,1);
-else
-    maxSpeed = p.Results.maxspeed;
-end
-
 
 %% plot
 confInt = [map(:,2) - map(:,3), map(:,2) + map(:,3); NaN NaN];
-xVals = 1:size(map(:,2),1)+1;
-plot(hAx,xVals(1:end-1)',map(:,2),'r-',[xVals'; xVals'],confInt(:),'r:');
-hAx.Children(1).LineWidth = 1;
-hAx.Children(2).LineWidth = 2;
+xVals   = 1:size(map(:,2),1)+1;
+plot(options.ax,xVals(1:end-1)',map(:,2),'r-',[xVals'; xVals'],confInt(:),'r:');
+%
+options.ax.Children(1).LineWidth = 1;
+options.ax.Children(2).LineWidth = 2;
 
 % format axis
 if sum(map(:,2)) ~= 0
-    set(hAx,'ylim',[min([0;confInt(:)]) max(confInt(:))],'ytick',[0 nanmax(map(:,2))],'YTickLabel',{'0' sprintf('%.1f',nanmax(map(:,2)))},'xlim',[0 length(map(:,1))+1],'xtick',[0 length(map(:,1))+1],'xticklabel',[0 round(maxSpeed)]);
+    set(options.ax,'ylim',[min([0;confInt(:)]) max(confInt(:))],'ytick',[0 max(map(:,2),[],'omitnan')],'YTickLabel',{'0' sprintf('%.1f',max(map(:,2),[],'omitnan'))},'xlim',[0 length(map(:,1))+1],'xtick',[0 length(map(:,1))+1],'xticklabel',[0 round(options.maxspeed)]);
 end
-
-ylabel(hAx,'Firing Rate (Hz)');
-xlabel(hAx,'Running Speed (cm/s)','VerticalAlignment','middle');
-axis(hAx,'square');
-
-
+%
+ylabel(options.ax,'Firing Rate (Hz)');
+xlabel(options.ax,'Running Speed (cm/s)','VerticalAlignment','middle');
+axis(options.ax,'square');
 
 end
 

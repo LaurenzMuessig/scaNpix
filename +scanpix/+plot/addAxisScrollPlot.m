@@ -18,17 +18,17 @@ function hAx = addAxisScrollPlot( hScroll, plotPos, plotSep, polarFlag )
 %  LM 2018
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%
+arguments
+    hScroll
+    plotPos (1,4) {mustBeNumeric}
+    plotSep (1,2) {mustBeNumeric} = [20 30];
+    polarFlag (1,1) {mustBeNumericOrLogical} = false;
+end
+
+%%
 persistent firstAxFlag
 
-if nargin < 4
-    polarFlag = false;
-end
-%% parse input 
-% separation of individual plots in x+y
-if nargin < 3 
-    plotSep(1) = 20; % pixel
-    plotSep(2) = 20; % pixel
-end
 %% draw axes
 % check if it's first axis - need to keep a memory of this
 if isempty(firstAxFlag); firstAxFlag = true; else; firstAxFlag = false; end 
@@ -38,8 +38,6 @@ if ~polarFlag
 else
     hAx     = polaraxes('Parent',hScroll.hPan,'Units','pixels','Position',[plotPos(1) plotPos(2) plotPos(3:4)]);
 end
-
-% disableDefaultInteractivity( hAx ); % global setting for whole figure is more efficient
 
 %increase panel height to fit all figures if necessary
 %current position of axis and canvas
@@ -75,8 +73,5 @@ if posAx(2) + posAx(4) > 0.95*p_hPan(4)
     p_hPan      = get(hScroll.hPan, 'Position'); %
     set(hScroll.hSldY,'Max',p_hPan(4),'Value',0,'Enable','on'); % increase range
 end
-
-
-% drawnow
 
 end
