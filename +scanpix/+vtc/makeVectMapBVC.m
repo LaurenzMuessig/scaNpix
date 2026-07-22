@@ -1,4 +1,4 @@
-function vMap = makeVectMapBVC( posMap, spkMap, barrDataIn, barrType,options)
+function vMap = makeVectMapBVC( posMap, spkMap, barrDataIn, barrType, options)
 % Make vector map of firing: firing rate with respect to distance and direction from walls/cues.
 %
 %           [vMapRate, vMapPos_Spk] = bvcTrVectMap( posMap, spkMap, mapSize, barrStr, barrCirc )
