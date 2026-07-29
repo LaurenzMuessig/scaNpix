@@ -48,7 +48,7 @@ if ~isempty(objFieldStrs)
    
     % in case pos is fitted to visited environment or embedded in camera window need to adjust coordinates further
     if obj.trialMetaData(trInd).PosIsFitToEnv{1}
-        coords = coords - obj.trialMetaData(trInd).PosIsFitToEnv{2};
+        coords = [coords(:,1:size(coords,2)/2) - obj.trialMetaData(trInd).PosIsFitToEnv{2}(1) coords(:,size(coords,2)/2+1:end) - obj.trialMetaData(trInd).PosIsFitToEnv{2}(2)];
     end
     % also generate a binned version of the corrdinates (bin size of rate maps)
     binSizePix    = floor( obj.trialMetaData(trInd).ppm/100 * obj.mapParams.rate.binSizeSpat );
