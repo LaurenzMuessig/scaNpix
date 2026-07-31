@@ -4,7 +4,7 @@ function plotGridProps(autoCorr,options)
 arguments
     autoCorr {mustBeNumeric}
     options.thresh (1,1) {mustBeNumeric} = -1;
-    options.binAC (1,1) {mustBeNumericOrLogical} = false;
+    options.binAC (1,1) {mustBeNumericOrLogical} = true;
     options.nBinSteps (1,1) {mustBeNumeric} = 21;
     options.minPeakSz (1,1) {mustBeNumeric} = 8;
     options.axArray (1,3) {mustBeA(options.axArray,'cell')} = scanpix.plot.multPlot([1 3],'plotsize',[150 150],'plotsep',[75 40]); 

@@ -32,7 +32,7 @@ options.ax.Children(2).LineWidth = 2;
 
 % format axis
 if sum(map(:,2)) ~= 0
-    set(options.ax,'ylim',[min([0;confInt(:)]) max(confInt(:))],'ytick',[0 max(map(:,2),[],'omitnan')],'YTickLabel',{'0' sprintf('%.1f',max(map(:,2),[],'omitnan'))},'xlim',[0 length(map(:,1))+1],'xtick',[0 length(map(:,1))+1],'xticklabel',[0 round(options.maxspeed)]);
+    set(options.ax,'ylim',[min([0;confInt(:)]) max(confInt(:))],'ytick',[0 max(map(:,2),[],'omitnan')],'YTickLabel',{'0' sprintf('%.1f',max(map(:,2),[],'omitnan'))},'xlim',[0 length(map(:,1))+1],'xtick',[0 length(map(:,1))+1],'xticklabel',[0 map(end,1)]);
 end
 %
 ylabel(options.ax,'Firing Rate (Hz)');

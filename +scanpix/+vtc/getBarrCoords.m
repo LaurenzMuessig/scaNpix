@@ -30,10 +30,9 @@ if ~isempty(objFieldStrs)
     for i = 1:length(objFieldStrs)
         if ~circFlag
             coords(i,:) = [obj.trialMetaData(trInd).(objFieldStrs{i})(1:2:end) obj.trialMetaData(trInd).(objFieldStrs{i})(2:2:end)];
-            radius(i)   = NaN;
         else
             coords(i,:) = [obj.trialMetaData(trInd).(objFieldStrs{i})(1) obj.trialMetaData(trInd).(objFieldStrs{i})(2)];
-            radius(i)   = obj.trialMetaData(trInd).(objFieldStrs{i})(3);
+            radius(i,1) = obj.trialMetaData(trInd).(objFieldStrs{i})(3);
         end
     end
     % add scaling factor in case data is scaled to common ppm

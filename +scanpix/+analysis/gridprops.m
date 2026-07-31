@@ -3,42 +3,15 @@ function [gridness, Props] = gridprops(autoCorr,fitEllipse,options)
 % offset of peaks
 % package: scanpix.analysis
 %
-%       [gridness] = scanpix.analysis.gridprops( autoCorr );
-%       [gridness, Props] = scanpix.analysis.gridprops( autoCorr, 'paramName', 'paramValue', .. );
+%       [gridness, Props] = scanpix.analysis.gridprops( autoCorr );
+%       [gridness, Props] = scanpix.analysis.gridprops( autoCorr, fitEllipse );
+%       [gridness, Props, Props] = scanpix.analysis.gridprops( __ , 'paramName', 'paramValue', .. );
 %
-% Produces key metrics about a grid cell derived from the spatial autocorrelogram: wavelength,
-% orientation, gridness, the mean x,y offset of the six central peaks (if fewer than six peaks are
-% found then that number is used to calculate the values). Also returns the coordinates of the peaks
-% used to calculate these values [x,y] pairs with origin at centre
-%
-% Optional input parameters: 
-%
-%   'corrThr'        - Peaks are r > this value
-%   'getprops'       - calculate all grid props; if 0 only gridness is calculated
-%   'getellgridness' - get grid props by regularising autoCorr from ellipse
-%   'minor'          - 
-%   'plot'           - make a nice plot showing all grid properties
-%   'ax'             - axis handle in case you want plot somewhere specific
-
-%
-%  Fields of additional output properties structure ('Props'):
-%
-%  .gridness
-%  .waveLength       NB. Unit for wavelength is bins of autocorr
-%  .waveLengthFull   NB. Unit for wavelength is bins of autocorr
-%  .orientation
-%  .orientationFull
-%  .offSet         
-%  .fieldSize
-%  .closestPeaksCoord 
-%
-% Note: In the autocorrelogram it is sensible to exclude bins that were constructed with relatively
-% small overlap between the ratemap1 and ratemap2 (Hafting excludes bins with an overlap of 20 or
-% less). Set these bins to 0 before passing to this function
-%
-% this function is a re-write of the original gridness calculation written by Tom and Caswell which for several properties didn't work very well in case 
-% the grid pattern was slightly irregular. I have tried to more or less replaicate what the Mosers are using.
-% 
+% A few notes:
+% - check scanpix.analysis.fieldDetect to understand how the peak finding
+%   works (this is the biggest difference to the original code from
+%   Tom/Caswell)
+% - best to use 'binAC' = true, 'thresh' = 0
 % LM 2022
 
 %% Params
@@ -46,23 +19,17 @@ arguments
     autoCorr {mustBeNumeric}
     fitEllipse (1,1) {mustBeNumericOrLogical} = false;
     options.thresh {mustBeScalarOrEmpty} = -1;
-    options.binAC (1,1) {mustBeNumericOrLogical} = false;
+    options.binAC (1,1) {mustBeNumericOrLogical} = true;
     options.nBinSteps (1,1) {mustBeNumeric} = 21;
     options.minPeakSz (1,1) {mustBeNumeric} = 8;
     options.plotEllipse (1,1) {mustBeNumericOrLogical} = false;
     options.ax  {ishghandle(options.ax, 'axes')}
     options.verbose (1,1) {mustBeNumericOrLogical} = false;
-    options.legacyMode (1,1) {mustBeNumericOrLogical} = false;
     options.peakCoords (:,2) {mustBeNumeric}
 end
 
-%% 
-if options.legacyMode
-    [gridness, Props] = scanpix.analysis.gridprops_legacy(autoCorr);
-    return
-end
 
-%%
+%% Props struct contains all sorts of useful properties for grid cells
 gridness                = NaN;
 %
 Props.gridness          = NaN;
@@ -101,12 +68,6 @@ if fitEllipse && isfield(options,'peakCoords')
 else
     [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr, options.thresh, options.binAC, options.nBinSteps, options.minPeakSz);
     Props.peakCoords = xyCoordMaxBin;
-
-    % if isempty(peakStats) || peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
-    %     % if isempty(peakStats) || peakStats(1).MajorAxisLength > length(autoCorr)
-    %     if options.verbose; warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
-    %     return
-    % end
 end
 % Regularise by fitting ellipse to AC 
 if fitEllipse
@@ -123,11 +84,6 @@ if fitEllipse
         [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre,peakStats, peakMask] = findGridPeaks(autoCorr,options.thresh,  options.binAC, options.nBinSteps, options.minPeakSz);
 
         Props.peakCoords = xyCoordMaxBin(1:min(7,size(xyCoordMaxBin,1)),:);
-        
-        % if isempty(peakStats) %|| peakStats(1).MajorAxisLength/2 > 0.5*(length(autoCorr)/2)
-        %     if options.verbose;  warning('scaNpix::analysis:: No peaks found or central peak is too large. Skipping grid properties calculation'); end
-        %     return
-        % end
         %
         Props.ellOrient            = orient;
         Props.ellAbScale           = abScale;
@@ -139,11 +95,12 @@ if fitEllipse
 end
  
 % make central peak mask
-[colsIm, rowsIm]                    = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
-distMap                             = sqrt((rowsIm-ceil(size(autoCorr,2)/2)).^2 + (colsIm-ceil(size(autoCorr,1)/2)).^2);
-% centrPeakMask                       = distMap < peakStats(1).MajorAxisLength/2;
-peakMaskRadius = mean(distFromCentre(2:end))/2;
-initAnnWidth   = max(distFromCentre(2:end));
+[colsIm, rowsIm] = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
+distMap          = sqrt((rowsIm-ceil(size(autoCorr,2)/2)).^2 + (colsIm-ceil(size(autoCorr,1)/2)).^2);
+peakMaskRadius   = mean(distFromCentre(2:end))/2;
+initAnnWidth     = max(distFromCentre(2:end));
+% in case central peak is large or no peak found we use some hard coded
+% values
 if isnan(peakMaskRadius) || peakMaskRadius > length(autoCorr)/4
     peakMaskRadius = length(autoCorr)/4;
     initAnnWidth   = length(autoCorr)/2;
@@ -155,7 +112,6 @@ Props.peakMask                            = peakMask;
 if ~isempty(peakStats)
     Props.peakMask(peakStats(1).PixelIdxList) = 0;
 end
-% 
 % 
 % % --------------------------------------------------------------------------------------------------
 % % ---- GRIDNESS ------------------------------------------------------------------------------------
@@ -169,11 +125,6 @@ for i=1:length(rotAngle)
 end
 
 % loop over radii to find optimal size for gridness calc.
-% if isempty(peakStats)
-%     initAnnWidth = peakMaskRadius/2;
-% else
-%     initAnnWidth = peakStats(1).EquivDiameter;
-% end
 firstStep = min(peakMaskRadius + initAnnWidth,ceil(length(autoCorr)/2));
 radii     = floor(firstStep):ceil(length(autoCorr)/2);
 %
@@ -235,8 +186,9 @@ end
 % -------------------------------------------------------------------------------------------------
 function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, peakStats, peakMask] = findGridPeaks(autoCorr,thresh,binAC,nBinSteps,minPeakSz)
 %%
-% autoCorrTemp = autoCorr;
+% subfunction to find the 6 closed peaks in AC to centre peak
 
+% this does the peak finding
 [peakStats, peakMask] = scanpix.analysis.fieldDetect(autoCorr,'thrMode','abs','thr',thresh,'binEdges',[-1 1],'binMap',binAC,'minPeakSz',minPeakSz,'nBinSteps',nBinSteps,'debugOn', false);
 
 %

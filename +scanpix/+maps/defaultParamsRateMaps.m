@@ -69,8 +69,8 @@ prms.objVect.showWaitBar         = showWaitBar;
 prms.speed.minBinProp            = 0.005; % valid speed bins need to contain > prctg of samples of population (0.5%)
 prms.speed.binSizeSpeed          = 2;     % cm/s (2 cm/s)
 prms.speed.maxSpeed              = 40;    % cm/s (40 cm/s)
-prms.speed.smKernelLength        = 3;     % Note: this is the SD of the kernel!!
-prms.speed.normaliseFR           = true;  % logical flag
+% prms.speed.smKernelLength        = 3;     % Note: this is the SD of the kernel!!
+% prms.speed.normaliseFR           = true;  % logical flag
 prms.speed.confInt               = 95;    % confidence interval
 prms.speed.showWaitBar           = showWaitBar;
 
@@ -92,7 +92,6 @@ prms.gridProps.thresh            = 0;  %
 prms.gridProps.minPeakSz         = 8;    % 
 prms.gridProps.plotEllipse       = false;         
 prms.gridProps.verbose           = false; 
-prms.gridProps.legacyMode        = false; 
 
 end
 

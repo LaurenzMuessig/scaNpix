@@ -1,9 +1,26 @@
 function [peakStats, peakMask] = fieldDetect(map,options)
-%UNTITLED2 Summary of this function goes 
-%   Detailed explanation goes here
+% find peaks in an arbitrary rate map, spatial AC etc. The approach might
+% seem very involved but it makes sure that we can find local peaks in e.g.
+% a spatial AC that do not have a strong prominence and that peaks that
+% seem to bleed into each other are still sorted into different peaks
+% package: scanpix.analysis
+%
+% Usage:
+%       [peakStats, peakMask] = scanpix.analysis.gridprops( map );
+%       [peakStats, peakMask] = scanpix.analysis.gridprops( map , 'paramName', 'paramValue', .. );
+%
+% logic:
+% - (optional) bin and/or threshold map
+% - segment using watershed
+% - merge fields (too small) to counter oversegmentation
+% - find peaks in basins using a local threshold
+% - clean up by merging too close peaks, removing too small peaks
+%
+% A few notes:
+% - generally tends to work best on binned maps for spatial ACs ('binMap' = true, 'thr' = 0, 'thrMode' = 'abs')
+% - tends to work best on coarsely binned rate maps ('binMap' = true, 'nBinSteps' = 5)
 
 
-%% TO DO
 
 %%
 arguments
@@ -39,63 +56,69 @@ switch options.thrMode
         thr                = max(map(:),[],'omitnan');
 
 end
-
-% segment the map using watershed
+% watershed
 fieldsLabel = watershed(-tmpMap);
 % special case if only a single field is present and the rest of the map is -Inf after thresholding - watershed returns all 1's in that cxase
 if all(fieldsLabel(:))
     fieldsLabel = tmpMap ~= -Inf;
 end
 
-%% merge fields that are too small into the closest larger one
-fieldMask    = fieldsLabel ~= 0;
-tmpStats     = regionprops(fieldMask,fieldsLabel,'centroid','PixelList','MaxIntensity');
-% sort by size
-[sz,sortInd] = sort( arrayfun(@(x) size(x.PixelList,1), tmpStats) );
-tmpStats     = tmpStats(sortInd);
-% index of fields with too small size
-tooSmallInd  = find(sz < options.minWSFieldSz)';
+%% merge fields that are too small into the larger neighbour with the most shared ridge pixels
+allLabels   = unique(fieldsLabel(fieldsLabel ~= 0));
+fieldSizes  = accumarray(fieldsLabel(fieldsLabel ~= 0),1);
+bigLabels   = allLabels(fieldSizes(allLabels) >= options.minWSFieldSz);
+smallLabels = allLabels(fieldSizes(allLabels) <  options.minWSFieldSz);
 
-% all field boundary pixels
-fieldBorderPix = arrayfun(@(x) bwdist(fieldsLabel==x.MaxIntensity) < 2 & ~(fieldsLabel==x.MaxIntensity),tmpStats, 'UniformOutput',0);
+if ~isempty(smallLabels) && ~isempty(bigLabels)
+    % process smallest fields first so chained merges (a too-small field
+    % bordering another too-small field) resolve into an already-merged
+    % big neighbour rather than needing a separate pass
+    [~,ord]     = sort(fieldSizes(smallLabels));
+    smallLabels = smallLabels(ord);
+    centroids   = []; % lazily filled in only if the centroid fallback below is ever needed
 
-while ~isempty(tooSmallInd)
-    structInd         = 1:length(tmpStats);
-    % all field centroid distances
-    centroids         = reshape([tmpStats.Centroid],2,[])';
-    dists             = squareform(pdist(centroids));
-    dists(dists == 0) = NaN;
-    % closest field
-    [~,minInd]        = min(dists(tooSmallInd(1),:),[],'omitnan');
-    % 
-    otherFieldsInd    = ~ismember(structInd,[tooSmallInd(1);minInd]);
-    if ~any(otherFieldsInd)
-        otherFieldsBorders = false(size(tmpMap));
-    else
-        otherFieldsBorders = any(cat(3,fieldBorderPix{otherFieldsInd}),3);
+    for i = 1:numel(smallLabels)
+        lbl           = smallLabels(i);
+        fieldMask     = fieldsLabel == lbl;
+        % everything within reach of this field's border (ridge pixels and,
+        % if the ridge is thin, the neighbouring field's own pixels too).
+        % Candidates may include other still-too-small fields - those get
+        % their own turn later in the (ascending-size) loop, so the chain
+        % still ends up folded into a big field by the time we're done
+        dilFieldMask  = quickDilate(quickDilate(fieldMask)); % radius 2 - bridges a multi-pixel-wide ridge
+        neighbourLbls = fieldsLabel(dilFieldMask & ~fieldMask & fieldsLabel > 0);
+
+        if ~isempty(neighbourLbls)
+            % target = neighbour with the most shared border/ridge pixels
+            counts     = accumarray(neighbourLbls,1,[max(allLabels) 1]);
+            [~,target] = max(counts);
+        else
+            % not directly touching anything - fall back to nearest centroid
+            if isempty(centroids)
+                centroidStats = regionprops(fieldsLabel,'Centroid');
+                centroids     = vertcat(centroidStats.Centroid);
+            end
+            d          = vecnorm(centroids(bigLabels,:) - centroids(lbl,:), 2, 2);
+            [~,k]      = min(d);
+            target     = bigLabels(k);
+        end
+        % close the ridge seam between this field and its chosen neighbour,
+        % but don't bridge into ridge segments touching a third field. Use a
+        % tight (immediate-neighbour, radius 1) test here so a merely-nearby
+        % third field doesn't wrongly veto closing a genuine two-field seam
+        targetMask = fieldsLabel == target;
+        otherMask  = fieldsLabel > 0 & fieldsLabel ~= lbl & fieldsLabel ~= target;
+        mergeRidge = quickDilate(fieldMask) & quickDilate(targetMask) & fieldsLabel == 0 & ~quickDilate(otherMask);
+        %
+        fieldsLabel(fieldMask | mergeRidge) = target;
     end
-    mergeBorderPix    = fieldBorderPix{tooSmallInd(1)} & fieldBorderPix{minInd} & ~otherFieldsBorders;
-    % update fields label
-    fieldsLabel(mergeBorderPix)                                       = tmpStats(minInd).MaxIntensity;
-    fieldsLabel(fieldsLabel == tmpStats(tooSmallInd(1)).MaxIntensity) = tmpStats(minInd).MaxIntensity;
-    %
-    % update structure after merging
-    tmpStats(minInd).PixelList     = [tmpStats(minInd).PixelList; tmpStats(tooSmallInd(1)).PixelList];
-    tmpStats(minInd).Centroid      = mean([tmpStats(minInd).Centroid; tmpStats(tooSmallInd(1)).Centroid],1);
-    tmpStats(tooSmallInd(1))       = [];
-    % update border mask after merging
-    fieldBorderPix{minInd}         = (fieldBorderPix{tooSmallInd(1)} | fieldBorderPix{minInd}) & ~mergeBorderPix; 
-    fieldBorderPix(tooSmallInd(1)) = [];
-    % check for more fields < size thresh
-    tooSmallInd                    = find(arrayfun(@(x) size(x.PixelList,1), tmpStats) < options.minWSFieldSz)';
 end
- 
+
 %% meake peak mask
 fLabels    = unique(fieldsLabel)';
 thresholds = nan(size(map));
 for i = fLabels(2:end)   
-    % thresholds(fieldsLabel == i) = max(map(fieldsLabel == i),[],'omitnan')/2;
-    thresholds(fieldsLabel == i) =  max(thr,prctile(map(fieldsLabel == i),75)); 
+    thresholds(fieldsLabel == i) = max(thr,prctile(map(fieldsLabel == i),75)); 
 end
 % generate peak mask and do a bit of cleaning up
 tmpMask               = map > thresholds;
@@ -121,20 +144,22 @@ peakStats(remInd)                                 = [];
 
 % get location of absolute field peak as well
 for i = 1 : length(peakStats)
-    
     % Find index of max value
     [~, maxIdx]          = max(peakStats(i).PixelValues,[],'omitnan');
     peakStats(i).peakLoc = peakStats(i).PixelList(maxIdx,:); 
 end
-
-
 
 %% debug plot
 if options.debugOn
     [peakY,peakX] = ind2sub(size(map),vertcat(peakStats.PixelIdxList)');
     figure;
     subplot(1,2,1);
-    scanpix.plot.plotRateMap(map,gca);
+    if options.binMap
+        imagesc(gca,map);
+        axis square
+    else
+        scanpix.plot.plotRateMap(map,gca);
+    end
     subplot(1,2,2);
     scanpix.plot.plotRateMap(map,gca,'colmap','hcg');
     hold on
@@ -144,6 +169,67 @@ end
 
 end
 
+function d = quickDilate(mask)
+% 8-connected 1-pixel dilation. Equivalent to imdilate(mask,strel('square',3))
+% but avoids imdilate's generic dispatch overhead, which dominates runtime.
+p = false(size(mask,1)+2, size(mask,2)+2);
+p(2:end-1,2:end-1) = mask;
+d = p(1:end-2,1:end-2) | p(1:end-2,2:end-1) | p(1:end-2,3:end) | ...
+    p(2:end-1,1:end-2) | p(2:end-1,2:end-1) | p(2:end-1,3:end) | ...
+    p(3:end,1:end-2)   | p(3:end,2:end-1)   | p(3:end,3:end);
+end
+
+% %% merge fields that are too small into the closest larger one
+% fieldMask    = fieldsLabel ~= 0;
+% tmpStats     = regionprops(fieldMask,fieldsLabel,'centroid','PixelList','MaxIntensity');
+% % sort by size
+% [sz,sortInd] = sort( arrayfun(@(x) size(x.PixelList,1), tmpStats) );
+% tmpStats     = tmpStats(sortInd);
+% % index of fields with too small size
+% tooSmallInd  = find(sz < options.minWSFieldSz)';
+% 
+% % all field boundary pixels
+% fieldBorderPix = arrayfun(@(x) bwdist(fieldsLabel==x.MaxIntensity) < 2 & ~(fieldsLabel==x.MaxIntensity),tmpStats, 'UniformOutput',0);
+% % fieldBorderPix = arrayfun(@(x) imdilate(fieldsLabel==x.MaxIntensity, strel('square',3)) & ~(fieldsLabel==x.MaxIntensity), tmpStats, 'UniformOutput', 0);
+% 
+% 
+% while ~isempty(tooSmallInd)
+%     structInd         = 1:length(tmpStats);
+%     % all field centroid distances
+%     % centroids         = reshape([tmpStats.Centroid],2,[])';
+%     % dists             = squareform(pdist(centroids));
+%     % dists(dists == 0) = NaN;
+%     % % closest field
+%     % [~,minInd]        = min(dists(tooSmallInd(1),:),[],'omitnan');
+% 
+%     centroids   = reshape([tmpStats.Centroid],2,[])';
+%     d           = pdist2(centroids(tooSmallInd(1),:), centroids);
+%     d(tooSmallInd(1)) = NaN;
+%     [~,minInd]  = min(d,[],'omitnan');
+% 
+% 
+%     % 
+%     otherFieldsInd    = ~ismember(structInd,[tooSmallInd(1);minInd]);
+%     if ~any(otherFieldsInd)
+%         otherFieldsBorders = false(size(tmpMap));
+%     else
+%         otherFieldsBorders = any(cat(3,fieldBorderPix{otherFieldsInd}),3);
+%     end
+%     mergeBorderPix    = fieldBorderPix{tooSmallInd(1)} & fieldBorderPix{minInd} & ~otherFieldsBorders;
+%     % update fields label
+%     fieldsLabel(mergeBorderPix)                                       = tmpStats(minInd).MaxIntensity;
+%     fieldsLabel(fieldsLabel == tmpStats(tooSmallInd(1)).MaxIntensity) = tmpStats(minInd).MaxIntensity;
+%     %
+%     % update structure after merging
+%     tmpStats(minInd).PixelList     = [tmpStats(minInd).PixelList; tmpStats(tooSmallInd(1)).PixelList];
+%     tmpStats(minInd).Centroid      = mean([tmpStats(minInd).Centroid; tmpStats(tooSmallInd(1)).Centroid],1);
+%     tmpStats(tooSmallInd(1))       = [];
+%     % update border mask after merging
+%     fieldBorderPix{minInd}         = (fieldBorderPix{tooSmallInd(1)} | fieldBorderPix{minInd}) & ~mergeBorderPix; 
+%     fieldBorderPix(tooSmallInd(1)) = [];
+%     % check for more fields < size thresh
+%     tooSmallInd                    = find(arrayfun(@(x) size(x.PixelList,1), tmpStats) < options.minWSFieldSz)';
+% end
 
 % switch type
 %     case 'place'
