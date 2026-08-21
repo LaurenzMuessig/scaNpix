@@ -40,7 +40,7 @@ if options.interp
 end
 
 % plot heat map
-imagesc(ax,'CData',rMapBinned,[0 size(cMapBinned,1)]);
+imagesc(ax,'CData',rMapBinned,[0 size(cMapBinned,1)-1]);
 colormap(ax, cMapBinned);
 axis(ax,'off');
 %

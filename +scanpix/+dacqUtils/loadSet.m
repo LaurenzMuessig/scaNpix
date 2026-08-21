@@ -131,9 +131,9 @@ if isempty(obj.trialMetaData)
     obj.trialMetaData = setFile;
 else
     % need to it the long way in case we added metaData from an xml file 
-    f = fieldnames(setFile);
-    for i = 1:length(f)
-        obj.trialMetaData(trialIterator).(f{i}) = setFile.(f{i});
+    fSet = fieldnames(setFile);
+    for i = 1:length(fSet)
+        obj.trialMetaData(trialIterator).(fSet{i}) = setFile.(fSet{i});
     end
 
     % obj.trialMetaData(trialIterator) = setFile;

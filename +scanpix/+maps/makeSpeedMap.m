@@ -74,7 +74,7 @@ for i = 1:length(spkTimes)
 
     %
     if isempty(spkTimes{i})
-        speedMaps{outInd(i),1}      = nan(length(speedBins),4);
+        speedMaps{outInd(i),1}      = nan(length(speedBins),3);
         speedMaps{outInd(i),1}(:,1) = speedBins;
         speedMaps{outInd(i),2}      = NaN;  
         continue; 
@@ -93,7 +93,7 @@ for i = 1:length(spkTimes)
     % confidence interval
     confInt                         = cell2mat( cellfun(@(x) CI(x,obj.mapParams.speed.confInt), accumarray(ind(ind~=0),instSpikeCount(ind~=0)',[lastValidBin-1 1],@(x) {x}),'uni',0) ) .* obj.trialMetaData(trialInd).posFs;
     speedMaps{outInd(i),1}(:,3)     = confInt(:,2);
-    speedMaps{outInd(i),1}(:,4)     = occCounts;
+    % speedMaps{outInd(i),1}(:,4)     = occCounts;
    
     % speed score (r speed vs instantaneous firing rate)
     instFRate                       = imfilter(instSpikeCount,kernel,'replicate');

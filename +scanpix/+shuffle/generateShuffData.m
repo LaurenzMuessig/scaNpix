@@ -47,7 +47,7 @@ if strcmp(options.trialSelectMode,'all')
     maxNtrials  = max(cellfun(@(x) length(x.trialNames), objData));
 elseif strcmp(options.trialSelectMode,'rand')
     maxNtrials = 1;
-elseif strcmp(options.triatrialSelectModelsel,'type')
+elseif strcmp(options.trialSelectMode,'type')
     allTrials  = cellfun(@(x) {x.trialMetaData.trialType}, objData, 'UniformOutput',0);
     maxNtrials = max(cellfun(@(x) sum(x), cellfun(@(x) ismember(x,options.trialType), allTrials,'UniformOutput',0)));
 elseif strcmp(options.trialSelectMode,'pattern')

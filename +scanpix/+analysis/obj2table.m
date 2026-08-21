@@ -236,6 +236,9 @@ switch rowFormat
             else
                 ResT = removevars(ResT,{'linMap','linPos'});
             end
+            % 
+        else
+            ResT = removevars(ResT,{'rateMap','posMap','dirMap','linMap','linPos','speedMap'});
         end
         % we need this for getting the true mean rate of each cell
         if copyObj.mapParams.rate.speedFilterFlagRMaps
@@ -255,11 +258,14 @@ switch rowFormat
             else
                 posFs  = copyObj.params('posFs');
             end
-            ResT.meanRate(:,tabInd(c))          = cellfun(@(x) length(x),copyObj.spikeData.spk_Times{i}) ./ copyObj.trialMetaData(i).duration; %
-            ResT.peakRate(:,tabInd(c))          = cellfun(@(x) max(x(:),[],'omitnan'),copyObj.maps.rate{i}); %
-            ResT.meanRateSpeedFilt(:,tabInd(c)) = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims); % 
             %
-            ResT.sparsity(:,tabInd(c))          = cell2mat(cellfun(@(x,y) scanpix.analysis.getSparsity(x,y), copyObj.maps.rate{i},ResT.posMap(:,tabInd(c)),'UniformOutput',false));
+            if options.addmaps
+                ResT.meanRate(:,tabInd(c))          = cellfun(@(x) length(x),copyObj.spikeData.spk_Times{i}) ./ copyObj.trialMetaData(i).duration; %
+                ResT.peakRate(:,tabInd(c))          = cellfun(@(x) max(x(:),[],'omitnan'),copyObj.maps.rate{i}); %
+                ResT.meanRateSpeedFilt(:,tabInd(c)) = scanpix.analysis.getMeanRate(copyObj.spikeData.spk_Times{i},posFs,copyObj.posData.speed{i},speedLims); %
+                %
+                ResT.sparsity(:,tabInd(c))          = cell2mat(cellfun(@(x,y) scanpix.analysis.getSparsity(x,y), copyObj.maps.rate{i},ResT.posMap(:,tabInd(c)),'UniformOutput',false));
+            end
             %
             if scoreInd(1)
                 if any(cellfun('isempty',copyObj.maps.rate(dataInd)))
@@ -336,12 +342,16 @@ switch rowFormat
         end
         %
         if options.addwfprops
-            % spikeProps                = scanpix.analysis.getWaveFormProps(copyObj);
-            % ResT.waveForms(1,tabInd)  = copyObj.spikeData.spk_waveforms(dataInd);
-            % ResT.spikeWidth(1,tabInd) = num2cell(squeeze(spikeProps(:,3,dataInd)),1);
-            % ResT.meanAC(1,tabInd)     = num2cell(squeeze(spikeProps(:,4,dataInd)),1);
+            spikeProps = scanpix.analysis.getWaveFormProps(copyObj);
+            c = 1;
+            for i = dataInd
+                ResT.waveForms(:,tabInd(c))  = copyObj.spikeData.spk_waveforms{i};
+                ResT.spikeWidth(:,tabInd(c)) = spikeProps(:,3,i);
+                ResT.meanAC(:,tabInd(c))     = spikeProps(:,4,i);
+                c = c+1;
+            end
         else
-            ResT                      = removevars(ResT,{'waveForms','spikeWidth','meanAC'});
+            ResT  = removevars(ResT,{'waveForms','spikeWidth','meanAC'});
         end
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
     case 'dataset'
@@ -380,7 +390,7 @@ switch rowFormat
                 ResT               = removevars(ResT,{'linMap','linPos'});
             end
         else
-            ResT                   = removevars(ResT,{'rateMap','posMap','dirMap','linMap','linPos'});
+            ResT                   = removevars(ResT,{'rateMap','posMap','dirMap','linMap','linPos','speedMap'});
         end
 
         if any(scoreInd)
@@ -445,6 +455,10 @@ switch rowFormat
 end
 
 %%
+if ~options.addmaps
+     ResT = removevars(ResT,{'peakRate','meanRateSpeedFilt','meanRate','sparsity'});
+end
+
 if ~options.addgridprops || ~ismember('gridness', ResT.Properties.VariableNames)
     ResT = removevars(ResT,{'gridScale','gridScale_ell','gridOr','gridOr_ell','sACs','sACs_reg'});
 end
@@ -455,3 +469,5 @@ if ~ismember('gridness', ResT.Properties.VariableNames)
 end
 
 end
+
+

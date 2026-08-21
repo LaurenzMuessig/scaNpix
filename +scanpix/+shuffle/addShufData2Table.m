@@ -82,6 +82,25 @@ for i = 1:length(scores)
         ResT.gridnessAll_popPctls  = pctlValsAllGridness; 
         combinedGridnessThresh     = false;
     end
+    
+    %
+    if strcmp(scores{i},'speedScore')
+
+        tmpVals               = ResShuf.(scores{i})(:,1:nTrials);
+        tmpVals(minSpikesInd) = {nan(size(tmpVals{1}))};
+        if options.useMEConly; tmpVals(~ResT.inMEC,:) = {nan(size(tmpVals{1}))}; end
+        %
+        pctlVals              = nan(height(ResT),length(options.pctls));
+
+        %
+        for k = 1:size(options.ageBins,1)
+            indAge                                   = ResT.age(:,1) >= options.ageBins(k,1) & ResT.age(:,1) <= options.ageBins(k,2);
+            pctlVals(indAge,1:length(options.pctls)) = ones(sum(indAge),1) .* scanpix.shuffle.getShufThresh(tmpVals(indAge,:),'type','pop','pctls',100-options.pctls);
+            %
+        end
+        ResT.([scores{i} '_popPctlsLow']) = pctlVals;
+
+    end
 end
 %
 ResT.Properties.UserData.ageBinsShufflePop = options.ageBins;

@@ -61,56 +61,61 @@ fieldsLabel = watershed(-tmpMap);
 % special case if only a single field is present and the rest of the map is -Inf after thresholding - watershed returns all 1's in that cxase
 if all(fieldsLabel(:))
     fieldsLabel = tmpMap ~= -Inf;
+    mergeFlag = false;
+else
+    mergeFlag = true;
 end
 
 %% merge fields that are too small into the larger neighbour with the most shared ridge pixels
-allLabels   = unique(fieldsLabel(fieldsLabel ~= 0));
-fieldSizes  = accumarray(fieldsLabel(fieldsLabel ~= 0),1);
-bigLabels   = allLabels(fieldSizes(allLabels) >= options.minWSFieldSz);
-smallLabels = allLabels(fieldSizes(allLabels) <  options.minWSFieldSz);
+if mergeFlag
+    allLabels   = unique(fieldsLabel(fieldsLabel ~= 0));
+    fieldSizes  = accumarray(fieldsLabel(fieldsLabel ~= 0),1);
+    bigLabels   = allLabels(fieldSizes(allLabels) >= options.minWSFieldSz);
+    smallLabels = allLabels(fieldSizes(allLabels) <  options.minWSFieldSz);
 
-if ~isempty(smallLabels) && ~isempty(bigLabels)
-    % process smallest fields first so chained merges (a too-small field
-    % bordering another too-small field) resolve into an already-merged
-    % big neighbour rather than needing a separate pass
-    [~,ord]     = sort(fieldSizes(smallLabels));
-    smallLabels = smallLabels(ord);
-    centroids   = []; % lazily filled in only if the centroid fallback below is ever needed
+    if ~isempty(smallLabels) && ~isempty(bigLabels)
+        % process smallest fields first so chained merges (a too-small field
+        % bordering another too-small field) resolve into an already-merged
+        % big neighbour rather than needing a separate pass
+        [~,ord]     = sort(fieldSizes(smallLabels));
+        smallLabels = smallLabels(ord);
+        centroids   = []; % lazily filled in only if the centroid fallback below is ever needed
 
-    for i = 1:numel(smallLabels)
-        lbl           = smallLabels(i);
-        fieldMask     = fieldsLabel == lbl;
-        % everything within reach of this field's border (ridge pixels and,
-        % if the ridge is thin, the neighbouring field's own pixels too).
-        % Candidates may include other still-too-small fields - those get
-        % their own turn later in the (ascending-size) loop, so the chain
-        % still ends up folded into a big field by the time we're done
-        dilFieldMask  = quickDilate(quickDilate(fieldMask)); % radius 2 - bridges a multi-pixel-wide ridge
-        neighbourLbls = fieldsLabel(dilFieldMask & ~fieldMask & fieldsLabel > 0);
+        for i = 1:numel(smallLabels)
+            lbl           = smallLabels(i);
+            fieldMask     = fieldsLabel == lbl;
+            % everything within reach of this field's border (ridge pixels and,
+            % if the ridge is thin, the neighbouring field's own pixels too).
+            % Candidates may include other still-too-small fields - those get
+            % their own turn later in the (ascending-size) loop, so the chain
+            % still ends up folded into a big field by the time we're done
+            dilFieldMask  = quickDilate(quickDilate(fieldMask)); % radius 2 - bridges a multi-pixel-wide ridge
+            neighbourLbls = fieldsLabel(dilFieldMask & ~fieldMask & fieldsLabel > 0);
 
-        if ~isempty(neighbourLbls)
-            % target = neighbour with the most shared border/ridge pixels
-            counts     = accumarray(neighbourLbls,1,[max(allLabels) 1]);
-            [~,target] = max(counts);
-        else
-            % not directly touching anything - fall back to nearest centroid
-            if isempty(centroids)
-                centroidStats = regionprops(fieldsLabel,'Centroid');
-                centroids     = vertcat(centroidStats.Centroid);
+            if ~isempty(neighbourLbls)
+                % target = neighbour with the most shared border/ridge pixels
+                counts     = accumarray(neighbourLbls,1,[max(allLabels) 1]);
+                [~,target] = max(counts);
+            else
+                % not directly touching anything - fall back to nearest centroid
+                if isempty(centroids)
+                    centroidStats = regionprops(fieldsLabel,'Centroid');
+                    centroids     = vertcat(centroidStats.Centroid);
+                end
+                d          = vecnorm(centroids(bigLabels,:) - centroids(lbl,:), 2, 2);
+                [~,k]      = min(d);
+                target     = bigLabels(k);
             end
-            d          = vecnorm(centroids(bigLabels,:) - centroids(lbl,:), 2, 2);
-            [~,k]      = min(d);
-            target     = bigLabels(k);
+            % close the ridge seam between this field and its chosen neighbour,
+            % but don't bridge into ridge segments touching a third field. Use a
+            % tight (immediate-neighbour, radius 1) test here so a merely-nearby
+            % third field doesn't wrongly veto closing a genuine two-field seam
+            targetMask = fieldsLabel == target;
+            otherMask  = fieldsLabel > 0 & fieldsLabel ~= lbl & fieldsLabel ~= target;
+            mergeRidge = quickDilate(fieldMask) & quickDilate(targetMask) & fieldsLabel == 0 & ~quickDilate(otherMask);
+            %
+            fieldsLabel(fieldMask | mergeRidge) = target;
         end
-        % close the ridge seam between this field and its chosen neighbour,
-        % but don't bridge into ridge segments touching a third field. Use a
-        % tight (immediate-neighbour, radius 1) test here so a merely-nearby
-        % third field doesn't wrongly veto closing a genuine two-field seam
-        targetMask = fieldsLabel == target;
-        otherMask  = fieldsLabel > 0 & fieldsLabel ~= lbl & fieldsLabel ~= target;
-        mergeRidge = quickDilate(fieldMask) & quickDilate(targetMask) & fieldsLabel == 0 & ~quickDilate(otherMask);
-        %
-        fieldsLabel(fieldMask | mergeRidge) = target;
     end
 end
 

@@ -66,15 +66,14 @@ obj.trialNames = trialNames;
 
 % load
 loadStr = loadStr( [options.loadpos options.loadspikes options.loadlfp] );
-obj.load(loadStr);
 
+obj.load(loadStr);
 % add meta data (optional)
 if ~isempty(addMeta)
     for i = 1:size(addMeta,1)
         obj.addMetaData(addMeta{i,1},addMeta{i,2});
     end
 end
-
 
 
 end

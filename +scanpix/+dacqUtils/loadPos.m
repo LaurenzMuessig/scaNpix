@@ -201,7 +201,7 @@ elseif n_leds == 2
     dir        = mod((180/pi)*( atan2(-smLightFront(pos,2)+smLightBack(pos,2), +smLightFront(pos,1)-smLightBack(pos,1)) ) - obj.trialMetaData(trialIterator).lightBearing(1), 360);
     obj.posData(1).direction{trialIterator} = dir(:);
     % Get position from smoothed individual lights %%  % TW, 12/09/08
-    wghtLightFront = 1 - obj.params('posHead');
+    wghtLightFront = 1 - obj.params('posHead'); 
     wghtLightBack  = obj.params('posHead');
     xy(pos, :)     = (smLightFront(pos, :).*wghtLightFront + smLightBack(pos, :).*wghtLightBack);  %%% CB added code todo headPos other than 0.5.
     obj.posData(1).XY{trialIterator} = xy;
@@ -217,6 +217,16 @@ speed(pos2)  = sqrt((xy(pos2+1,1)-xy(pos2,1)).^2+(xy(pos2+1,2)-xy(pos2,2)).^2);
 speed(n_pos) = speed(n_pos-1);
 speed        = speed.*(100*obj.trialMetaData(trialIterator).posFs/obj.trialMetaData(trialIterator).ppm);
 obj.posData(1).speed{trialIterator} = speed(:);
+
+
+% scale position
+if ~obj.params('scalePos2CamWin') && isfield(obj.trialMetaData,'envSize') && isfield(obj.trialMetaData,'trialType')
+    boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
+    if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')); circleFlag = false; else; circleFlag = true; end
+    scanpix.maps.scalePosition(obj, trialIterator,'envSzPix', boxExt,'circleFlag',circleFlag);
+else
+    obj.trialMetaData(trialIterator).PosIsFitToEnv = {false,[]};
+end
 
 % times = (1:n_pos)/pos_sample_rate;
 % times = times(:);

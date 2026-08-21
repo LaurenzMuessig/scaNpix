@@ -50,13 +50,13 @@ switch lower(options.colmap)
         cMap   = scanpix.maps.cm_Poulter;
     otherwise
         try
-            cMap   = feval( str2func(options.colmap), options.nsteps );
+            cMap = feval( str2func(options.colmap), options.nsteps );
         catch
             error(['''' options.colmap ''' not yet supported as colormap. Why don''t you add it yourself?']);
         end
 end
-
-if size(cMap,1) > options.nsteps
+%
+if size(cMap,1) < options.nsteps
     nSteps = size(cMap,1);
 else
     nSteps = options.nsteps;
