@@ -67,7 +67,6 @@ obj.posData.XY{trialIndex} = XYScaled;
 obj.trialMetaData(trialIndex).PosIsFitToEnv{1,1} = true;
 obj.trialMetaData(trialIndex).PosIsFitToEnv{1,2} = lowerEdge;
 
-
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

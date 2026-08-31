@@ -86,7 +86,6 @@ else
     obj.trialMetaData(trialIterator).PosIsScaled = false;
     obj.trialMetaData(trialIterator).ppm         = obj.trialMetaData(trialIterator).ppm_org;
 end
-% obj.trialMetaData(trialIterator).ppm = sscanf(scanpix.dacqUtils.getValue(posHeader,'pixels_per_metre'),'%d');
 
 % post process
 obj.posData(1).XYraw{trialIterator}    = led_pos;
@@ -103,18 +102,7 @@ if obj.trialMetaData(trialIterator).duration * obj.params('posFs') < length(led_
     obj.posData(1).direction{trialIterator} = obj.posData(1).direction{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs')); % truncate data
     obj.posData(1).speed{trialIterator}     = obj.posData(1).speed{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs')); % truncate data
 end
-
-% convert to integers
-% obj.posData(1).XY{trialIterator} = [double( floor(obj.posData(1).XYraw{trialIterator}(:,1)) + 1 ), double( floor(obj.posData(1).XYraw{trialIterator}(:,2)) + 1 )];  %%% NECESSARY??
-
 %
-if ~obj.params('scalePos2CamWin') && ~isempty(obj.trialMetaData(trialIterator).envSize )
-    boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
-    scanpix.maps.scalePosition(obj, trialIterator,'envszpix', boxExt);
-    %
-    % obj.posData(1).XY{trialIterator} = scanpix.helpers.rotatePoints(obj.posData(1).XY{trialIterator});
-end
-
 fprintf('  DONE!\n');
 
 end
@@ -127,7 +115,6 @@ function  postprocess_posData(obj,trialIterator,led_pos,led_pix )
 n_pos  = size(led_pos,1); % Don't use led_pix because this is absent from the older format
 n_leds = size(led_pos,2);
 
-% pos_sample_rate = sscanf(scanpix.dacqUtils.getValue(posdata.header, 'sample_rate'),'%d');
 
 % For 2 spot tracking, check for instances of swapping (often happens if one LED bright, one less bright).
 if n_leds == 2 && ~(isempty(led_pix)) % Only check if we actually have led_pix
@@ -206,21 +193,16 @@ elseif n_leds == 2
     xy(pos, :)     = (smLightFront(pos, :).*wghtLightFront + smLightBack(pos, :).*wghtLightBack);  %%% CB added code todo headPos other than 0.5.
     obj.posData(1).XY{trialIterator} = xy;
 
-    %Get heading from displacement too
-    % dir_disp(pos2)  = mod((180/pi)*(atan2( -xy(pos2+1, 2)+xy(pos2, 2), xy(pos2+1, 1)-xy(pos2, 1) )), 360);
-    % dir_disp(n_pos) = dir_disp(n_pos-1);
-    % dir_disp        = dir_disp(:);
 end
 
-%%% Calculate speed, based on distance(sampleN+1-sampleN) %%%
+% Calculate speed, based on distance(sampleN+1-sampleN) %%%
 speed(pos2)  = sqrt((xy(pos2+1,1)-xy(pos2,1)).^2+(xy(pos2+1,2)-xy(pos2,2)).^2);
 speed(n_pos) = speed(n_pos-1);
 speed        = speed.*(100*obj.trialMetaData(trialIterator).posFs/obj.trialMetaData(trialIterator).ppm);
 obj.posData(1).speed{trialIterator} = speed(:);
 
-
 % scale position
-if ~obj.params('scalePos2CamWin') && isfield(obj.trialMetaData,'envSize') && isfield(obj.trialMetaData,'trialType')
+if ~obj.params('scalePos2CamWin') && isfield(obj.trialMetaData,'envSize') && isfield(obj.trialMetaData,'trialType') && ~isempty(obj.trialMetaData(trialIterator).envSize) && ~isempty(obj.trialMetaData(trialIterator).trialType)
     boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
     if isempty(regexp(obj.trialMetaData(trialIterator).trialType,'circle','once')); circleFlag = false; else; circleFlag = true; end
     scanpix.maps.scalePosition(obj, trialIterator,'envSzPix', boxExt,'circleFlag',circleFlag);
@@ -228,11 +210,9 @@ else
     obj.trialMetaData(trialIterator).PosIsFitToEnv = {false,[]};
 end
 
-% times = (1:n_pos)/pos_sample_rate;
-% times = times(:);
 end
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [n_jumpy, led_pos] = led_speed_filter(led_pos, max_pix_per_sample, led)
 
 % Filters out short runs of data caused by tracker picking up an incorrect distant point.
@@ -261,14 +241,14 @@ for i = 2:length(ok_pos)
 end
 end
 
-% ----------------------------------------------------------------------------------------------------------------------
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function swap_list = led_swap_filter(led_pos, led_pix)
 % Checks for instances of two leds swapping or big one replacing little one
 % when the big one gets obscured.
-% Input xy posiiton of each led and
+% Input xy position of each led and
 % and number of pixels in each. Big light is light number 1
-% format: led_pos(1:n_pos, 1:num_cols, x-y), npix(1:n_pos, 1:num_cols)
+% format: led_pos(1:n_pos, 1:num_cols, x-y),
 
 thresh    = 5;
 

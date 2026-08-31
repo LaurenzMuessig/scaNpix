@@ -30,7 +30,7 @@ for i = 1:size(mapArray,1)
     % If the 'M' input (maps) is empty, it means input is coming from a probe not run. Return the values defined above.
     if isempty( mapArray{i,1} );   continue;    end
 
-       % Define 'baseline' field (main field pre-probe.
+    % Define 'baseline' field (main field pre-probe.
     BslFMask{i,1} =  mapNorm{i,1} >=  options.BslFieldThr;
 
     % If M{2} is empty, this is a cell without a probe - process BslFMask for output, and return (all other outputs are NaN).
@@ -86,13 +86,13 @@ for i = 1:size(mapArray,1)
         bfMask( fLabels==bfLabelFin )              = 1;                     % The actual used mask = 1
         bfMask( fLabels~=bfLabelFin & fLabels~=0 ) = 2;                     % Other fields, but not that chosen as mask are 2.
         bfMask( isnan(mapNorm{i,3}) )              = 3;                     % Non-visited = 3.
-
+        %
         bfMaskFin{itTr}                            = bfMask;
     end
     %
-    BFMask{i,1}                      = bfMaskFin{1};
-    PoPrFMask{i,1}                   = bfMaskFin{2};
-    BslFMask{i,1}                    = double( BslFMask{i,1} );  % For consisteny, make BslFMask the same format os the other two,
+    BFMask{i,1}                        = bfMaskFin{1};
+    PoPrFMask{i,1}                     = bfMaskFin{2};
+    BslFMask{i,1}                      = double( BslFMask{i,1} );  % For consisteny, make BslFMask the same format os the other two,
     BslFMask{i,1}(isnan(mapNorm{i,3})) = 3;                   % i.e. double, where 1 is field, 0 no field and 3 unvisited.
 
      % only calculate trace if there is a barrier field.

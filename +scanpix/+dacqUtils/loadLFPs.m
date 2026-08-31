@@ -34,42 +34,44 @@ if obj.params('loadHighFsLFP')
 else
     it = 1;
 end
-
+%
 sRateStr = {'lfpFs','lfpHighFs'};
 
 for i = it
     % switch extension
     if i == 2
         lfp2load = strrep(lfp2load,'.eeg','.egf');
+        scanpix.fxchange.textprogressbar(['Loading EGF data for ' obj.trialNames{trialIterator} ' ']);
+    else
+        scanpix.fxchange.textprogressbar(['Loading EEG data for ' obj.trialNames{trialIterator} ' ']);
     end
     
-    scanpix.fxchange.textprogressbar(['Loading ' lfp2load{1}(end-3:end) ' data for ' obj.trialNames{trialIterator} ' ']);
-    
+    %
     for j = 1:length(lfp2load)
+   
         % Note in some rare cases it seems that fopen gets the encoding scheme wrong and reads in a gibberish header so we want to be explicit 
         fid = fopen(fullfile(obj.dataPath{trialIterator}, lfp2load{j}),'r','ieee-be',"UTF-8");  % 'ieee-be' is machine format, 'big endian'.
         if fid == -1
             noEGFflag = true;
             scanpix.fxchange.textprogressbar(0);
+            obj.lfpData(1).lfpHighSamp{trialIterator}{j} = [];
             continue
         end
-        
+        %
         hdr = fread(fid,400,'int8');
         ds  = strfind(hdr','data_start') + 10; % data start marker
         % more convenient format - read some info from header
         frewind(fid);
-        %%%%%%%
         tempHeader = textscan(fid,'%s %[^\r\n]',11);
         tempHeader = horzcat(tempHeader{:});
-        
-        %%%%%%%
+        %
         sRateInd = strcmp('sample_rate',tempHeader(:,1));
         if sum( sRateInd ) == 0   % Sometimes there are 'empty' EEG files, which don't even have a full header. If we have one of these, just quit now.
             warning(['scaNpix: Problem loading EEG. Empty EEG data file for ' lfp2load{j}]);
             continue
         end
         obj.params(sRateStr{i}) = sscanf(tempHeader{sRateInd,2},'%d');  % hard code??
-        %%%%%%
+        %
         bytesInd     = strcmp('bytes_per_sample',tempHeader(:,1));
         bytesPerSamp = sscanf(tempHeader{bytesInd,2},'%d');
         % read data
@@ -78,25 +80,34 @@ for i = it
             nSamplesInd    = strcmp('num_EEG_samples',tempHeader(:,1));
             nSamples       = sscanf(tempHeader{nSamplesInd,2},'%d');
             tempData       = fread(fid,nSamples,'int8');
-            obj.lfpData(1).lfp{trialIterator}{j}  = (double(tempData)./2^7) .* obj.trialMetaData(trialIterator).lfp_scalemax(j); %voltages
+            obj.lfpData(1).lfp{trialIterator}{j} = (double(tempData)./2^7) .* obj.trialMetaData(trialIterator).lfp_scalemax(j); %voltages
+            % remove DACQ overhang
+            if obj.trialMetaData(trialIterator).duration * obj.params('lfpFs') < length(obj.lfpData(1).lfp{trialIterator}{j})
+                obj.lfpData(1).lfp{trialIterator}{j} = obj.lfpData(1).lfp{trialIterator}{j}(1:obj.trialMetaData(trialIterator).duration * obj.params('lfpFs')); % truncate data
+            end
         elseif bytesPerSamp == 2
             nSamplesInd    = strcmp('num_EGF_samples',tempHeader(:,1));
             nSamples       = sscanf(tempHeader{nSamplesInd,2},'%d');
             %grab actual voltage data
             tempData = fread(fid,nSamples,'int16'); %re-read as int16
-            obj.lfpData(1).lfpHighSamp{trialIterator}{j}  = (double(tempData)./2^15) .* obj.trialMetaData(trialIterator).lfp_scalemax(j); %voltages
+            obj.lfpData(1).lfpHighSamp{trialIterator}{j} = (double(tempData)./2^15) .* obj.trialMetaData(trialIterator).lfp_scalemax(j); %voltages
+            % remove DACQ overhang
+            if obj.trialMetaData(trialIterator).duration * obj.params('lfpHighFs') < length(obj.lfpData(1).lfpHighSamp{trialIterator}{j})
+                obj.lfpData(1).lfpHighSamp{trialIterator}{j} = obj.lfpData(1).lfpHighSamp{trialIterator}{j}(1:obj.trialMetaData(trialIterator).duration * obj.params('lfpHighFs')); % truncate data
+            end
         end
         fclose(fid);
-        
+        %
         scanpix.fxchange.textprogressbar(j/length(lfp2load)*100);
     end
     if noEGFflag
         scanpix.fxchange.textprogressbar('  NO DATA!');
+        obj.preA
     else
         scanpix.fxchange.textprogressbar('  DONE!');
     end
 end
-
+%
 obj.lfpData(1).lfpTet{trialIterator} = ceil( obj.trialMetaData(trialIterator).lfp_channel(:) ./ 4)';
 end
 

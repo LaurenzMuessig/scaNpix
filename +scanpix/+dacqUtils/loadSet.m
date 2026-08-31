@@ -73,7 +73,7 @@ setFile.fullscale = (setFile.ADC_fullscale_mv ./ setFile.gains) .* 1000;
 % Which channels EEGs recorded? %
 recordingChannel = zeros([1 128]); %HARD CODED
 for i = 1:length(recordingChannel) %%
-    temp=scanpix.dacqUtils.getValue(sFileTxt,['saveEEG_ch_' num2str(i)]);
+    temp = scanpix.dacqUtils.getValue(sFileTxt,['saveEEG_ch_' num2str(i)]);
     if isempty(temp)
         break;
     elseif str2double(temp) % temp is '1' or '0' for EEG used or not.

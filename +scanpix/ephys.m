@@ -37,7 +37,7 @@ classdef ephys < handle
         dataPathSort(1,:)     string
         dataSetName(1,:)      char
         trialNames(1,:)       string
-        cell_ID(:,4)          double %{mustBePositive, mustBeNonNan, mustBeNonzero}
+        cell_ID(:,4)          double 
         cell_Label(:,1)       string
         histo_reconstruct     struct
     end
@@ -46,7 +46,7 @@ classdef ephys < handle
         trialMetaData(1,:)    struct
         posData               struct  = struct('XYraw',[],'XY',[],'direction',[],'speed',[],'linXY',[],'sampleT',[]);
         spikeData             struct  = struct('spk_Times',[],'spk_waveforms',[],'sampleT',[]); 
-        lfpData               struct  = struct('lfp',[]);
+        lfpData               struct  = struct('lfp',[],'lfpHighSamp',[],'lfpTet',[]);
         bhaveData             struct  = struct('data',[]);
     end
     
@@ -68,12 +68,12 @@ classdef ephys < handle
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function obj = ephys(type,prmsMode,setDirFlag)
-            % dacq - creates class object
+            % scanpix - creates class object
             %
             % Syntax:
-            %       obj = npix;
-            %       obj = npix(prmsMode);
-            %       obj = npix(prmsMode, uiFlag);
+            %       obj = scanpix.ephys;
+            %       obj = scanpix.ephys(prmsMode);
+            %       obj = scanpix.ephys(prmsMode, uiFlag);
             %
             % Inputs:
             %    prmsMode    - 'default' - uses default parameter (default)
@@ -535,9 +535,107 @@ classdef ephys < handle
             end
             
         end
-        
+
+        %%
+        function trialInd = truncateData( obj, trialInd,  timeS )
+            % This function will truncate ephys data between timeS(1) and time S(2). All
+            % trial data will be truncated. This is useful when e.g. at some point the
+            % headstage unplugged and one wants to salvage the data recorded prior to
+            % this or when only certain periods of the trial, based e.g. on animal
+            % behaviour should be extracted.
+            %
+            %  Usage:   obj.truncateData( trialInd, timeS )
+            %
+            %  Inputs:
+            %           trialInd    - trial index
+            %           timeS       - [startTimes stopTimes] array or [stopTime] in seconds. In
+            %                         latter case we will assume startTime = 0
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            %% 
+            if nargin < 2
+                [select, loadCheck] = listdlg('PromptString','Select which trial you want to truncate:','ListString',obj.trialNames,'ListSize',[160 100]);
+                if ~loadCheck
+                    warning('scaNpix::ephys::truncateDACQData:Truncating data aborted. More data is better anyway.');
+                    return;
+                end
+                trialInd = ismember(obj.trialNames,obj.trialNames(select));
+            end
+
+            %
+            if nargin < 3
+                uiInput = inputdlg({'start time', 'end time'},'Please indicate time interval for truncation');
+                if isempty(uiInput)
+                    warning('scaNpix::ephys::truncateDACQData:Truncating aborted. Just ask yourself why you started it then...');
+                    return;
+                end
+                timeS = cellfun(@(x) str2double(x), uiInput)'; 
+            end
+
+            for i = 1:length(obj.trialNames)
+                if i == trialInd
+                    obj.trialMetaData(i).log.posIsTruncated = true;
+                else
+                    obj.trialMetaData(i).log.posIsTruncated = false;
+                end
+            end
+            
+            %%
+            % if only stop time is supplied
+            if length(timeS) == 1
+                timeS = [0 timeS];
+            end
+
+            %%
+            obj.trialMetaData(trialInd).duration = diff(timeS);
+
+            %% pos data
+            startInd                        = max(1,floor(timeS(1) * obj.trialMetaData(trialInd).posFs));
+            endInd                          = min(length(obj.posData.XY{trialInd}),ceil(timeS(2) * obj.trialMetaData(trialInd).posFs));
+            obj.posData.XY{trialInd}        = obj.posData.XY{trialInd}(startInd:endInd,:);
+            obj.posData.XYraw{trialInd}     = obj.posData.XYraw{trialInd}(startInd:endInd,:);
+            obj.posData.direction{trialInd} = obj.posData.direction{trialInd}(startInd:endInd);
+            obj.posData.speed{trialInd}     = obj.posData.speed{trialInd}(startInd:endInd);
+            %
+            if ~isempty(obj.posData.sampleT{trialInd})
+                obj.posData.sampleT{trialInd}   = obj.posData.sampleT{trialInd}(startInd:endInd);
+                obj.spikeData.sampleT{trialInd} = obj.spikeData.sampleT{trialInd}(startInd:endInd);
+            end
+
+            %% spike data
+            for i = 1:length(obj.spikeData.spk_Times{trialInd})
+
+                if ~isempty(obj.spikeData.spk_Times{trialInd}{i})
+                    validSpks                            = obj.spikeData.spk_Times{trialInd}{i} >= timeS(1) & obj.spikeData.spk_Times{trialInd}{i} <= timeS(2);
+                    obj.spikeData.spk_Times{trialInd}{i} = obj.spikeData.spk_Times{trialInd}{i}(validSpks);
+                end
+                %
+                if ~isempty(obj.spikeData.spk_waveforms{trialInd}) && obj.params('loadAllWFs')
+                    if ~isempty(obj.spikeData.spk_waveforms{trialInd}{i})
+                        obj.spikeData.spk_waveforms{trialInd}{i} = obj.spikeData.spk_waveforms{trialInd}{i}(validSpks,:,:);
+                    end
+                end
+            end
+
+            %% LFP
+            if ~isempty(obj.lfpData.lfp{trialInd})
+                startInd                        = max(1,floor(timeS(1) * obj.params('lfpFs')));
+                endInd                          = min(length(obj.lfpData.lfp{trialInd}{1}),ceil(timeS(2) * obj.params('lfpFs')));
+                for i = 1:length(obj.lfpData.lfp{trialInd})
+                    obj.lfpData.lfp{trialInd}{i} = obj.lfpData.lfp{trialInd}{i}(startInd:endInd); 
+                end
+            end
+            %
+            if ~isempty(obj.lfpData.lfpHighSamp{trialInd})
+                startInd                        = max(1,floor(timeS(1) * obj.params('lfpHighFs')));
+                endInd                          = min(length(obj.lfpData.lfpHighSamp{trialInd}{1}),ceil(timeS(2) * obj.params('lfpHighFs')));
+                for i = 1:length(obj.lfpData.lfpHighSamp{trialInd})
+                    obj.lfpData.lfpHighSamp{trialInd}{i} = obj.lfpData.lfpHighSamp{trialInd}{i}(startInd:endInd); 
+                end
+            end
+        end
     end
-    
+
     %% data loading %%
     methods
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -668,6 +766,10 @@ classdef ephys < handle
             % that all properties have same size
             % obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
             obj.preallocEmpty({'posData','spikeData','lfpData','bhaveData','maps'});
+
+            if strcmp(obj.type,'npix')
+                obj.lfpData = rmfield(obj.lfpData,{'lfpTet','lfpHighSamp'});
+            end
 
             % try and load histological reconstrction data
             obj.read_histology;
