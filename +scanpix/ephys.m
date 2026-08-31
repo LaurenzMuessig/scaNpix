@@ -564,7 +564,7 @@ classdef ephys < handle
 
             %
             if nargin < 3
-                uiInput = inputdlg({'start time', 'end time'},'Please indicate time interval for truncation');
+                uiInput = inputdlg({'start time', 'end time'},'Please indicate time interval for truncation',1,{'0',''});
                 if isempty(uiInput)
                     warning('scaNpix::ephys::truncateDACQData:Truncating aborted. Just ask yourself why you started it then...');
                     return;
