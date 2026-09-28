@@ -20,7 +20,7 @@ classdef ephys < handle
     %
     %       setDirFlag: true (default) or false
     %                   - if false will skip UI dialogue for data selection
-    %                   (e.g. when you use constructor programatically)
+    %                   (e.g. when you use constructor programmatically)
     %
     % LM 2020
     
@@ -57,7 +57,7 @@ classdef ephys < handle
     properties(Hidden)
         fileType              char    = '';
         type                  char {mustBeMember(type,{'npix','dacq','nexus','bhave','init'})} = 'init';
-        fields2spare          cell    = {'params','dataSetName','cell_ID','cell_Label'}; % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
+        fields2spare          cell    = {'params','dataSetName','cell_ID','cell_Label','histo_reconstruct'}; % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
         mapParams             struct  = scanpix.maps.defaultParamsRateMaps;
         loadFlag              logical = false;                                         % flag so we know something has been loaded into object
         isConcat              logical = false;
@@ -501,7 +501,7 @@ classdef ephys < handle
             %
             % Inputs:
             %    orderIndex - numeric index; will order data in object accordingly
-            %                 (if ommited will open UI dialogue to indicate index)
+            %                 (if omitted will open UI dialogue to indicate index)
             %
             %
             % Outputs:
@@ -544,7 +544,9 @@ classdef ephys < handle
             % this or when only certain periods of the trial, based e.g. on animal
             % behaviour should be extracted.
             %
-            %  Usage:   obj.truncateData( trialInd, timeS )
+            %  Usage:   obj.truncateData
+            %           obj.truncateData( trialInd )
+            %           obj.truncateData( trialInd, timeS )
             %
             %  Inputs:
             %           trialInd    - trial index

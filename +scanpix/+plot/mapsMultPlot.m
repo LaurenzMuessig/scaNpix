@@ -115,7 +115,7 @@ for n = 1:nFigs
                         imagesc(hAx,'CData',data{1,k,j}{i}); colormap(hAx,jet);
                         %                 axis(hAx,'square');
                         
-                        set(hAx,'xlim',[0 mapSz(1)],'ylim',[0 mapSz(1)]);
+                        set(hAx,'xlim',[0 mapSz(2)],'ylim',[0 mapSz(1)]);
                         axis(hAx,'off');
                     elseif  strcmpi(type{j},'speed')
                         scanpix.plot.plotSpeedMap(data{1,k,j}{i},hAx);
@@ -123,11 +123,6 @@ for n = 1:nFigs
                         %%% PROBABLY WOULD REQUIRE SUPPLYING ANON FNCT TO PLOT
                     end
                     
-                    % plot peak rate
-                    % if plotPeakRateFlag
-                    %     t = text(hAx);
-                    %     set(t,'Units','pixels','position',[8 -6],'String',sprintf('peakFR=%.1f',max(data{1,k,j}{i}(:),[],'omitnan') ),'FontSize',8 ); % harcoded text pos
-                    % end
                     % plot cell ID string
                     if j == 1 && k == 1
                         t = text(hAx);

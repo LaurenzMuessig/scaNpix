@@ -47,7 +47,8 @@ switch lower(options.colmap)
         ind    = round(linspace(1,length(temp),options.nsteps));
         cMap   = temp(ind,:);   
     case 'poulter'
-        cMap   = scanpix.maps.cm_Poulter;
+        cMap           = scanpix.maps.cm_Poulter;
+        options.nsteps = size(cMap,1); 
     otherwise
         try
             cMap = feval( str2func(options.colmap), options.nsteps );
