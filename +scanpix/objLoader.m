@@ -16,7 +16,8 @@ function obj = objLoader(objType,dataPath, addMeta, options )
 %    metadata   - optional; name by values cell array of metadata to be added to object
 %    name-value - comma separated list of name-value pairs   
 %                 objParams  - optional; containers.Map (see 'scanpix.helpers.defaultParamsContainer' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat')
-%                 mapParams  - optional; mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat') 
+%                 mapParams  - optional; mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format) or name of file w/o extension (needs to be located in 'Path/To/+scaNpix/files/YourFile.mat')
+%                 paramslfp  - optional; struct with params for loading npix LFP (see 'scanpix.helpers.defaultParamsLFP' for details on format)
 %
 % Outputs: obj - class object with data loaded
 %
@@ -34,6 +35,7 @@ arguments
   addMeta (:,2) {mustBeA(addMeta,'cell')} = {}
   options.paramsobj (1,:) {mustBeA(options.paramsobj,'containers.Map')} = scanpix.helpers.defaultParamsContainer(objType)
   options.paramsmap (1,:) {mustBeA(options.paramsmap,'struct')} = scanpix.maps.defaultParamsRateMaps
+  options.paramslfp (1,:) {mustBeA(options.paramslfp,'struct')} = scanpix.helpers.defaultParamsLFP
   options.loadpos (1,1) {mustBeNumericOrLogical} = true;
   options.loadspikes (1,1) {mustBeNumericOrLogical} = true;
   options.loadlfp (1,1) {mustBeNumericOrLogical} = false;
@@ -47,7 +49,8 @@ loadStr = {'pos','spikes','lfp'};
 obj           = scanpix.ephys(objType,'default',false); % assume default params
 obj.params    = options.paramsobj;
 obj.mapParams = options.paramsmap;
-% 
+obj.lfpParams = options.paramslfp;
+%
 % parse directories and trialnames
 [filepath,name,ext] = cellfun(@fileparts,dataPath,'uni',0);
 obj.dataPath        = cellfun(@(x) [x filesep],filepath,'uni',0);

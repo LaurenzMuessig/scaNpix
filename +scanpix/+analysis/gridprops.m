@@ -96,14 +96,15 @@ end
  
 % make central peak mask
 [colsIm, rowsIm] = meshgrid(1:size(autoCorr,2), 1:size(autoCorr,1));
-distMap          = sqrt((rowsIm-ceil(size(autoCorr,2)/2)).^2 + (colsIm-ceil(size(autoCorr,1)/2)).^2);
+distMap          = sqrt((rowsIm-ceil(size(autoCorr,1)/2)).^2 + (colsIm-ceil(size(autoCorr,2)/2)).^2);
+minACSide        = min(size(autoCorr)); % use shorter side so annuli stay inside AC if it isn't square
 peakMaskRadius   = mean(distFromCentre(2:end))/2;
 initAnnWidth     = max(distFromCentre(2:end));
 % in case central peak is large or no peak found we use some hard coded
 % values
-if isnan(peakMaskRadius) || peakMaskRadius > length(autoCorr)/4
-    peakMaskRadius = length(autoCorr)/4;
-    initAnnWidth   = length(autoCorr)/2;
+if isnan(peakMaskRadius) || peakMaskRadius > minACSide/4
+    peakMaskRadius = minACSide/4;
+    initAnnWidth   = minACSide/2;
 end
 centrPeakMask                             = distMap < peakMaskRadius;
 %
@@ -119,14 +120,17 @@ end
 % 
 % make all rotated sac's
 rotAngle = [60, 120, 30, 90, 150];
-autoCorr_rot = nan(length(autoCorr),length(autoCorr),length(rotAngle));
+autoCorr_rot = nan([size(autoCorr), length(rotAngle)]);
 for i=1:length(rotAngle)
-    autoCorr_rot(:,:,i) = imrotate(autoCorr,rotAngle(i), 'bilinear', 'crop');
+    tmpRot              = imrotate(autoCorr,rotAngle(i), 'bilinear', 'crop');
+    % imrotate pads with 0 - set bins rotated in from outside the AC to NaN so they get excluded
+    tmpRot(~imrotate(true(size(autoCorr)),rotAngle(i), 'nearest', 'crop')) = NaN;
+    autoCorr_rot(:,:,i) = tmpRot;
 end
 
 % loop over radii to find optimal size for gridness calc.
-firstStep = min(peakMaskRadius + initAnnWidth,ceil(length(autoCorr)/2));
-radii     = floor(firstStep):ceil(length(autoCorr)/2);
+firstStep = min(peakMaskRadius + initAnnWidth,ceil(minACSide/2));
+radii     = floor(firstStep):ceil(minACSide/2);
 %
 annCorr = nan(length(radii),length(rotAngle));
 for i = 1:length(radii)
@@ -194,8 +198,8 @@ function [xyCoordMaxBin, xyCoordMaxBinCentral, distFromCentre, peakStats, peakMa
 %
 xyCoordMaxBin        = round(reshape([peakStats.WeightedCentroid], 2,[])'); %Still x,y pair
 
-centralPoint         = ceil([size(autoCorr,2)/2,size(autoCorr,1)/2]); %m,n pair
-xyCoordMaxBinCentral = xyCoordMaxBin-repmat(fliplr(centralPoint), [size(xyCoordMaxBin,1), 1]);
+centralPoint         = ceil([size(autoCorr,2)/2,size(autoCorr,1)/2]); %x,y pair
+xyCoordMaxBinCentral = xyCoordMaxBin-repmat(centralPoint, [size(xyCoordMaxBin,1), 1]);
 distFromCentre       = sum(xyCoordMaxBinCentral.^2,2).^0.5;
 % exit gracefully
 if ~any(peakMask(:)); return; end
@@ -711,8 +715,9 @@ end
 
 %5) Finally keep only the central portion of the sac so that it matches
 %the original size
-sizeDif=round((size(regSac)-size(sac))/2);
-regSac=regSac(1+sizeDif(1):end-sizeDif(1), 1+sizeDif(2):end-sizeDif(2));
+% LM edit - crop around centre bin so output size always matches input exactly (also if AC isn't square)
+sizeDif=ceil(size(regSac)/2) - ceil(size(sac)/2);
+regSac=regSac(sizeDif(1)+(1:size(sac,1)), sizeDif(2)+(1:size(sac,2)));
 % LM edit
 % regSac(isnan(sac)) = NaN; % reassign original nan's 
 

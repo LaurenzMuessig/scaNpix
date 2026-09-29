@@ -55,7 +55,7 @@ else
 end
 
 % open figure
-fH      = figure('units', 'pixel', 'position', figSz, 'NumberTitle', 'off', 'Name', 'GimmeSomeInput');
+fH      = figure('units', 'pixel', 'position', figSz, 'NumberTitle', 'off', 'Name', 'GimmeSomeInput','ToolBar','none','MenuBar','none');
 figSz   = get(fH,'position');
 offSetX = 0.015 * figSz(3);
 offSetY = figSz(4) - 1.2*lineSz1(2);

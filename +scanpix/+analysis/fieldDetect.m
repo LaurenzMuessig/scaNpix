@@ -53,7 +53,7 @@ switch options.thrMode
         tmpMap(map < thr | isnan(map))         = -Inf;
     case 'none'
         tmpMap(isnan(map)) = -Inf;
-        thr                = max(map(:),[],'omitnan');
+        thr                = min(map(:),[],'omitnan');
 
 end
 % watershed

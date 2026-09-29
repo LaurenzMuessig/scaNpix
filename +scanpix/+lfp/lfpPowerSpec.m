@@ -71,11 +71,11 @@ tempPower = tempPower(1:length(freq), : ); % drop power for redundant frequencie
 % smooth power
 kernSz    = find(freq <= options.smWinSz, 1 ,'last');
 kernel    = fspecial( 'Gaussian', [kernSz 1], kernSz/3 ) ; % TW uses sigma = kernSz/3
-power     = nan(size(tempPower));
-% smooth
-for i = 1:size(tempPower,2)
-    power(:, i) = imfilter(tempPower(:, i), kernel, 'replicate'); % faster to run 'imfilter' in loop than on whole array ( actually even faster to just run conv(...) )
-end
+% smooth - same as imfilter(tempPower(:,i), kernel, 'replicate'), but imfilter gets extremely slow for long
+% recordings (kernel size in bins scales with nFFT; e.g. ~18min vs 0.16s with conv2 for a 15min trial @ 2.5kHz)
+kernCtr   = floor((kernSz+1)/2); % same kernel centre as imfilter
+padded    = [repmat(tempPower(1,:),kernCtr-1,1); tempPower; repmat(tempPower(end,:),kernSz-kernCtr,1)]; % replicate edges
+power     = conv2(padded, kernel, 'valid'); % smooths all EEGs (columns) at once
 
 %% find peak freq
 freqBandPower       = power( freq > freqBand(1) & freq < freqBand(2), : );
@@ -102,12 +102,15 @@ peakFreqInd = freq > peakFreq' - options.s2nBand & freq < peakFreq' + options.s2
 s2n         = mean( reshape( power(peakFreqInd'), [], size(power,2) ), 1, 'omitnan' ) ./ mean( reshape( power(~peakFreqInd'), [], size(power,2) ), 1, 'omitnan' ); % might make sense to exclude all f<1-2Hz for this?
 
 %% best EEG index
-[maxVal, bestEEGInd] = max(s2n);
+[~, bestEEGInd] = max(s2n);
 
 %% plot
 if options.plotSpec
     figure;
-    plot(freq, power(:,maxVal ~= s2n)', 'k-');
+    otherInd = setdiff(1:size(power,2), bestEEGInd);
+    if ~isempty(otherInd) % no other EEGs if only 1 EEG supplied
+        plot(freq, power(:,otherInd)', 'k-');
+    end
     hold on
     plot(freq,power(:,bestEEGInd)','r-','linewidth', 3);
     line([peakFreq(bestEEGInd)+0.1*options.maxFreq peakFreq(bestEEGInd)],[maxPower(bestEEGInd)*1.1 maxPower(bestEEGInd)],'color',[0.5 0.5 0.5]);

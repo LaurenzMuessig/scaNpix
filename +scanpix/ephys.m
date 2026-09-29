@@ -59,6 +59,7 @@ classdef ephys < handle
         type                  char {mustBeMember(type,{'npix','dacq','nexus','bhave','init'})} = 'init';
         fields2spare          cell    = {'params','dataSetName','cell_ID','cell_Label','histo_reconstruct'}; % spare this when deleting or rearranging data. make sure to add new properties that should be spared here!
         mapParams             struct  = scanpix.maps.defaultParamsRateMaps;
+        lfpParams             struct  = scanpix.helpers.defaultParamsLFP;              % npix only; which LFP channels to load etc.
         loadFlag              logical = false;                                         % flag so we know something has been loaded into object
         isConcat              logical = false;
     end
@@ -451,7 +452,8 @@ classdef ephys < handle
                         end
                         obj.loadFlag  = false;
                         obj.changeParams('default'); % reset defaults
-                        obj.mapParams = scanpix.maps.defaultParamsRateMaps(class(obj)); % reset defaults
+                        obj.mapParams = scanpix.maps.defaultParamsRateMaps; % reset defaults
+                        obj.lfpParams = scanpix.helpers.defaultParamsLFP;
                         warning('scaNpix::ephys::deleteData:Back to square one...');
                     end
                     
@@ -543,6 +545,8 @@ classdef ephys < handle
             % headstage unplugged and one wants to salvage the data recorded prior to
             % this or when only certain periods of the trial, based e.g. on animal
             % behaviour should be extracted.
+            % Truncated data is re-referenced, so that the trial starts at t=0 again
+            % (i.e. spike times, sample times and LFP are shifted by timeS(1)).
             %
             %  Usage:   obj.truncateData
             %           obj.truncateData( trialInd )
@@ -592,24 +596,29 @@ classdef ephys < handle
             obj.trialMetaData(trialInd).duration = diff(timeS);
 
             %% pos data
-            startInd                        = max(1,floor(timeS(1) * obj.trialMetaData(trialInd).posFs));
-            endInd                          = min(length(obj.posData.XY{trialInd}),ceil(timeS(2) * obj.trialMetaData(trialInd).posFs));
+            % pos sample k covers [(k-1)/posFs, k/posFs), so sample for timeS(1) is floor(timeS(1)*posFs)+1
+            posFs                           = obj.trialMetaData(trialInd).posFs;
+            startInd                        = max(1,floor(timeS(1) * posFs) + 1);
+            endInd                          = min(length(obj.posData.XY{trialInd}),ceil(timeS(2) * posFs));
+            % all data gets re-referenced to start of 1st kept pos sample, so that truncated trial starts at t=0
+            % (map functions assume pos sample 1 = t0, i.e. spkPosInd = ceil(spkTimes*posFs))
+            tShift                          = (startInd-1) / posFs;
             obj.posData.XY{trialInd}        = obj.posData.XY{trialInd}(startInd:endInd,:);
             obj.posData.XYraw{trialInd}     = obj.posData.XYraw{trialInd}(startInd:endInd,:);
             obj.posData.direction{trialInd} = obj.posData.direction{trialInd}(startInd:endInd);
             obj.posData.speed{trialInd}     = obj.posData.speed{trialInd}(startInd:endInd);
             %
             if ~isempty(obj.posData.sampleT{trialInd})
-                obj.posData.sampleT{trialInd}   = obj.posData.sampleT{trialInd}(startInd:endInd);
-                obj.spikeData.sampleT{trialInd} = obj.spikeData.sampleT{trialInd}(startInd:endInd);
+                obj.posData.sampleT{trialInd}   = obj.posData.sampleT{trialInd}(startInd:endInd) - tShift;
+                obj.spikeData.sampleT{trialInd} = obj.spikeData.sampleT{trialInd}(startInd:endInd) - tShift;
             end
 
             %% spike data
             for i = 1:length(obj.spikeData.spk_Times{trialInd})
 
                 if ~isempty(obj.spikeData.spk_Times{trialInd}{i})
-                    validSpks                            = obj.spikeData.spk_Times{trialInd}{i} >= timeS(1) & obj.spikeData.spk_Times{trialInd}{i} <= timeS(2);
-                    obj.spikeData.spk_Times{trialInd}{i} = obj.spikeData.spk_Times{trialInd}{i}(validSpks);
+                    validSpks                            = obj.spikeData.spk_Times{trialInd}{i} > timeS(1) & obj.spikeData.spk_Times{trialInd}{i} <= timeS(2); % '>' so that no spike maps to pos sample 0
+                    obj.spikeData.spk_Times{trialInd}{i} = obj.spikeData.spk_Times{trialInd}{i}(validSpks) - tShift;
                 end
                 %
                 if ~isempty(obj.spikeData.spk_waveforms{trialInd}) && obj.params('loadAllWFs')
@@ -620,19 +629,30 @@ classdef ephys < handle
             end
 
             %% LFP
-            if ~isempty(obj.lfpData.lfp{trialInd})
-                startInd                        = max(1,floor(timeS(1) * obj.params('lfpFs')));
-                endInd                          = min(length(obj.lfpData.lfp{trialInd}{1}),ceil(timeS(2) * obj.params('lfpFs')));
-                for i = 1:length(obj.lfpData.lfp{trialInd})
-                    obj.lfpData.lfp{trialInd}{i} = obj.lfpData.lfp{trialInd}{i}(startInd:endInd); 
+            if strcmp(obj.type,'npix')
+                % npix: [nChannels x nSamples] matrix; LFP sample 1 = t0
+                if ~isempty(obj.lfpData.lfp{trialInd})
+                    lfpFs                           = obj.trialMetaData(trialInd).lfpFs;
+                    startInd                        = max(1,round(tShift * lfpFs) + 1);
+                    endInd                          = min(size(obj.lfpData.lfp{trialInd},2),ceil(timeS(2) * lfpFs));
+                    obj.lfpData.lfp{trialInd}       = obj.lfpData.lfp{trialInd}(:,startInd:endInd);
                 end
-            end
-            %
-            if ~isempty(obj.lfpData.lfpHighSamp{trialInd})
-                startInd                        = max(1,floor(timeS(1) * obj.params('lfpHighFs')));
-                endInd                          = min(length(obj.lfpData.lfpHighSamp{trialInd}{1}),ceil(timeS(2) * obj.params('lfpHighFs')));
-                for i = 1:length(obj.lfpData.lfpHighSamp{trialInd})
-                    obj.lfpData.lfpHighSamp{trialInd}{i} = obj.lfpData.lfpHighSamp{trialInd}{i}(startInd:endInd); 
+            else
+                % DACQ: LFP sample 1 = t0
+                if ~isempty(obj.lfpData.lfp{trialInd})
+                    startInd                         = max(1,round(tShift * obj.params('lfpFs')) + 1);
+                    endInd                           = min(length(obj.lfpData.lfp{trialInd}{1}),ceil(timeS(2) * obj.params('lfpFs')));
+                    for i = 1:length(obj.lfpData.lfp{trialInd})
+                        obj.lfpData.lfp{trialInd}{i} = obj.lfpData.lfp{trialInd}{i}(startInd:endInd);
+                    end
+                end
+                %
+                if ~isempty(obj.lfpData.lfpHighSamp{trialInd})
+                    startInd                        = max(1,round(tShift * obj.params('lfpHighFs')) + 1);
+                    endInd                          = min(length(obj.lfpData.lfpHighSamp{trialInd}{1}),ceil(timeS(2) * obj.params('lfpHighFs')));
+                    for i = 1:length(obj.lfpData.lfpHighSamp{trialInd})
+                        obj.lfpData.lfpHighSamp{trialInd}{i} = obj.lfpData.lfpHighSamp{trialInd}{i}(startInd:endInd);
+                    end
                 end
             end
         end
@@ -770,7 +790,7 @@ classdef ephys < handle
             obj.preallocEmpty({'posData','spikeData','lfpData','bhaveData','maps'});
 
             if strcmp(obj.type,'npix')
-                obj.lfpData = rmfield(obj.lfpData,{'lfpTet','lfpHighSamp'});
+                obj.lfpData = rmfield(obj.lfpData,intersect(fieldnames(obj.lfpData),{'lfpTet','lfpHighSamp'})); % DACQ only fields; might already be removed from previous load
             end
 
             % try and load histological reconstrction data
@@ -927,10 +947,12 @@ classdef ephys < handle
         
         %%
         function loadLFPData(obj, trialIterator)
-            % loadSpikes - load spike data
+            % loadLFPData - load LFP data
             % Method for ephys class objects (hidden)
+            % For npix data, channel selection etc. is set in obj.lfpParams
+            % (see scanpix.helpers.defaultParamsLFP)
             %
-            % Syntax:  obj.loadSpikes(trialIterator)
+            % Syntax:  obj.loadLFPData(trialIterator)
             %
             % Inputs:
             %    trialIterator - numeric index for trial to be loaded
@@ -942,7 +964,7 @@ classdef ephys < handle
                 case 'dacq'
                     scanpix.dacqUtils.loadLFPs(obj,trialIterator);
                 case 'npix'
-                    %%%%
+                    scanpix.npixUtils.loadLFPNPix(obj,trialIterator);
                 case 'nexus'
                 case 'bhave'
                     % nothing to do here %
@@ -1104,8 +1126,11 @@ classdef ephys < handle
             end
             
             % UI selection
-            [select, loadCheck]  = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400],'CancelString','Keep All');
+            [select, loadCheck]  = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400]);
             if ~loadCheck
+                obj.trialNames   = [];
+                obj.dataPath     = [];
+                obj.dataPathSort = [];
                 return;
             else
                 trialNameStrOut  = trialNameStrIn(select);
