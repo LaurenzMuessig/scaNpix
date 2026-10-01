@@ -141,7 +141,8 @@ end
 pos(envSzInd,:) = NaN;
 
 % fix positions (inline subfunction)
-pos = fixPositions(pos, mean(diff(sampleT)), ppm(1), obj, trialIterator );
+% use median frame interval - camera time stamps can be corrupt and a mean would be dominated by corrupt jumps (and by setup freezes)
+pos = fixPositions(pos, median(diff(sampleT)), ppm(1), obj, trialIterator );
 
 % smooth
 kernel = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( obj.params('posSmooth') * obj.params('posFs') ); % as per Ephys standard - 400ms boxcar filter
@@ -187,7 +188,7 @@ fprintf('  DONE!\n');
 end
 
 
-function pos = fixPositions(pos,sampleT,ppm,obj,trialIterator)
+function pos = fixPositions(pos,frameInt,ppm,obj,trialIterator)
 
 obj.trialMetaData(trialIterator).log.PosLoadingStats(1,1) = sum(~isnan(squeeze(pos(:,1,:))),1) / size(pos,1);
 
@@ -198,40 +199,35 @@ while ~isempty(remPosInd) %any(speedInd)
     remPosInd = find(conv(trackedPosInd,ones(5,1),'same') <= 2 & trackedPosInd);
     pos(remPosInd,:) = NaN;
 end
-% now look for tracking errors by speed - we'll ignore all the NaNs here as these prevent to identify some dodgy samples (again we might lose a few legit samples here when the light wasn't tracked for too
-% long continuously)
-validPos                = pos(~isnan(pos(:,1)),:);
-pathDists               = sqrt( diff(validPos(:,1),[],1).^2 + diff(validPos(:,2),[],1).^2 ) ./ ppm(1); % % distances in m
-tempSpeed               = pathDists ./ sampleT; %diff(sampleT(~isnan(ledPos(:,1,i)))); % m/s
-tempSpeed(end+1)        = tempSpeed(end);
-speedInd                = tempSpeed >  obj.params('posMaxSpeed');
-validPos(speedInd,:)    = NaN;
-pos(~isnan(pos(:,1)),:) = validPos;
+% now look for tracking errors by speed - compare each sample to the last good one, using the actual time elapsed in between (so jumps across gaps of
+% missing samples aren't mistaken for one-frame jumps)
+ok_pos = find(~isnan(pos(:,1)));
+if ~isempty(ok_pos)
+    prev_pos = ok_pos(1);
+    for j = 2:length(ok_pos)
+        currSpeed = (sqrt( (pos(ok_pos(j),1)-pos(prev_pos,1))^2 + (pos(ok_pos(j),2)-pos(prev_pos,2))^2 ) / ppm(1)) / ((ok_pos(j)-prev_pos) * frameInt); % m/s
+        if currSpeed > obj.params('posMaxSpeed')
+            pos(ok_pos(j),:) = NaN;
+        else
+            prev_pos         = ok_pos(j);
+        end
+    end
+end
 
 
 % interpolate between good samples  
 % find all missing positions/led
 missing_pos   = find(isnan(pos(:,1)));
-if ~isempty(missing_pos) && length(missing_pos) > 1
-    % find those missing chunks where light was lost for too long (i.e. rat moved too far in between)
-    
-%     idx           = find(diff(missing_pos)>1);
-    idx = diff(missing_pos);
-    if sum(idx) - max(idx) == length(idx) - 1
-        missPosChunks = [missing_pos(find(idx==1,1,'first')) missing_pos(find(idx==1,1,'last'))]; % only 1 valid chunk
-    else
-        idx = find(idx(1:end-1)>1);
-        missPosChunks = [[max([1,missing_pos(1)-1]); missing_pos(idx(1:end-1)+1)-1],missing_pos(idx)+1]; % make sure first index~=0
+if ~isempty(missing_pos)
+    % find those missing chunks where light was lost for too long (we can't know where the rat went in between) and leave them as NaN
+    chunkStart    = missing_pos([true; diff(missing_pos) > 1]);
+    chunkEnd      = missing_pos([diff(missing_pos) > 1; true]);
+    indTooLong    = (chunkEnd - chunkStart + 1) * frameInt > obj.params('maxPosInterpolate'); % gap duration in s
+    tooLongInd    = false(size(pos,1),1);
+    for i = find(indTooLong)'
+        tooLongInd(chunkStart(i):chunkEnd(i)) = true;
     end
-%     missPosChunks = [[max([1,missing_pos(1)-1]); missing_pos(idx(1:end-1)+1)-1],missing_pos(idx)+1]; % make sure first index~=0
-    if ~isempty(missPosChunks)
-        indTooLong    = sqrt(diff([pos(missPosChunks(:,1),1),pos(missPosChunks(:,2),1)],[],2).^2+diff([pos(missPosChunks(:,1),2),pos(missPosChunks(:,2),2)],[],2).^2) ./ ppm .* 100 > obj.params('maxPosInterpolate');
-        missPosChunks = missPosChunks(indTooLong,:); % only keep these
-        % remove all bad chunks
-        for i = 1:size(missPosChunks,1)
-            missing_pos = missing_pos(~ismember(missing_pos,missPosChunks(i,1)+1:missPosChunks(i,2)-1));
-        end
-    end
+    missing_pos   = missing_pos(~tooLongInd(missing_pos));
     % interpolate as per usual
     ok_pos      = find(~isnan(pos(:,1)));
     for i = 1:2
@@ -241,6 +237,9 @@ if ~isempty(missing_pos) && length(missing_pos) > 1
     end
     %
     obj.trialMetaData(trialIterator).log.PosLoadingStats(2,1) = (length(missing_pos)+length(ok_pos)) / size(pos,1);
+    if obj.trialMetaData(trialIterator).log.PosLoadingStats(2,1) < 1
+        warning('scaNpix::bhaveUtils::loadPosBhave:Some position data were not interpolated (gaps > maxPosInterpolate = %.1fs) - valid fraction: %.4f', obj.params('maxPosInterpolate'), obj.trialMetaData(trialIterator).log.PosLoadingStats(2,1));
+    end
 end
 
 

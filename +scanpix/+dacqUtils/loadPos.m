@@ -168,9 +168,10 @@ xy   = nan(n_pos, 2);
 if n_leds == 1
     xy(pos, :) = led_pos(pos, 1, :);
     xy         = imfilter(xy, kernel, 'replicate');
-    % y from tracker increases downwards. dir is positive anticlockwise from X axis, 0<= dir <360
-    %CB verified calc of dir in next line is correct & concords with tint
-    dir(pos2)  = mod((180/pi)*(atan2( -xy(pos2+1, 2)+xy(pos2, 2), xy(pos2+1, 1)-xy(pos2, 1) )), 360);
+    % y from tracker increases downwards. dir is positive CLOCKWISE (as displayed) from X axis, 0<= dir <360, i.e. 90deg = down/south in camera
+    % frame. This is the same convention as for npix/bhave data and matches how rate maps and dir maps are plotted (note: NOT the Tint convention,
+    % which is anticlockwise; dir here = mod(360 - dir_tint, 360))
+    dir(pos2)  = mod((180/pi)*(atan2( xy(pos2+1, 2)-xy(pos2, 2), xy(pos2+1, 1)-xy(pos2, 1) )), 360);
     dir(n_pos) = dir(n_pos-1)';
     obj.posData(1).direction{trialIterator} = dir(:);
     % dir_disp   = dir'; %Return dir_disp for completness even though == dir
@@ -185,7 +186,9 @@ elseif n_leds == 2
     smLightFront(pos, :) = imfilter(led_pos(pos, 1, :), kernel, 'replicate');
     smLightBack(pos, :)  = imfilter(led_pos(pos, 2, :), kernel, 'replicate');
     
-    dir        = mod((180/pi)*( atan2(-smLightFront(pos,2)+smLightBack(pos,2), +smLightFront(pos,1)-smLightBack(pos,1)) ) - obj.trialMetaData(trialIterator).lightBearing(1), 360);
+    % dir is positive CLOCKWISE (as displayed) with 90deg = down/south in camera frame - same convention as npix/bhave data and as plotted in rate and
+    % dir maps (NOT the Tint convention: dir here = mod(360 - dir_tint, 360)). As lightBearing is defined anti-clockwise, it gets added rather than subtracted
+    dir        = mod((180/pi)*( atan2(smLightFront(pos,2)-smLightBack(pos,2), smLightFront(pos,1)-smLightBack(pos,1)) ) + obj.trialMetaData(trialIterator).lightBearing(1), 360);
     obj.posData(1).direction{trialIterator} = dir(:);
     % Get position from smoothed individual lights %%  % TW, 12/09/08
     wghtLightFront = 1 - obj.params('posHead'); 

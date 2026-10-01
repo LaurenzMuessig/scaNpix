@@ -68,6 +68,15 @@ end
 obj.trialNames = trialNames;
 
 % load
+if strcmp(objType,'dacq') && any(strcmp(addMeta(:,1),'cutTag1'))
+    obj.params('cutTag1') = addMeta{strcmp(addMeta(:,1),'cutTag1'),2}{1};
+    addMeta(strcmp(addMeta(:,1),'cutTag1'),:) = [];
+end
+if strcmp(objType,'dacq') && any(strcmp(addMeta(:,1),'cutTag2'))
+    obj.params('cutTag2') = addMeta{strcmp(addMeta(:,1),'cutTag2'),2}{1};
+    addMeta(strcmp(addMeta(:,1),'cutTag2'),:) = [];
+end
+%
 loadStr = loadStr( [options.loadpos options.loadspikes options.loadlfp] );
 
 obj.load(loadStr);

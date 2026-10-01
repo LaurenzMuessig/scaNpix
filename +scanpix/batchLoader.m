@@ -56,7 +56,7 @@ for i = 1:length(expInfo.animal)
 
     try
         % load current object
-        objData{c} = scanpix.objLoader(objType, expInfo.fullPath{i}, [addMetaData{:,1} cellfun(@(x) x{i},addMetaData(:,2), 'uni',0)], prms{:} );
+        objData{c} = scanpix.objLoader(objType, expInfo.fullPath{i}, [addMetaData(:,1) cellfun(@(x) x{i},addMetaData(:,2), 'uni',0)], prms{:} );
     catch 
         warning('scaNpix::batchLoader: Couldn''t load dataset from rat %s starting with trial %s',expInfo.animal{i}, expInfo.fullPath{i}{1});
     end

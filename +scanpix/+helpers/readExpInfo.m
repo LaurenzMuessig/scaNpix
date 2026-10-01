@@ -89,7 +89,7 @@ end
 addFieldNames = cribSheet.Properties.VariableNames( ~ismember(lower(cribSheet.Properties.VariableNames), lower(standardFieldNames)) );
 
 anNum = sscanf([cribSheet.animal{:}],'%*c%d');  % a numerical animal identifier is also helpful - need to remove the 'r' or 'm'. 
-
+%
 switch method
     
     case 'single'

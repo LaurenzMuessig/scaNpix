@@ -91,9 +91,9 @@ xy   = ones(n_pos, 2)*NaN;
 if n_leds == 1
     xy(pos, :) = posdata.led_pos(pos, 1, :);
     xy         = imfilter(xy, b, 'replicate');
-    % y from tracker increases downwards. dir is positive anticlockwise from X axis, 0<= dir <360
-    %CB verified calc of dir in next line is correct & concords with tint
-    dir(pos2)  = mod((180/pi)*(atan2( -xy(pos2+1, 2)+xy(pos2, 2), xy(pos2+1, 1)-xy(pos2, 1) )), 360);
+    % y from tracker increases downwards. dir is positive CLOCKWISE (as displayed) from X axis, 0<= dir <360, i.e. 90deg = down/south in camera
+    % frame - same convention as scanpix.dacqUtils.loadPos and npix/bhave data (NOT the Tint convention: dir here = mod(360 - dir_tint, 360))
+    dir(pos2)  = mod((180/pi)*(atan2( xy(pos2+1, 2)-xy(pos2, 2), xy(pos2+1, 1)-xy(pos2, 1) )), 360);
     dir(n_pos) = dir(n_pos-1)';
     % dir_disp   = dir'; %Return dir_disp for completness even though == dir
 elseif n_leds == 2
@@ -107,8 +107,9 @@ elseif n_leds == 2
     smLightFront(pos, :) = imfilter(posdata.led_pos(pos, 1, :), b, 'replicate');
     smLightBack(pos, :)  = imfilter(posdata.led_pos(pos, 2, :), b, 'replicate');
     
-    correction = setfile_header.lightBearing(1); %To correct for light pos relative to rat subtract angle of large light
-    dir        = mod((180/pi)*( atan2(-smLightFront(pos,2)+smLightBack(pos,2), +smLightFront(pos,1)-smLightBack(pos,1)) ) - correction, 360);
+    correction = setfile_header.lightBearing(1); %To correct for light pos relative to rat add angle of large light (lightBearing is anti-clockwise, dir clockwise)
+    % dir is positive CLOCKWISE (as displayed), 90deg = down/south in camera frame - same convention as scanpix.dacqUtils.loadPos (NOT Tint convention)
+    dir        = mod((180/pi)*( atan2(smLightFront(pos,2)-smLightBack(pos,2), smLightFront(pos,1)-smLightBack(pos,1)) ) + correction, 360);
     dir        = dir(:);
     % Get position from smoothed individual lights %%  % TW, 12/09/08
     wghtLightFront = 1-headPos;

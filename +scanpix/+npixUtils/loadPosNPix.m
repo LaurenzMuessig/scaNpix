@@ -149,7 +149,8 @@ for i = 1:2
 end
 
 % fix positions (inline subfunction)
-led = fixPositions(led, mean(diff(sampleT)), ppm(1), obj, trialIterator );
+% use median frame interval - camera time stamps can be corrupt (see fixFrameCounts) and a mean would be dominated by the corrupt jumps
+led = fixPositions(led, median(diff(sampleT)), ppm(1), obj, trialIterator );
 
 % smooth
 kernel = ones( ceil(obj.params('posSmooth') * obj.params('posFs')), 1)./ ceil( obj.params('posSmooth') * obj.params('posFs') ); % as per Ephys standard - 400ms boxcar filter
@@ -237,7 +238,7 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%% INLINE FUNCTIONS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function ledPos = fixPositions(ledPos,sampleT,ppm,obj,trialIterator)
+function ledPos = fixPositions(ledPos,frameInt,ppm,obj,trialIterator)
 %%
 % remove probable tracking errors (i.e. too fast) as per usual
 for i = 1:2 
@@ -245,7 +246,7 @@ for i = 1:2
     prev_pos = ok_pos(1);
     for j = 2:length(ok_pos)
         % Get speed of shift from prev_pos
-        currSpeed = (sqrt((ledPos(ok_pos(j),1,i)-ledPos(prev_pos,1,i))^2+(ledPos(ok_pos(j),2,i)-ledPos(prev_pos,2,i))^2) / ppm)/ ((ok_pos(j)-prev_pos) * sampleT) ;
+        currSpeed = (sqrt((ledPos(ok_pos(j),1,i)-ledPos(prev_pos,1,i))^2+(ledPos(ok_pos(j),2,i)-ledPos(prev_pos,2,i))^2) / ppm)/ ((ok_pos(j)-prev_pos) * frameInt) ;
         if currSpeed > obj.params('posMaxSpeed')
             ledPos(ok_pos(j),:,i) = NaN;
         else
@@ -255,7 +256,7 @@ for i = 1:2
 end
 
 %%
-% now find addtional dodgy samples - we use the distance between the 2 lights and we assume that the sample from the LED that was tracked better overall is the non-dodgy sample - note that this will 
+% now find additional dodgy samples - we use the distance between the 2 lights and we assume that the sample from the LED that was tracked better overall is the non-dodgy sample - note that this will 
 % inevitably remove some legit samples if the tracking was perfect. Using the 99th prctl of the distance distribution seems to do a good job in all environments/trial types 
 LEDdistInd  = sqrt( (ledPos(:,1,1) - ledPos(:,1,2)).^2 + (ledPos(:,2,1) - ledPos(:,2,2)).^2 );% ./ ppm .* 100; % 
 [~, maxInd] = max([sum(isnan(ledPos(:,1,1))),sum(isnan(ledPos(:,1,2)))]);
@@ -269,17 +270,16 @@ obj.trialMetaData(trialIterator).log.PosLoadingStats(1,:) = sum(~isnan(squeeze(l
 for i = 1:2
     % find all missing positions/led
     missing_pos   = find(isnan(ledPos(:,1,i)));
-    % find those missing chunks where light was lost for too long (i.e. rat moved too far in between)
-    chunkInd      = diff(find([true,diff(missing_pos')>1,true]));
-    C             = mat2cell(missing_pos',1,chunkInd);
-    % C(cellfun(@(x) length(x)==1,C)) = []; % remove single missing samples
-    missPosChunks = cell2mat(cellfun(@(x) [x(1) x(end)],C','UniformOutput',false));
-    indTooLong    = sqrt(diff([ledPos(missPosChunks(:,1),1,i),ledPos(missPosChunks(:,2),1,i)],[],2).^2+diff([ledPos(missPosChunks(:,1),2,i),ledPos(missPosChunks(:,2),2,i)],[],2).^2) ./ ppm .* 100 > obj.params('maxPosInterpolate');
-    missPosChunks = missPosChunks(indTooLong,:); % only keep these
-    % remove all bad chunks
-    for j = 1:size(missPosChunks,1)
-        missing_pos(ismember(missing_pos,missPosChunks(j,1)+1:missPosChunks(j,2)-1)) = [];
+    if isempty(missing_pos); continue; end
+    % find those missing chunks where light was lost for too long (we can't know where the rat went in between) and leave them as NaN
+    chunkStart    = missing_pos([true; diff(missing_pos) > 1]);
+    chunkEnd      = missing_pos([diff(missing_pos) > 1; true]);
+    indTooLong    = (chunkEnd - chunkStart + 1) * frameInt > obj.params('maxPosInterpolate'); % gap duration in s
+    tooLongInd    = false(size(ledPos,1),1);
+    for j = find(indTooLong)'
+        tooLongInd(chunkStart(j):chunkEnd(j)) = true;
     end
+    missing_pos   = missing_pos(~tooLongInd(missing_pos));
     % interpolate as per usual
     ok_pos                                                   = find(~isnan(ledPos(:,1,i)));
     for j = 1:2
@@ -291,8 +291,8 @@ end
 %
 obj.trialMetaData(trialIterator).log.PosLoadingStats(2,:)    = sum(~isnan(squeeze(ledPos(:,1,:))),1) / size(ledPos,1);
 
-if ~all(obj.trialMetaData(trialIterator).log.PosLoadingStats(2,:))
-    warning('scaNpix::npixUtils::loadPosNPix:Some position data were not interpolated');
+if any(obj.trialMetaData(trialIterator).log.PosLoadingStats(2,:) < 1)
+    warning('scaNpix::npixUtils::loadPosNPix:Some position data were not interpolated (gaps > maxPosInterpolate = %.1fs) - valid fraction per LED: %.4f / %.4f', obj.params('maxPosInterpolate'), obj.trialMetaData(trialIterator).log.PosLoadingStats(2,1), obj.trialMetaData(trialIterator).log.PosLoadingStats(2,2));
 end
 
 end
@@ -332,14 +332,32 @@ end
 % with those
 if ~isempty(obj.trialMetaData(trialIterator).missedSyncPulses)
     % first figure out if we have some extra frames in the pos stream
-    [addPosFrames,posFrameInd] = deal(nan(1,size(obj.trialMetaData(trialIterator).missedSyncPulses,1)));
-    totalNAddPosFrames = 0;
+    missedSyncs                = obj.trialMetaData(trialIterator).missedSyncPulses; % [index of last good sync, n missing pulses, time of last good sync]
+    posFs                      = obj.trialMetaData(trialIterator).posFs;
+    [addPosFrames,posFrameInd] = deal(nan(1,size(missedSyncs,1)));
+    totalNAddPosFrames         = 0;
+    dSampleT                   = diff(sampleT);
+    dFrameCount                = diff(double(frameCount));
 
-    for i = 1:size(obj.trialMetaData(trialIterator).missedSyncPulses,1)
-        % find the relevant pos frame where the syncs are missing - 'min' should be fine here as next sampleT will correspond to time when syncs came back, so there should be a temporal gap
-        posFrameInd(i)     = find(abs(sampleT - obj.trialMetaData(trialIterator).missedSyncPulses(i,3)) < 1/obj.trialMetaData(trialIterator).posFs,1,'last');
-        %
-        addPosFrames(i)    = frameCount(posFrameInd(i)) - obj.trialMetaData(trialIterator).missedSyncPulses(i,1) - totalNAddPosFrames;
+    for i = 1:size(missedSyncs,1)
+        % The camera is triggered by the sync pulses, so if they stopped the camera pauses as well, but without the frame count advancing (unlike dropped
+        % frames). Sometimes the camera still catches a pulse or two that is missing in the npix stream, so we find the last frame before the camera
+        % paused. We search a generous window around the gap, so we don't depend on exact alignment of camera and npix clocks (which drift apart).
+        gapDur   = (missedSyncs(i,2) + 1) / posFs;
+        candInd  = find( sampleT(1:end-1) > missedSyncs(i,3) - 1 & sampleT(1:end-1) < missedSyncs(i,3) + gapDur + 1 & dSampleT > 1.5/posFs & dFrameCount == 1 );
+        if ~isempty(candInd)
+            [~, maxInd]     = max(dSampleT(candInd));
+            posFrameInd(i)  = candInd(maxInd); % last frame before camera paused
+            addPosFrames(i) = double(frameCount(posFrameInd(i))) - missedSyncs(i,1) - totalNAddPosFrames; % frameCount is uint, which would clip negative values
+        else
+            % camera kept running, i.e. only the npix stream missed pulses - all frames are present in pos stream
+            [~, posFrameInd(i)] = min(abs(sampleT - missedSyncs(i,3)));
+            addPosFrames(i)     = missedSyncs(i,2);
+        end
+        if addPosFrames(i) < 0 || addPosFrames(i) > missedSyncs(i,2)
+            warning('scaNpix::npixUtils::loadPosNPix:Couldn''t match pos frames to missing sync pulses (chunk %i: %i extra pos frames for %i missing syncs). Alignment of pos and spike data after %.1fs might be off - check this!', i, addPosFrames(i), missedSyncs(i,2), missedSyncs(i,3));
+            addPosFrames(i) = min(max(addPosFrames(i), 0), missedSyncs(i,2));
+        end
         totalNAddPosFrames = totalNAddPosFrames + addPosFrames(i);
     end
     % then update framecount accordingly
