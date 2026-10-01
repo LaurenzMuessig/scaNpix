@@ -1,129 +1,188 @@
-function objMap = makeOVMap(spikeTimes,xy,sampleT,objPos,ppm,varargin)
+function [objMap, occMap, spkMaps] = makeOVMap(obj, trialInd, options)
+% makeOVMap - Make object vector maps, i.e. firing rate as a function of
+% direction and distance from an object (Hoydal et al. 2019, Nature)
+% package: scanpix.maps
+%
+% Direction is allocentric, from object to animal, with 0 = positive x
+% direction in camera coordinates. Distance is measured from the object
+% centre. Object coordinates (trialMetaData.objectPos) are expected in raw
+% camera pixels and are scaled/offset here to match the processed position
+% data. Map params are taken from obj.mapParams.objVect.
+%
+% Syntax:
+%       objMap = scanpix.maps.makeOVMap(obj, trialInd)
+%       [objMap, occMap, spkMaps] = scanpix.maps.makeOVMap(obj, trialInd, Name-Value comma separated list)
+%
+% Inputs:
+%    obj          - ephys class object
+%    trialInd     - numeric index of trial
+%    options      - name-value: 'addPosFilter' (logical nPosx1, positions to exclude)
+%                               'cellInd' (logical/numeric index of cells to make maps for)
+%
+% Outputs:
+%   objMap       - nCell x 1 cell array of smoothed object vector maps (rows: direction, cols: distance)
+%   occMap       - occupancy map (s)
+%   spkMaps      - nCell x 1 cell array of raw spike count maps
+%
+% see also: scanpix.maps.addMaps; scanpix.maps.makeRateMaps; scanpix.maps.rotatePosition
+%
+% LM 2020
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%
+arguments
+    obj {mustBeA(obj,'scanpix.ephys')}
+    trialInd (1,1) {mustBeNumeric}
+    options.addPosFilter {mustBeNumericOrLogical} = false(size(obj.posData.XY{trialInd},1),1);
+    options.cellInd {mustBeNumericOrLogical} = true(length(obj.cell_ID(:,1)),1);
+end
 
 %% params
-
-%% params
-prms.binSz_dist = 5; % in cm;  2cm in Høydal et al (2019)
-prms.minDist    = 0.1;   % in cm;
-prms.maxDist    = [];   % in cm;
-prms.binSz_dir  = 10;  % in degrees;  5deg in Høydal et al (2019)
-prms.posFs      = 50;  % sample rate
-% smoothing
-prms.smKernelSz_OV = 5;
-prms.smSigma_OV    = 2;
-prms.showWaitBar   = false;
-
-% prms.debugOn    = 0;
-
-%% TO DO:
-
-%% parse input
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% - This is the template code for name-value list OR struct passing of parameters -- %
-if ~isempty(varargin)                                                                %
-    if ischar(varargin{1})                                                           %
-        for ii=1:2:length(varargin);   prms.(varargin{ii}) = varargin{ii+1};   end   %
-    elseif isstruct(varargin{1})                                                     %
-        s = varargin{1};   f = fieldnames(s);                                        %
-        for ii=1:length(f);   prms.(f{ii}) = s.(f{ii});   end                        %
-    end                                                                              %
-end                                                                                  %
-% ---------------------------------------------------------------------------------- %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if ~iscell(spikeTimes)
-    spikeTimes = {spikeTimes};
+% use defaults for any field missing in obj (e.g. params loaded from older files)
+prms = scanpix.maps.defaultParamsRateMaps;
+prms = prms.objVect;
+if isfield(obj.mapParams,'objVect')
+    f = fieldnames(obj.mapParams.objVect);
+    for i = 1:length(f);   prms.(f{i}) = obj.mapParams.objVect.(f{i});   end
 end
+prms.posFs = obj.trialMetaData(trialInd).posFs;
 
-if length(prms.smKernelSz_OV) == 1
-    prms.smKernelSz_OV = [prms.smKernelSz_OV prms.smKernelSz_OV];
-end
-
-% this is a temp hack to deal with multiple obj trials - for now use first
-% in list as hard-coded
-if length(objPos) > 2
-    warning('Coordinates for several objects supplied. Will use first in list as reference. Multi object detection is not yet supported!');  
-    objPos = objPos(1:2);
-end
-
-%% PREPROCESS
-% objPos               = objPos - min(xy);
-% xy                   = ceil( bsxfun(@minus,xy, min(xy)) + eps ); % make min pos data = [1,1]
-binSzDir             = prms.binSz_dir * pi/180;
-% binSzDist            = ceil(prms.binSz_dist * (ppm/100)); % in camera pixel
-
-%% MAKE OCCUPANCY MAP
-% distances to object
-dist                 = sqrt( (xy(:,1) - objPos(1)).^2 + (xy(:,2) - objPos(2)).^2 ) ./ (ppm/100); % all distances to obj in cm
-notValidInd          = dist < prms.minDist;  
-xy(notValidInd,:)    = NaN;
-dist                 = ceil( dist ./ prms.binSz_dist ); % binned
-minDistBInned        = ceil( prms.minDist ./ prms.binSz_dist );
-if isempty(prms.maxDist)
-    maxDistBinned    = nanmax(dist(:));
+% only relevant for npix data - check for interpolated Fs
+if strcmp(obj.type,'npix') && isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
+    sampleT = [];
 else
-    maxDistBinned    = ceil( prms.maxDist ./ prms.binSz_dist );
+    sampleT = obj.spikeData.sampleT{trialInd};
 end
-% angles to object      
-theta                = mod(atan2(xy(:,2)-objPos(2),xy(:,1)-objPos(1)), 2*pi); % all angles to obj in degrees %% IS THIS RIGHT??
 
-% theta(theta < 0)     = theta(theta < 0) + 2*pi; % 0:360
-theta                = ceil( theta ./ binSzDir ); % binned
-% occupancy map 
-occMap               = accumarray([theta(~isnan(xy(:,1))) dist(~isnan(xy(:,1))) ],1,[ceil(2*pi/binSzDir) nanmax(dist(:))]) ./ prms.posFs; 
-occMap               = occMap(:,minDistBInned:maxDistBinned);
-% loop over cells to make rate maps
+% data from object
+xy                         = obj.posData.XY{trialInd};
+xy(options.addPosFilter,:) = NaN;
+ppm                        = obj.trialMetaData(trialInd).ppm;
+spikeTimes                 = obj.spikeData.spk_Times{trialInd}(options.cellInd);
+
+%% object position
+if ~isfield(obj.trialMetaData(trialInd),'objectPos') || numel(obj.trialMetaData(trialInd).objectPos) < 2
+    error('scaNpix::maps::makeOVMap:No object position (trialMetaData.objectPos) for trial %i.',trialInd);
+end
+% stored as X1Y1,X2Y2,... in raw camera pixels
+objPos = obj.trialMetaData(trialInd).objectPos;
+nObj   = floor(numel(objPos)/2);
+objPos = [reshape(objPos(1:2:2*nObj),[],1), reshape(objPos(2:2:2*nObj),[],1)];
+% this is a temp hack to deal with multiple obj trials - for now use first in list as hard-coded
+if nObj > 1
+    warning('scaNpix::maps::makeOVMap:Coordinates for several objects supplied. Will use first in list as reference. Multi object detection is not yet supported!');
+end
+objPos = objPos(1,:);
+
+% add scaling factor in case data is scaled to common ppm
+if obj.trialMetaData(trialInd).PosIsScaled
+    scaleFact = obj.trialMetaData(trialInd).ppm / obj.trialMetaData(trialInd).ppm_org;
+else
+    scaleFact = 1;
+end
+objPos = objPos .* scaleFact;
+% in case pos is fitted to visited environment need to adjust coordinates further
+if obj.trialMetaData(trialInd).PosIsFitToEnv{1}
+    objPos = objPos - reshape(obj.trialMetaData(trialInd).PosIsFitToEnv{2},1,[]);
+end
+
+%% speed filter
+if prms.speedFilterFlagOVMaps
+    speedFilter       = obj.posData.speed{trialInd} <= prms.speedFilterLimitLow | obj.posData.speed{trialInd} > prms.speedFilterLimitHigh;
+    xy(speedFilter,:) = NaN;
+end
+
+if all(isnan(xy(:,1)))
+    warning('scaNpix::maps::makeOVMap:No valid position samples left for trial %i (check speed filter). No maps generated.',trialInd);
+    [objMap, spkMaps] = deal(cell(length(spikeTimes),1));
+    occMap            = [];
+    return
+end
+
+%% BIN DISTANCE & DIRECTION
+nDirBins = round(360 / prms.binSz_dir);
+if abs(nDirBins * prms.binSz_dir - 360) > 1e-9
+    error('scaNpix::maps::makeOVMap:binSz_dir (%g deg) needs to divide 360.',prms.binSz_dir);
+end
+% distances (cm) and angles (rad, object -> animal, 0 = +x) to object
+dist  = sqrt( (xy(:,1) - objPos(1)).^2 + (xy(:,2) - objPos(2)).^2 ) ./ (ppm/100);
+theta = mod(atan2(xy(:,2)-objPos(2), xy(:,1)-objPos(1)), 2*pi);
+% distance bins start at minDist; maxDist sets a fixed map size (use this when comparing maps across trials)
+if isempty(prms.maxDist)
+    nDistBins = floor( (max(dist,[],'omitnan') - prms.minDist) / prms.binSz_dist ) + 1;
+else
+    nDistBins = ceil( (prms.maxDist - prms.minDist) / prms.binSz_dist );
+end
+% bin index = floor(x/binSz)+1, so x=0 falls in bin 1
+distBin  = floor( (dist - prms.minDist) ./ prms.binSz_dist ) + 1;
+thetaBin = min( floor( theta ./ (prms.binSz_dir*pi/180) ) + 1, nDirBins); % min() guards against rounding at 2*pi
+valid    = ~isnan(distBin) & ~isnan(thetaBin) & distBin >= 1 & distBin <= nDistBins;
+distBin(~valid)  = NaN;
+thetaBin(~valid) = NaN;
+mapSz    = [nDirBins nDistBins];
+
+%% OCCUPANCY MAP
+occMap   = accumarray([thetaBin(valid) distBin(valid)], 1, mapSz) ./ prms.posFs;
+unVisPos = occMap == 0;
+
+%% SMOOTHING KERNEL
+% Gaussian, SD in bins (scalar or [dir dist]); kernel size defaults to 2*ceil(2*SD)+1 (as imgaussfilt)
+smSigma = prms.smSigma_OV .* [1 1];
+if isempty(prms.smKernelSz_OV)
+    kSz = 2*ceil(2*smSigma) + 1;
+else
+    kSz = prms.smKernelSz_OV .* [1 1];
+    kSz = kSz + (mod(kSz,2) == 0); % needs to be odd
+end
+halfK  = (kSz - 1) / 2;
+gDir   = exp( -(-halfK(1):halfK(1)).^2 ./ (2*smSigma(1)^2) )';
+gDist  = exp( -(-halfK(2):halfK(2)).^2 ./ (2*smSigma(2)^2) );
+kernel = gDir * gDist;
+kernel = kernel ./ sum(kernel(:));
+% spike and occupancy maps are smoothed separately and then divided (rather than smoothing the rate map as in
+% Hoydal et al.), as polar bins close to the object are tiny and their raw rates are very noisy. Zero padding along
+% the distance axis is the same for both maps, so cancels in the ratio
+occMap_sm = smoothCircLin(occMap, kernel, halfK);
+
+%% SPIKE TIMES -> POS SAMPLES
+nPos = size(xy,1);
+if ~isempty(sampleT)
+    sampleT = sampleT(:);
+    % nearest pos sample for each spike - spikes outside the pos sample range return NaN and are discarded
+    posInd = @(t) interp1(sampleT, (1:length(sampleT))', t(:), 'nearest');
+else
+    % pos sample k covers [(k-1)/posFs, k/posFs)
+    posInd = @(t) floor(t(:) .* prms.posFs) + 1;
+end
+
+%% RATE MAPS
 [ spkMaps, objMap ]  = deal(cell(length(spikeTimes),1));
 
 if prms.showWaitBar; hWait = waitbar(0); end
 
 for i = 1:length(spikeTimes)
-    if isempty(spikeTimes{i})
-        [objMap{i}, spkMaps{i}] = deal(zeros(size(occMap)));
-        continue
-    end
-    if isempty(sampleT)
-        spkPosBinInd = ceil(spikeTimes{i} .* prms.posFs ); 
-    else
-%         [~, spkPosBinInd] = arrayfun(@(x) min(abs(sampleT - x)), spikeTimes{i}, 'UniformOutput', 0);
-%         spkPosBinInd = cell2mat(spkPosBinInd);
-        [~, spkPosBinInd] = min(abs(bsxfun(@minus, sampleT, spikeTimes{i}.')), [], 1);
-    end
-    spkBinnedDist    = dist(spkPosBinInd); 
-    spkBinnedTheta   = theta(spkPosBinInd); 
-    nanInd           = isnan(spkBinnedTheta) | isnan(spkBinnedDist);
-    spkMaps{i}       = accumarray([spkBinnedTheta(~nanInd) spkBinnedDist(~nanInd)],1,[ceil(2*pi/binSzDir) nanmax(dist(:))]);
-    spkMaps{i}       = spkMaps{i}(:,minDistBInned:maxDistBinned);
-    objMapRaw        = spkMaps{i} ./ occMap;
-    objMapRaw(occMap==0) = 0;
-    % smooth map
-    % as map is circular-linear we need to padd both dims differently
-    objMapRawPadded  = padarray(objMapRaw,prms.smKernelSz_OV(1),'circular');
-    objMapRawPadded  = padarray(objMapRawPadded,[0 prms.smKernelSz_OV(2)],0);  
-    temp             = imgaussfilt(objMapRawPadded,prms.smSigma_OV,'filtersize', prms.smKernelSz_OV);  % smooth map
-    objMap{i}        = temp(prms.smKernelSz_OV(1)+1:end-prms.smKernelSz_OV(1),prms.smKernelSz_OV(2)+1:end-prms.smKernelSz_OV(2)); % remove padding
-    objMap{i}(occMap==0) = nan;
+    spkPosBinInd = posInd(spikeTimes{i});
+    spkPosBinInd = spkPosBinInd(spkPosBinInd >= 1 & spkPosBinInd <= nPos);
+    spkTheta     = thetaBin(spkPosBinInd);
+    spkDist      = distBin(spkPosBinInd);
+    ok           = ~isnan(spkTheta);
+    spkMaps{i}   = accumarray([spkTheta(ok) spkDist(ok)], 1, mapSz);
+    % smoothed spikes / smoothed occupancy (circular in direction)
+    objMap{i}            = smoothCircLin(spkMaps{i}, kernel, halfK) ./ occMap_sm;
+    objMap{i}(unVisPos)  = NaN;
 
     if prms.showWaitBar; waitbar(i/length(spikeTimes),hWait,sprintf('Making those Object Vector Maps... %i/%i done.',i,length(spikeTimes))); end
-    
-%     if prms.debugOn
-%         figure; 
-%         subplot(1,2,1);
-%         rMap = makeRateMaps(spikeTimes, xy, sampleT, ppm);
-%         [rMapBinned, cMapBinned] = binAnyRMap(rMap{1},'jet',11,[1 1 1]);
-%         imagesc(rMapBinned); colormap(gca,cMapBinned); axis square; axis off
-%         hold on
-%         objPosBins = objPos ./ 10;
-%         scatter(objPosBins(2),objPosBins(1),108,'rx','linewidth',4);
-%         hold off
-%         subplot(1,2,2);
-%         imagesc(objMap{i},[0 nanmax(objMap{i}(:))]); axis square
-%         set(gca,'xtick',5:5:size(objMap{i},2),'XTickLabel',(5:5:size(objMap{i},2)).*prms.binSz_dist,'ytick',0.5:5:60.5,'YTickLabel',0:30:360);
-%     end
 end
 
 if prms.showWaitBar; close(hWait); end
 
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function mapSm = smoothCircLin(map, kernel, halfK)
+% smooth a direction x distance map: circular padding along direction (rows), zero padding along distance (cols)
+mapPadded = [map(end-halfK(1)+1:end,:); map; map(1:halfK(1),:)];
+mapPadded = [zeros(size(mapPadded,1),halfK(2)), mapPadded, zeros(size(mapPadded,1),halfK(2))];
+mapSm     = conv2(mapPadded, kernel, 'valid');
+end

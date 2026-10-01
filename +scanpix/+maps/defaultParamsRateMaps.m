@@ -59,9 +59,14 @@ prms.lin.remTrackEnds            = 0;  % Remove this many bins from each end of 
 prms.lin.showWaitBar             = showWaitBar;
 
 %% object vector maps
+prms.objVect.speedFilterFlagOVMaps = 1;  % y/n
+prms.objVect.speedFilterLimitLow   = speedFilterLimits(1);
+prms.objVect.speedFilterLimitHigh  = speedFilterLimits(2);
+prms.objVect.minDist             = 0;     % in cm; distance bins start here
+prms.objVect.maxDist             = [];    % in cm; empty = max distance in data
 prms.objVect.binSz_dist          = 2.5;   % in cm;  2cm in Høydal et al (2019)
 prms.objVect.binSz_dir           = 5;     % in degrees;  5deg in Høydal et al (2019)
-prms.objVect.smKernelSz_OV       = 5;
+prms.objVect.smKernelSz_OV       = [];    % in bins; empty = 2*ceil(2*smSigma_OV)+1 (as imgaussfilt)
 prms.objVect.smSigma_OV          = 2;
 prms.objVect.showWaitBar         = showWaitBar;
 

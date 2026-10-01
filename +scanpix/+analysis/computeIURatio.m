@@ -5,12 +5,12 @@ function IUratio = computeIURatio(spatialACs,ellipseFits)
 %
 %
 % Syntax:
-%       IUratio = scanpix.analysis.computeIURatio(spatialACs)
 %       IUratio = scanpix.analysis.computeIURatio(spatialACs,ellipseFits)
 %
 % Inputs:
 %    spatialACs  - cell array of spatial autocorrelations of grid cells
-%    ellipseFits - array of ellipse fits (one for each cell); nCell by 3 array [orientation, length major axis, length minor axis] (optional)  
+%    ellipseFits - array of ellipse fits (one for each cell); nCell by 3 array [orientation, major semi-axis, minor semi-axis],
+%                  i.e. [Props.ellOrient Props.ellAbScale] from scanpix.analysis.gridprops(...,'getellgridness',true)
 %
 % Outputs: 
 %
@@ -25,10 +25,8 @@ arguments
 
 end
 %% some pre-checking
-if nargin == 1 
-    %%%% NNEDS FIXING
-    % [~,~,propsEllipse] = cellfun(@(x) scanpix.analysis.gridprops(x,'getellgridness',true),spatialACs,'uni',0);
-    % ellipseFits        = cell2mat(cellfun(@(x) [x.ellOrient x.ellAbScale],propsEllipse,'uni',0));
+if size(ellipseFits,1) ~= numel(spatialACs)
+    error('scaNpix::analysis::computeIURatio: ellipseFits must have one row per spatial AC (%d rows for %d ACs).',size(ellipseFits,1),numel(spatialACs));
 end
 
 %% compute ratio
@@ -51,8 +49,8 @@ for i = 1:length(spatialACs)
         
         if any(isnan(ellipseFits(j,2:3))); continue; end
         
-        radiusX      = ellipseFits(j,2);
-        radiusY      = ellipseFits(j,3);
+        radiusX      = ellipseFits(j,3);
+        radiusY      = ellipseFits(j,2);
         ellipsePixB  = (sin(ellipseFits(j,1)).*(cols - center) + cos(ellipseFits(j,1)).*(rows - center)).^2 ./ radiusX^2 + (cos(ellipseFits(j,1)).*(cols - center) - sin(ellipseFits(j,1)).*(rows - center)) .^2 ./ radiusY^2 <= 1;
         %
         IUratio(i,j) = sum(ellipsePixA(:) & ellipsePixB(:),'omitnan') / sum(ellipsePixA(:) | ellipsePixB(:),'omitnan'); % Intersection / Union

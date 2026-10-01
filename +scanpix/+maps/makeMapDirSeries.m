@@ -21,8 +21,9 @@ else
 end
 
 %%
-
-% orgSt = obj.spikeData.spk_Times{trialInd};     
+% we don't want to have a waitbar for this
+orgVal                         = obj.mapParams.rate.showWaitBar;
+obj.mapParams.rate.showWaitBar = false;
 
 mapSeries = cell(1,length(dirShift));
 % prevInd = false(length(dirRad),1);
@@ -41,6 +42,8 @@ for i = 1:length(dirShift)
     end
     % obj.spikeData.spk_Times{trialInd} = orgSt;
 end
+obj.mapParams.rate.showWaitBar = orgVal;
+
 
 end
 

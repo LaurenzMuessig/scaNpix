@@ -1324,19 +1324,12 @@ classdef ephys < handle
                         obj.maps(1).sACs{i} = cellfun(@(x) scanpix.analysis.spatialCrosscorr(x,x,options{:}),tmp,'uni',0);
                     end
                     
-                case 'objvect'
+                case {'objvect','objVect'}
                     for i = trialInd
                         if isfield(obj.trialMetaData(i),'objectPos') && ~isempty(obj.trialMetaData(i).objectPos)
-                            if isKey(obj.params,'InterpPos2PosFs') && obj.params('InterpPos2PosFs')
-                                sampleTimes = [];
-                                prms.posFs  = obj.trialMetaData(i).log.InterpPosFs;
-                            else
-                                sampleTimes = obj.spikeData.sampleT{i};
-                                prms.posFs  = obj.params('posFs');
-                            end
-                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj.spikeData.spk_Times{i}, obj.posData.XY{i}, sampleTimes, obj.trialMetaData(i).objectPos, obj.trialMetaData(i).ppm,  prms  );
+                            obj.maps(1).OV{i} = scanpix.maps.makeOVMap( obj, i );
                         else
-                            warning('scaNpix::ephys::addMaps:If you to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
+                            warning('scaNpix::ephys::addMaps:If you want to generate object vector maps, you need to have a field ''objectPos'' in your trialMetaData for any trial you want to generate these beauties for. Do that now and you won''t be disappointed');
                         end
                     end
                     
