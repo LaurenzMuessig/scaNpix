@@ -86,7 +86,7 @@ recordingChannel = recordingChannel(recordingChannel~=0);   %  .. and their reco
 % Get signal source channel, gain, filters %
 if isempty(recordingChannel)
     [setFile.lfp_channel,setFile.lfp_recordingChannel,setFile.lfp_slot,setFile.lfp_scalemax,setFile.lfp_filter,setFile.lfp_filtresp,setFile.lfp_filtkind,setFile.lfp_filtfreq1,...
-        setFile.filtfreq2,setFile.lfp_filtripple] = deal([]); % In case of null EEG
+        setFile.lfp_filtfreq2,setFile.lfp_filtripple] = deal([]); % In case of null EEG
 else
     for i=1:length(recordingChannel)
         mode = str2double(scanpix.dacqUtils.getValue(sFileTxt, ['mode_ch_' num2str(recordingChannel(i)-1)]));
