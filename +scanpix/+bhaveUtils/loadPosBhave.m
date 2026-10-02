@@ -162,9 +162,13 @@ obj.posData(1).sampleT{trialIterator}      = sampleT; % this is redundant as we 
 obj.trialMetaData(trialIterator).ppm       = ppm(1);
 obj.trialMetaData(trialIterator).ppm_org   = ppm(2);
 
-% scale position
-boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
-scanpix.maps.scalePosition(obj, trialIterator,'envSzPix', boxExt,'circleFlag',circleFlag); % need to enable this for circular env as well!
+% scale position to physical size of environment (only if requested with 'scalePos2Env'; params from older versions lack the key -> off)
+if isKey(obj.params,'scalePos2Env') && obj.params('scalePos2Env') && ~isempty(obj.trialMetaData(trialIterator).envSize)
+    boxExt = obj.trialMetaData(trialIterator).envSize / 100 * obj.trialMetaData(trialIterator).ppm;
+    scanpix.maps.scalePosition(obj, trialIterator,'envSzPix', boxExt,'circleFlag',circleFlag);
+else
+    obj.trialMetaData(trialIterator).PosIsFitToEnv = {false,[]};
+end
 
 % running speed
 pathDists                                  = sqrt( diff(xy(:,1)).^2 + diff(xy(:,2)).^2 ) ./ ppm(1) .* 100; % distances in cm

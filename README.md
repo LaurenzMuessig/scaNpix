@@ -420,7 +420,8 @@ The default values come from `scanpix.helpers.defaultParamsContainer(type)` and 
 * _myRateMapParams_: `'FileNameOfYourRateMapParams.mat'` (_default=''_)
 
 ### Full list Neuropixels data
-* _scalePos2CamWin_: see DACQ (_default=false_). With false, positions are fitted to the environment using `envSize` from the metadata xml.
+* _scalePos2CamWin_: see DACQ (_default=false_).
+* _scalePos2Env_: true/false. If true (and _scalePos2CamWin_ is false), positions are fitted to the physical size of the environment using `envSize` from the metadata xml (`scanpix.maps.scalePosition`), so rate maps have a fixed size per environment. If false (default), positions are only scaled to _ScalePos2PPM_ and rate maps span the visited area.
 * _ScalePos2PPM_: scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion when you recorded in different environments with different sizes and/or pix/m settings for the tracking.
 * _posMaxSpeed_: speeds > posMaxSpeed are treated as tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
 * _posSmooth_: smooth position data over this many seconds (_default=0.4_)
@@ -435,7 +436,7 @@ The default values come from `scanpix.helpers.defaultParamsContainer(type)` and 
 * _myRateMapParams_: `'FileNameOfYourRateMapParams.mat'` (_default=''_)
 
 ### Full list behavioural data
-* _ScalePos2PPM_, _posMaxSpeed_, _posSmooth_, _maxPosInterpolate_, _posHead_, _posFs_, _defaultDir_, _myRateMapParams_: same as for Neuropixels data
+* _scalePos2Env_, _ScalePos2PPM_, _posMaxSpeed_, _posSmooth_, _maxPosInterpolate_, _posHead_, _posFs_, _defaultDir_, _myRateMapParams_: same as for Neuropixels data (_scalePos2Env_ default=false)
 
 > **Note on older saved objects/param files:** `maxPosInterpolate` used to be a distance in cm (default 15–30). It is now a **duration in s**. If you load an old parameter file, check this value, because e.g. 30 is now read as 30 s.
 
