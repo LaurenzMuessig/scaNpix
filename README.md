@@ -22,7 +22,6 @@
 
 ### Optional
 * **Python with `scipy` + `matplotlib`**: only needed to export figures as real vector PDFs through the matplotlib route (`scanpix.helpers.saveFigAsPDF(..., 'contentType', 'python')`, see [Saving figures](#saving-figures-as-pdf)).
-* [UMAP for Matlab](https://uk.mathworks.com/matlabcentral/fileexchange/71902-uniform-manifold-approximation-and-projection-umap): only needed for the (experimental) UMAP option in `scanpix.analysis.sortModules`.
 
 ---
 
