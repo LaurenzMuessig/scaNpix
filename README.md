@@ -425,8 +425,15 @@ The default values come from `scanpix.helpers.defaultParamsContainer(type)` and 
 * _ScalePos2PPM_: scale position data to this pix/m (_default=400_). This is particularly useful for keeping rate map sizes in proportion when you recorded in different environments with different sizes and/or pix/m settings for the tracking.
 * _posMaxSpeed_: speeds > posMaxSpeed are treated as tracking errors and ignored (set to _NaN_); in m/s (_default=4_)
 * _posSmooth_: smooth position data over this many seconds (_default=0.4_)
-* _maxPosInterpolate_: maximum duration of a gap of missing positions that is interpolated over; longer gaps are left as _NaN_; in s (_default=2.5_)
+* _maxPosInterpolate_: maximum duration of a gap in position (i.e. both LEDs lost) that is interpolated over; longer gaps are left as _NaN_; head direction is _NaN_ in interpolated gaps; in s (_default=2_)
 * _InterpPos2PosFs_: true/false; interpolate position data to the exact sampling rate (which is slightly different from exactly 50Hz). This substantially speeds up making rate maps (_default=true_).
+
+How tracking errors are handled when loading Neuropixels position data (fixed behaviour, not parameters):
+* LED pair check: where both LEDs are tracked, a separation > 2x the median LED separation is treated as a tracking error and the LED that jumped (relative to its own surrounding positions) is removed; n removed samples per LED in `trialMetaData.log.nLEDSepRemoved`.
+* Gaps of a single LED of up to 1 s are interpolated (position and head direction). Head direction across 0.5-1 s gaps is off by ~5 deg (median), but ~4% of these samples are > 30 deg off - if you need very accurate head direction sampling, change this to 0.5 s in `scanpix.npixUtils.loadPosNPix` (fixPositions).
+* Single LED fallback: where only one LED is tracked for longer, the position is taken from that LED instead of being set to _NaN_. The offset between that LED and the head position (see _posHead_) is only known at the edges of each gap, so it is carried in from the edges and fades out (time constant 0.5 s) - positions stay continuous at the gap edges and further inside the gap the error is about that offset (e.g. half the LED separation, ~2.5 cm). Head direction stays _NaN_ there.
+* Where both LEDs are lost, the position is interpolated across gaps of up to _maxPosInterpolate_; head direction stays _NaN_.
+* Logs: `trialMetaData.log.posSingleLEDInd` (position from one LED), `log.posInterpInd` (interpolated position), `log.posValidFrac` (final fraction of valid positions), `log.dirValidFrac` (fraction of valid head direction).
 * _posHead_: position of the head relative to the headstage LEDs (_default=0.5_)
 * _posFs_: nominal position sampling rate in Hz (_default=50_)
 * _loadFromPhy_: logical flag that sets which sorting results to use. If _true_ (default), the code tries Phy; otherwise it uses the raw Kilosort results.

@@ -202,9 +202,25 @@ wghtLightFront = (1-obj.params('posHead'));
 wghtLightBack  = obj.params('posHead');
 xy             = smLight(:,:,1) .* wghtLightFront + smLight(:,:,2) .* wghtLightBack;  %
 
+% single LED fallback - where only one LED was tracked (other one lost for > 1s, see fixPositions), use that LED rather
+% than discarding the position (head direction stays NaN there, as it needs both LEDs)
+[xy, singleLEDInd] = singleLEDFallback(xy, smLight, obj.trialMetaData(trialIterator).posFs);
+% where both LEDs were lost, interpolate the position across gaps of up to 'maxPosInterpolate' (s); longer gaps stay NaN
+[xy, posInterpInd] = interpShortGaps(xy, round(obj.params('maxPosInterpolate') * obj.trialMetaData(trialIterator).posFs));
+
+obj.trialMetaData(trialIterator).log.posSingleLEDInd  = singleLEDInd;            % samples where position is from one LED only
+obj.trialMetaData(trialIterator).log.posSingleLEDFrac = mean(singleLEDInd);
+obj.trialMetaData(trialIterator).log.posInterpInd     = posInterpInd;            % samples where position is interpolated (both LEDs lost)
+obj.trialMetaData(trialIterator).log.posInterpFrac    = mean(posInterpInd);
+obj.trialMetaData(trialIterator).log.posValidFrac     = mean(~isnan(xy(:,1)));   % final fraction of valid positions
+if any(singleLEDInd) || any(posInterpInd) || any(isnan(xy(:,1)))
+    fprintf('\nNote: positions from a single LED: %.1f%%, interpolated (both LEDs lost): %.1f%%, NaN (both LEDs lost > %.1fs): %.1f%%.\n', 100*mean(singleLEDInd), 100*mean(posInterpInd), obj.params('maxPosInterpolate'), 100*mean(isnan(xy(:,1))));
+end
+
 % get direction data
 correction     = obj.trialMetaData(trialIterator).LEDorientation(1); %To correct for light pos relative to rat subtract angle of large light
-dirData        = mod((180/pi) .* atan2(smLight(:,2,1)-smLight(:,2,2), smLight(:,1,1)-smLight(:,1,2)) - correction, 360); %
+dirData        = mod((180/pi) .* atan2(smLight(:,2,1)-smLight(:,2,2), smLight(:,1,1)-smLight(:,1,2)) - correction, 360); % NaN unless both LEDs tracked (or LED gap <= 1s)
+obj.trialMetaData(trialIterator).log.dirValidFrac = mean(~isnan(dirData));
 
 % pos data output
 obj.posData(1).XYraw{trialIterator}       = led;
@@ -238,6 +254,49 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%% INLINE FUNCTIONS  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+function [xy, singleLEDInd] = singleLEDFallback(xy, smLight, posFs)
+% fill positions where only one LED is valid. The combined position differs from a single LED by an offset (fraction of
+% the LED separation vector, e.g. half of it for posHead = 0.5) that rotates with the head, so is unknown inside the gap.
+% We take the offset measured at the edges of each gap (last/first sample with both LEDs) and let it fade out with time
+% from the edge (exp. decay, tau = 0.5s). This keeps the position continuous at the gap edges (no speed artefacts) without
+% guessing the head direction for long: further inside the gap the single LED is used as is, i.e. the error is ~ the
+% offset itself. (Linearly interpolating the edge offsets across the gap was tested too - better on average for short
+% gaps, but larger errors (up to ~2x offset) whenever the head turned during the gap.)
+
+tau          = 0.5; % s
+nSamp        = size(xy,1);
+ledOK        = squeeze(~isnan(smLight(:,1,:))); % nSamp x 2
+bothOK       = all(ledOK,2);
+singleLEDInd = false(nSamp,1);
+
+for k = 1:2 % k = LED that is still tracked
+    onlyK = ledOK(:,k) & ~ledOK(:,3-k);
+    if ~any(onlyK); continue; end
+    offset   = xy - smLight(:,:,k); % valid where both LEDs are tracked
+    d        = diff([false; onlyK; false]);
+    runStart = find(d == 1);
+    runEnd   = find(d == -1) - 1;
+    for r = 1:length(runStart)
+        ind = (runStart(r):runEnd(r))';
+        pre = runStart(r) - 1;
+        pst = runEnd(r) + 1;
+        hasPre = pre >= 1 && bothOK(pre);
+        hasPst = pst <= nSamp && bothOK(pst);
+        % weight of edge offsets, decaying with time from the respective edge
+        wPre   = hasPre .* exp( -((ind - pre) ./ posFs) ./ tau );
+        wPst   = hasPst .* exp( -((pst - ind) ./ posFs) ./ tau );
+        wSum   = max(1, wPre + wPst); % normalise in short gaps, where both edges contribute fully
+        offsetInGap = zeros(length(ind), 2);
+        if hasPre; offsetInGap = offsetInGap + (wPre ./ wSum) .* offset(pre,:); end
+        if hasPst; offsetInGap = offsetInGap + (wPst ./ wSum) .* offset(pst,:); end
+        xy(ind,:) = smLight(ind,:,k) + offsetInGap;
+    end
+    singleLEDInd = singleLEDInd | onlyK;
+end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 function ledPos = fixPositions(ledPos,frameInt,ppm,obj,trialIterator)
 %%
 % remove probable tracking errors (i.e. too fast) as per usual
@@ -256,45 +315,70 @@ for i = 1:2
 end
 
 %%
-% now find additional dodgy samples - we use the distance between the 2 lights and we assume that the sample from the LED that was tracked better overall is the non-dodgy sample - note that this will 
-% inevitably remove some legit samples if the tracking was perfect. Using the 99th prctl of the distance distribution seems to do a good job in all environments/trial types 
-LEDdistInd  = sqrt( (ledPos(:,1,1) - ledPos(:,1,2)).^2 + (ledPos(:,2,1) - ledPos(:,2,2)).^2 );% ./ ppm .* 100; % 
-[~, maxInd] = max([sum(isnan(ledPos(:,1,1))),sum(isnan(ledPos(:,1,2)))]);
-ledPos(isoutlier(LEDdistInd,'percentile',[0 99]) | isnan(LEDdistInd),:,maxInd) = NaN;
-% ledPos(LEDdistInd > mean(LEDdistInd,'omitnan') + std(LEDdistInd,[],'omitnan') | isnan(LEDdistInd),:,maxInd) = NaN;
-%
-obj.trialMetaData(trialIterator).log.PosLoadingStats(1,:) = sum(~isnan(squeeze(ledPos(:,1,:))),1) / size(ledPos,1);
+% LED pair consistency - where both LEDs are tracked, their separation can't be much larger than the distance between the
+% LEDs on the headstage, so a separation > 2x the median separation means one LED was mistracked (e.g. a reflection). We
+% remove the LED that jumped, i.e. the one further away from its own (median) position in the surrounding frames. Samples
+% where only one LED is tracked are left alone
+nSamp   = size(ledPos,1);
+bothOK  = all(~isnan(squeeze(ledPos(:,1,:))),2);
+LEDsep  = sqrt( sum( (ledPos(:,:,1) - ledPos(:,:,2)).^2, 2) );
+badSep  = bothOK & LEDsep > 2 * median(LEDsep(bothOK));
+[rem1, rem2] = deal(false(nSamp,1));
+if any(badSep)
+    dev = nan(nSamp,2);
+    for i = 1:2
+        dev(:,i)  = sqrt( sum( (ledPos(:,:,i) - movmedian(ledPos(:,:,i), 11, 1, 'omitnan')).^2, 2) ); % deviation from own +/-5 frame median
+        % an LED with few valid neighbours (e.g. appearing right after a gap) can't be judged by its own median and is the
+        % suspect one (isolated detections are more likely errors)
+        nNeighb   = movsum(double(~isnan(ledPos(:,1,i))), 11) - double(~isnan(ledPos(:,1,i)));
+        dev(nNeighb < 4, i) = Inf;
+    end
+    [~, worseLED] = max([sum(isnan(ledPos(:,1,1))), sum(isnan(ledPos(:,1,2)))]); % tie breaker: LED that is tracked worse overall
+    rem1 = badSep & (dev(:,1) > dev(:,2) | (dev(:,1) == dev(:,2) & worseLED == 1));
+    rem2 = badSep & ~rem1;
+    ledPos(rem1,:,1) = NaN;
+    ledPos(rem2,:,2) = NaN;
+end
+obj.trialMetaData(trialIterator).log.nLEDSepRemoved            = [sum(rem1), sum(rem2)]; % n samples removed per LED by separation check
+obj.trialMetaData(trialIterator).log.PosLoadingStats(1,:)      = sum(~isnan(squeeze(ledPos(:,1,:))),1) / nSamp;
 
 %%
-% interpolate between good samples  
+% interpolate each LED across short gaps only - over short gaps both LEDs (and therefore position and head direction) are
+% reliable. Longer gaps are left NaN here and dealt with on the level of the combined position (single LED fallback / position
+% interpolation up to 'maxPosInterpolate'), where head direction stays NaN.
+% NOTE: max gap is 1s. Tested against ground truth (real LED loss patterns imposed on a well tracked session): HD interpolated
+% across 0.5-1s gaps is off by ~5deg (median), but ~4% of these samples are > 30deg off (95th prctile ~25deg); for gaps <= 0.5s
+% the 95th prctile is <= 6deg. If you need very accurate HD sampling (e.g. HD cell tuning width) you might want to change this
+% to 0.5s (costs HD coverage in sessions with poor tracking of one LED, e.g. ~6% of samples in r1010 novel_morph)
+maxLEDGap = 1; % in s
 for i = 1:2
-    % find all missing positions/led
-    missing_pos   = find(isnan(ledPos(:,1,i)));
-    if isempty(missing_pos); continue; end
-    % find those missing chunks where light was lost for too long (we can't know where the rat went in between) and leave them as NaN
-    chunkStart    = missing_pos([true; diff(missing_pos) > 1]);
-    chunkEnd      = missing_pos([diff(missing_pos) > 1; true]);
-    indTooLong    = (chunkEnd - chunkStart + 1) * frameInt > obj.params('maxPosInterpolate'); % gap duration in s
-    tooLongInd    = false(size(ledPos,1),1);
-    for j = find(indTooLong)'
-        tooLongInd(chunkStart(j):chunkEnd(j)) = true;
-    end
-    missing_pos   = missing_pos(~tooLongInd(missing_pos));
-    % interpolate as per usual
-    ok_pos                                                   = find(~isnan(ledPos(:,1,i)));
-    for j = 1:2
-        ledPos(missing_pos, j, i)                            = interp1(ok_pos, ledPos(ok_pos, j, i), missing_pos, 'linear');
-        ledPos(missing_pos(missing_pos > max(ok_pos)), j, i) = ledPos( max(ok_pos), j, i);
-        ledPos(missing_pos(missing_pos < min(ok_pos)), j, i) = ledPos( min(ok_pos), j, i);
-    end
+    ledPos(:,:,i) = interpShortGaps(ledPos(:,:,i), round(maxLEDGap / frameInt));
 end
 %
-obj.trialMetaData(trialIterator).log.PosLoadingStats(2,:)    = sum(~isnan(squeeze(ledPos(:,1,:))),1) / size(ledPos,1);
+obj.trialMetaData(trialIterator).log.PosLoadingStats(2,:)    = sum(~isnan(squeeze(ledPos(:,1,:))),1) / nSamp;
 
-if any(obj.trialMetaData(trialIterator).log.PosLoadingStats(2,:) < 1)
-    warning('scaNpix::npixUtils::loadPosNPix:Some position data were not interpolated (gaps > maxPosInterpolate = %.1fs) - valid fraction per LED: %.4f / %.4f', obj.params('maxPosInterpolate'), obj.trialMetaData(trialIterator).log.PosLoadingStats(2,1), obj.trialMetaData(trialIterator).log.PosLoadingStats(2,2));
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [xy, interpInd] = interpShortGaps(xy, maxGapSamp)
+% linearly interpolate runs of NaNs (rows of xy) of up to maxGapSamp samples; runs at the start/end of the data are filled
+% with the first/last valid sample. Longer runs stay NaN
+interpInd = false(size(xy,1),1);
+okInd     = find(~isnan(xy(:,1)));
+if isempty(okInd) || numel(okInd) == size(xy,1); return; end
+d         = diff([false; isnan(xy(:,1)); false]);
+runStart  = find(d == 1);
+runEnd    = find(d == -1) - 1;
+for r = find((runEnd - runStart + 1) <= maxGapSamp)'
+    interpInd(runStart(r):runEnd(r)) = true;
+end
+fillInd   = find(interpInd);
+for j = 1:size(xy,2)
+    xy(fillInd,j) = interp1(okInd, xy(okInd,j), fillInd, 'linear');
+    xy(fillInd(fillInd > okInd(end)),j) = xy(okInd(end),j);
+    xy(fillInd(fillInd < okInd(1)),j)   = xy(okInd(1),j);
+end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
