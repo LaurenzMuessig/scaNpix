@@ -10,7 +10,7 @@ function IUratio = computeIURatio(spatialACs,ellipseFits)
 % Inputs:
 %    spatialACs  - cell array of spatial autocorrelations of grid cells
 %    ellipseFits - array of ellipse fits (one for each cell); nCell by 3 array [orientation, major semi-axis, minor semi-axis],
-%                  i.e. [Props.ellOrient Props.ellAbScale] from scanpix.analysis.gridprops(...,'getellgridness',true)
+%                  i.e. [Props.ellOrient Props.ellAbScale] from [~,Props] = scanpix.analysis.gridprops(spatialAC,true)
 %
 % Outputs: 
 %

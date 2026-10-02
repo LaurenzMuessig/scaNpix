@@ -30,11 +30,12 @@ csvData = textscan(fID,fmt,'HeaderLines',1,'delimiter',',');
 fclose(fID);
 
 % add possible extra data from Bonsai
+bhaveData = {};
 if nColumns > 8
     bhaveData = csvData(9:end);
 end
 
-% 
+%
 pos         = [csvData{3}, csvData{4}];
 pos(pos==0) = NaN;
 
@@ -61,7 +62,7 @@ end
 missFrames       = find(~ismember(1:frameCount(end),frameCount));
 nMissFrames      = length(missFrames);
 if ~isempty(missFrames)
-    fprintf('Note: There are %i missing frames in tracking data for %s.\n', nMissFrames, obj.trialMetaData(trialIterator).filename);
+    fprintf('Note: There are %i missing frames in tracking data for %s.\n', nMissFrames, obj.trialNames{trialIterator});
     
     temp                   = zeros(length(pos)+nMissFrames, 2);
     temp(missFrames,:,:)   = nan;
@@ -171,7 +172,11 @@ obj.posData(1).speed{trialIterator}        = pathDists ./ diff(sampleT); % cm/s
 obj.posData(1).speed{trialIterator}(end+1) = obj.posData(1).speed{trialIterator}(end);
 
 % crop overhang at the end
-endIdxNPix                           = min( [ length(obj.posData.sampleT{trialIterator}), find(obj.posData.sampleT{trialIterator} < obj.trialMetaData(trialIterator).duration,1,'last') + 1]);
+if isfield(obj.trialMetaData,'duration') && ~isempty(obj.trialMetaData(trialIterator).duration)
+    endIdxNPix                       = min( [ length(obj.posData.sampleT{trialIterator}), find(obj.posData.sampleT{trialIterator} < obj.trialMetaData(trialIterator).duration,1,'last') + 1]);
+else
+    endIdxNPix                       = length(obj.posData.sampleT{trialIterator}); % no trial duration in meta data - keep all
+end
 obj.posData.XYraw{trialIterator}     = obj.posData.XYraw{trialIterator}(1:endIdxNPix,:);
 obj.posData.XY{trialIterator}        = obj.posData.XY{trialIterator}(1:endIdxNPix,:);
 obj.posData.speed{trialIterator}     = obj.posData.speed{trialIterator}(1:endIdxNPix,:);
@@ -179,8 +184,14 @@ obj.posData.direction{trialIterator} = obj.posData.direction{trialIterator}(1:en
 obj.posData.sampleT{trialIterator}   = obj.posData.sampleT{trialIterator}(1:endIdxNPix,:);
 
 % add possible extra data from Bonsai
-if nColumns > 8
-    obj.bhaveData(1).data(trialIterator) = cellfun(@(x) x(1:endIdxNPix,:),bhaveData,'uni',0);
+% (a single extra column is stored as vector, as expected by e.g. scanpix.bhaveUtils.pp_analyse; several extra columns as cell array)
+if ~isempty(bhaveData)
+    bhaveData = cellfun(@(x) x(1:endIdxNPix,:),bhaveData,'uni',0);
+    if isscalar(bhaveData)
+        obj.bhaveData(1).data{trialIterator} = bhaveData{1};
+    else
+        obj.bhaveData(1).data{trialIterator} = bhaveData;
+    end
 end
 
 fprintf('  DONE!\n');
@@ -252,7 +263,7 @@ function [sampleT, pos, bhaveData] = fixSetupFreeze(obj,trialIterator,sampleT,po
 missedFrames = find(diff(sampleT) > 1.5*1/obj.params('posFs'));
 if ~isempty(missedFrames)
     addFrames = [];
-    missedFrames(:,2) = floor((sampleT(missedFrames+1) - sampleT(missedFrames)) * obj.params('posFs'));
+    missedFrames(:,2) = round((sampleT(missedFrames+1) - sampleT(missedFrames)) * obj.params('posFs')) - 1; % n frames missing in gap (gap of k frame intervals = k-1 missing frames)
     cs_NMissed = cumsum([0;missedFrames(:,2)]);
     x = 1:length(sampleT);
     for i = 1:size(missedFrames,1)

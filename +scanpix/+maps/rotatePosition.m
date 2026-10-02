@@ -61,7 +61,14 @@ for i = 1:length(trialIndex)
     % in case pos is fitted to visited environment or embedded in camera window need to adjust coordinates further
     corners = corners';
     if obj.trialMetaData(trInd).PosIsFitToEnv{1}
-        corners = corners - obj.trialMetaData(trInd).PosIsFitToEnv{2}(:)';
+        if numel(obj.trialMetaData(trInd).PosIsFitToEnv) >= 3 && isstruct(obj.trialMetaData(trInd).PosIsFitToEnv{3})
+            % full transform as stored by scanpix.maps.scalePosition: XYfit = (XY - origin) .* scale + shift
+            T       = obj.trialMetaData(trInd).PosIsFitToEnv{3};
+            corners = (corners - reshape(T.origin,1,2)) .* reshape(T.scale,1,2) + reshape(T.shift,1,2);
+        else
+            % data loaded with older version - only offset known (ignores small rescaling of fit to env.)
+            corners = corners - obj.trialMetaData(trInd).PosIsFitToEnv{2}(:)';
+        end
     end
     boxCentre = mean(corners,1);
 

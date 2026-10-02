@@ -13,6 +13,7 @@ function objData = batchLoader(cribSheetPath, method, objType, addMeta, options 
 %    dataType      - 'npix' or 'dacq' - data type
 %    varargin      - 'objParams' - containers.Map (see 'scanpix.helpers.defaultParamsContainer' for details on format)
 %                  - 'mapParams' - mapParamsStruct (see 'scanpix.maps.defaultParamsRateMaps' for details on format)
+%                  - 'paramslfp' - struct with params for loading npix LFP (see 'scanpix.helpers.defaultParamsLFP' for details on format)
 %
 % Outputs:
 %    objData       - cell array with data
@@ -28,6 +29,7 @@ arguments
   addMeta (1,:) {mustBeA(addMeta,'cell')} = {}
   options.paramsobj (1,:) {mustBeA(options.paramsobj,'containers.Map')} = scanpix.helpers.defaultParamsContainer(objType);
   options.paramsmap (1,:) {mustBeA(options.paramsmap,'struct')} = scanpix.maps.defaultParamsRateMaps;
+  options.paramslfp (1,:) {mustBeA(options.paramslfp,'struct')} = scanpix.helpers.defaultParamsLFP;
   options.loadpos (1,1) {mustBeNumericOrLogical} = true;
   options.loadspikes (1,1) {mustBeNumericOrLogical} = true;
   options.loadlfp (1,1) {mustBeNumericOrLogical} = false;

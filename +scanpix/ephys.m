@@ -322,10 +322,15 @@ classdef ephys < handle
             
             if nargin < 2 || isempty(newTrialNames)
                 [newTrialNames, newDataDir] = obj.fetchFileNamesAndPath(obj.fileType, obj.params('defaultDir'));
-                if isempty(newTrialNames)
+                if isempty(newTrialNames) || ~iscell(newTrialNames) % NaN if UI was cancelled
                     return
                 end
-                [newTrialNames, ind] = obj.selectTrials(newTrialNames);
+                % selection is from new files, so don't touch trial list of object
+                [newTrialNames, ind] = obj.selectTrials(newTrialNames, false);
+                if isempty(newTrialNames)
+                    warning('scaNpix::ephys::addData:No trials selected. Nothing added.');
+                    return
+                end
             else
                 % this only works for 1 trial currently! 
                 [path,newTrialNames] = fileparts(newTrialNames);
@@ -553,19 +558,25 @@ classdef ephys < handle
             %           obj.truncateData( trialInd, timeS )
             %
             %  Inputs:
-            %           trialInd    - trial index
+            %           trialInd    - trial index (single trial; numeric or logical)
             %           timeS       - [startTimes stopTimes] array or [stopTime] in seconds. In
             %                         latter case we will assume startTime = 0
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            %% 
-            if nargin < 2
-                [select, loadCheck] = listdlg('PromptString','Select which trial you want to truncate:','ListString',obj.trialNames,'ListSize',[160 100]);
+            %%
+            if nargin < 2 || isempty(trialInd)
+                [trialInd, loadCheck] = listdlg('PromptString','Select which trial you want to truncate:','ListString',obj.trialNames,'ListSize',[160 100],'SelectionMode','single');
                 if ~loadCheck
                     warning('scaNpix::ephys::truncateDACQData:Truncating data aborted. More data is better anyway.');
                     return;
                 end
-                trialInd = ismember(obj.trialNames,obj.trialNames(select));
+            end
+            % works on one trial at a time - make numeric index
+            if islogical(trialInd)
+                trialInd = find(trialInd);
+            end
+            if ~isscalar(trialInd) || trialInd < 1 || trialInd > length(obj.trialNames) || mod(trialInd,1) ~= 0
+                error('scaNpix::ephys::truncateData:''trialInd'' needs to be the index of a single trial in the object. Run this for each trial separately.');
             end
 
             %
@@ -578,10 +589,11 @@ classdef ephys < handle
                 timeS = cellfun(@(x) str2double(x), uiInput)'; 
             end
 
+            % flag truncated trial (other trials keep their flag, e.g. from truncating them earlier)
             for i = 1:length(obj.trialNames)
                 if i == trialInd
                     obj.trialMetaData(i).log.posIsTruncated = true;
-                else
+                elseif ~isfield(obj.trialMetaData(i).log,'posIsTruncated') || isempty(obj.trialMetaData(i).log.posIsTruncated)
                     obj.trialMetaData(i).log.posIsTruncated = false;
                 end
             end
@@ -603,8 +615,12 @@ classdef ephys < handle
             % all data gets re-referenced to start of 1st kept pos sample, so that truncated trial starts at t=0
             % (map functions assume pos sample 1 = t0, i.e. spkPosInd = ceil(spkTimes*posFs))
             tShift                          = (startInd-1) / posFs;
+            % keep link to raw data (e.g. extract_waveforms, loadLFPNPix add offSet to times rel. to trial start)
+            if isfield(obj.trialMetaData,'offSet') && ~isempty(obj.trialMetaData(trialInd).offSet)
+                obj.trialMetaData(trialInd).offSet = obj.trialMetaData(trialInd).offSet + tShift;
+            end
             obj.posData.XY{trialInd}        = obj.posData.XY{trialInd}(startInd:endInd,:);
-            obj.posData.XYraw{trialInd}     = obj.posData.XYraw{trialInd}(startInd:endInd,:);
+            obj.posData.XYraw{trialInd}     = obj.posData.XYraw{trialInd}(startInd:endInd,:,:); % npix/dacq raw pos is nSamp x 2 x nLED (or nSamp x nLED x 2)
             obj.posData.direction{trialInd} = obj.posData.direction{trialInd}(startInd:endInd);
             obj.posData.speed{trialInd}     = obj.posData.speed{trialInd}(startInd:endInd);
             %
@@ -691,6 +707,10 @@ classdef ephys < handle
                 obj.fetchFileNamesAndPath(obj.fileType, obj.params('defaultDir'));
                 if isempty(obj.trialNames); return; end
                 obj.selectTrials(obj.trialNames);
+                if isempty(obj.trialNames)
+                    warning('scaNpix::ephys::load: No trials selected. Nothing is loaded.');
+                    return;
+                end
             end
             
             if nargin < 2
@@ -915,7 +935,7 @@ classdef ephys < handle
                     scanpix.npixUtils.loadPosNPix(obj,trialIterator);
                 case 'nexus'
                 case 'bhave'
-                    obj.preallocEmpty(true,{'posData','spikeData','lfpData','bhaveData'});
+                    obj.preallocEmpty({'posData','spikeData','lfpData','bhaveData'});
                     scanpix.bhaveUtils.loadPosBhave(obj,trialIterator);
             end
         end
@@ -1103,44 +1123,60 @@ classdef ephys < handle
             
         end
         %%
-        function [trialNameStrOut, select] = selectTrials(obj,trialNameStrIn)
+        function [trialNameStrOut, select] = selectTrials(obj,trialNameStrIn,updateObj)
             % selectTrials - select from a list which trials to choose for loading data into ephys class objects
             %
             % Syntax:
             %       obj.selectTrials(trialNameStrIn)
+            %       [trialNameStrOut, select] = obj.selectTrials(trialNameStrIn, updateObj)
             %
             % Inputs:
             %    trialNameStrIn  - char/cell array of filename strings that we want to
             %                      choose from
+            %    updateObj       - logical (default=true); if true, obj.trialNames/dataPath/dataPathSort
+            %                      are reduced to the selection (cancel = no trials). Use false
+            %                      when selecting from a list that isn't the object's own trial
+            %                      list (e.g. obj.addData)
             %
             % Outputs:
-            %    trialNameStrOut - user choice of 'trialNameStrIn'
+            %    trialNameStrOut - user choice of 'trialNameStrIn' (empty if cancelled)
+            %    select          - index of selection into 'trialNameStrIn' (empty if cancelled)
             %
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
+
+            if nargin < 3
+                updateObj = true;
+            end
+
             % skip if only one trial in object
             if ischar(trialNameStrIn)
                 trialNameStrOut = trialNameStrIn;
                 select = true;
                 return;
             end
-            
+
             % UI selection
             [select, loadCheck]  = listdlg('PromptString','Select which Trial(s) to Include:','ListString',trialNameStrIn,'ListSize',[200 400]);
             if ~loadCheck
-                obj.trialNames   = [];
-                obj.dataPath     = [];
-                obj.dataPathSort = [];
+                trialNameStrOut  = {};
+                select           = [];
+                if updateObj
+                    obj.trialNames   = [];
+                    obj.dataPath     = [];
+                    obj.dataPathSort = [];
+                end
                 return;
             else
                 trialNameStrOut  = trialNameStrIn(select);
                 %
-                ind              = ismember(obj.trialNames,trialNameStrOut);
-                obj.trialNames   = obj.trialNames(ind);
-                obj.dataPath     = obj.dataPath(ind);
-                obj.dataPathSort = obj.dataPathSort(ind);
+                if updateObj
+                    ind              = ismember(obj.trialNames,trialNameStrOut);
+                    obj.trialNames   = obj.trialNames(ind);
+                    obj.dataPath     = obj.dataPath(ind);
+                    obj.dataPathSort = obj.dataPathSort(ind);
+                end
             end
-            
+
         end
         %%
         % function preallocEmpty(obj,noLoadProps,loadProps)
@@ -1150,13 +1186,11 @@ classdef ephys < handle
             % (i.e. all raw data like positions, spiketimes etc.)
             %
             % Syntax:
-            %       obj.preallocEmpty(noLoadProps)
-            %       obj.preallocEmpty(noLoadProps,loadProps)
+            %       obj.preallocEmpty(loadProps)
             %
             % Inputs:
-            %    noLoadProps - true/false - flag to do properties that won't be loaded
-            %                  through normal routines
-            %    loadProps   - cell array; any combination of {'pos','spikes','lfp'}
+            %    loadProps   - cell array of trial based data properties, any combination of
+            %                  {'posData','spikeData','lfpData','bhaveData','maps'}
             %
             % Outputs:
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

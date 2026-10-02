@@ -3,16 +3,22 @@ function extract_waveforms(ephysObj,trialInd,options)
 % Actual data is grabbed in subfunction.  
 %
 % Usage:
-%       [npixObj,waveforms,channels] = scanpix.npixUtils.extract_waveforms(npixObj);
-%       [npixObj,waveforms,channels] = scanpix.npixUtils.extract_waveforms(npixObj,trialInd);
-%       [npixObj,waveforms,channels] = scanpix.npixUtils.extract_waveforms(__, Name-Value comma separated list);
+%       scanpix.npixUtils.extract_waveforms(npixObj);
+%       scanpix.npixUtils.extract_waveforms(npixObj,trialInd);
+%       scanpix.npixUtils.extract_waveforms(__, Name-Value comma separated list);
 %
 %
 % Inputs:   npixObj     - npix class object
 %           trialInd    - index for trial we want to get waveform data for
 %           options     - name-value: comma separated list of name-value pairs (see arguments block)
 %
-% Outputs:
+% Outputs:  none - waveforms are stored in npixObj.spikeData.spk_waveforms{trial} as {waveforms, channels}
+%           per cell (optionally also saved to disk with 'save', true). channels are sorted channel indices
+%           (rows in KS/drift corr. data) when extracting from the drift corr. file, raw data channels otherwise
+%
+% Note: channels around each cell are selected in sorted channel space (npixObj.cell_ID(:,3), i.e. rows of the
+% kilosort/drift corr. data), so 'remchans' needs to be given in that space too. Reference and sync channels are
+% not part of that space, so they never need removing.
 %
 % LM 2021
 %
@@ -22,7 +28,7 @@ function extract_waveforms(ephysObj,trialInd,options)
 arguments
     ephysObj
     trialInd                               = [];
-    options.remchans  {mustBeNumeric}      = [];         % 192: reference channel; 385: sync channel - these should def be ignored
+    options.remchans  {mustBeNumeric}      = [];         % sorted channel indices (as cell_ID(:,3)) to exclude, e.g. noisy channels; ref/sync channels are already excluded
     options.prec      (1,:) char           = 'int16';    % Data type of file
     options.getnch    (1,1) {mustBeNumeric} = 5;         % grab +/- this many channels around peak channel of cluster
     options.nwave     {mustBeScalarOrEmpty} = 250;       % this many waveforms/cluster (if [] we'll grab all)
@@ -49,6 +55,7 @@ end
 if isempty(trialInd) || strcmp(options.mode,'cat')
     trialInd = 1:length(ephysObj.trialNames);
 end
+trialInd = trialInd(:)'; % row, so 'for i = trialInd' loops over trials
 
 %
 driftFlag = false;
@@ -84,7 +91,8 @@ if strcmp(options.mode,'cat')
 else % 'single' (mode is validated in arguments block)
     % if you load from ap.bin raw - you should really HP filter and CAR this data before extracting waveforms
     nChan    = ephysObj.trialMetaData(1).nChanTot;
-    path2raw = fullfile(ephysObj.dataPath(trialInd),strcat(ephysObj.trialNames(trialInd),ephysObj.fileType));
+    % one file per trial in object, so path2raw{i} is the file for trial i (also when trialInd is only a subset of trials)
+    path2raw = cellstr(fullfile(ephysObj.dataPath,strcat(ephysObj.trialNames,ephysObj.fileType)));
 end
 
 % drift corr. file is already HP filtered and CAR'd (and whitened) by kilosort - filtering again would also skip unwhitening
@@ -146,8 +154,8 @@ for i = trialInd % loop over trials
         chanMap        = load(chanMapFName);
         % work in sorted channel space (rows of KS/drift corr. data), same as ephysObj.cell_ID(:,3)
         sortedYCoords  = chanMap.ycoords(logical(chanMap.connected));
-        nChanSorted    = numel(sortedYCoords);
-        bankBoundaries = find(abs(diff(sortedYCoords(:))) > options.chanspace) + [0 1];
+        % contiguous blocks of channels along the probe (e.g. separate banks); new block wherever depth jumps by > chanspace
+        chanBlockID    = cumsum([1; abs(diff(sortedYCoords(:))) > options.chanspace])';
         
         if driftFlag
             try
@@ -195,26 +203,16 @@ for i = trialInd % loop over trials
         if ~cluInd(j);continue;end
         
         currSTimesBin = round(tempST{j} * ephysObj.params('APFs')) + sampOffset; % back to samples using same Fs as loadSpikesNPix; round, as ceil can be 1 off from float error
-        currChannels  = max([1,ephysObj.cell_ID(j,3)-options.getnch]):min([nChanSorted, ephysObj.cell_ID(j,3)+options.getnch]); % sorted channel space; take care not to go <0 or > nChan
-        
-        % remove channels from list
-        ind = ismember(currChannels,options.remchans);
-        if any(ind)
-            currChannels = currChannels(~ind);
-            lhsAdd = sum(find(ind) <= options.getnch);
-            if lhsAdd > 0;  currChannels = [currChannels(1)-lhsAdd:currChannels(1)-1, currChannels]; end
-            rhsAdd = sum(find(ind) > options.getnch+1);
-            if rhsAdd > 0;  currChannels = [currChannels, currChannels(end)+1:currChannels(end)+rhsAdd]; end
-        end
-        
-        % need to remove channels if selection spans multiple banks
-        if any(ismember(currChannels,bankBoundaries))
-            if sum(currChannels <= bankBoundaries(1)) > sum(currChannels >= bankBoundaries(2))
-                currChannels = currChannels(currChannels <= bankBoundaries(1));
-            else
-                currChannels = currChannels(currChannels >= bankBoundaries(2));
-            end
-        end
+        % channel window in sorted channel space: peak channel + up to 'getnch' allowed channels on either side. Excluded
+        % channels ('remchans') are skipped and replaced by the next allowed channel further out on the same side; at the
+        % ends of the probe the window is just shorter on that side. An excluded peak channel is left out (not replaced).
+        % Only channels from the same contiguous block (bank) as the peak channel are used - channels across a depth jump
+        % are far away and wouldn't see the cell, so the window is cut at block edges in the same way as at the probe ends
+        pkChan        = ephysObj.cell_ID(j,3);
+        allowedChans  = setdiff(find(chanBlockID == chanBlockID(pkChan)), options.remchans);
+        lhsChans      = allowedChans(allowedChans < pkChan);
+        rhsChans      = allowedChans(allowedChans > pkChan);
+        currChannels  = [lhsChans(max(1,end-options.getnch+1):end), pkChan(ismember(pkChan,allowedChans)), rhsChans(1:min(options.getnch,end))];
         
         % now extract waveforms for current cluster
         if ~isempty(options.nwave)
@@ -278,7 +276,8 @@ for i = trialInd % loop over trials
        tmpWaveforms{j} = currWave;
        tmpChannels{j}  = currChannels';
         
-       waitbar( (spkCount(j)*i)/(sum(cluInd)*length(trialInd)), hWait, ['cluster ' num2str(spkCount(j)) '/' num2str(sum(cluInd)) ' from trial ' num2str(i) '/' num2str(length(trialInd))] );
+       iTr = find(trialInd == i,1); % position of current trial in trialInd
+       waitbar( ((iTr-1)*sum(cluInd) + spkCount(j))/(sum(cluInd)*length(trialInd)), hWait, ['cluster ' num2str(spkCount(j)) '/' num2str(sum(cluInd)) ' from trial ' num2str(iTr) '/' num2str(length(trialInd))] );
     end
     %
     if isempty(ephysObj.spikeData.spk_waveforms{i})

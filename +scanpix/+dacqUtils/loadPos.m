@@ -97,8 +97,8 @@ postprocess_posData(obj,trialIterator,led_pos,led_pix);
 
 % remove DACQ overhang
 if obj.trialMetaData(trialIterator).duration * obj.params('posFs') < length(led_pos)
-    obj.posData(1).XYraw{trialIterator}     = obj.posData(1).XYraw{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs'),:); % truncate data
-    obj.posData(1).XY{trialIterator}        = obj.posData(1).XY{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs'),:); % truncate data
+    obj.posData(1).XYraw{trialIterator}     = obj.posData(1).XYraw{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs'),:,:); % truncate data (raw pos is nSamp x nLED x 2)
+    obj.posData(1).XY{trialIterator}       = obj.posData(1).XY{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs'),:); % truncate data
     obj.posData(1).direction{trialIterator} = obj.posData(1).direction{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs')); % truncate data
     obj.posData(1).speed{trialIterator}     = obj.posData(1).speed{trialIterator}(1:obj.trialMetaData(trialIterator).duration * obj.params('posFs')); % truncate data
 end
