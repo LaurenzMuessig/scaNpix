@@ -89,6 +89,9 @@ for i = 1:length(trialIndex)
         inset      = min(cornersRot,[],1) - min(corners,[],1);
         obj.posData(1).XY{trInd}                   = obj.posData(1).XY{trInd} - inset;
         obj.trialMetaData(trInd).PosIsFitToEnv{2} = reshape(obj.trialMetaData(trInd).PosIsFitToEnv{2},1,[]) + inset;
+        if numel(obj.trialMetaData(trInd).PosIsFitToEnv) >= 3 && isstruct(obj.trialMetaData(trInd).PosIsFitToEnv{3})
+            obj.trialMetaData(trInd).PosIsFitToEnv{3}.shift = obj.trialMetaData(trInd).PosIsFitToEnv{3}.shift - inset;
+        end
     end
 
     % object/feeder/reward zone positions (stored in raw camera pixels as X1Y1,X2Y2,... - a trailing odd element, e.g.

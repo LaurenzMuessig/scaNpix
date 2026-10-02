@@ -6,8 +6,16 @@ function [objMap, occMap, spkMaps] = makeOVMap(obj, trialInd, options)
 % Direction is allocentric, from object to animal, with 0 = positive x
 % direction in camera coordinates. Distance is measured from the object
 % centre. Object coordinates (trialMetaData.objectPos) are expected in raw
-% camera pixels and are scaled/offset here to match the processed position
-% data. Map params are taken from obj.mapParams.objVect.
+% camera pixels and are converted here to match the processed position
+% data (scanpix.maps.rawToFitCoords). Map params are taken from
+% obj.mapParams.objVect.
+%
+% NOTE: scanpix.maps.scalePosition does not only shift the positions, it
+% also rescales them. The full transform is stored in
+% trialMetaData.PosIsFitToEnv{3} since 2026-10 - for data loaded before
+% that only the shift is known, so the object position will be slightly off
+% for rectangular envs (~1-2% stretch, i.e. up to ~1cm) and can be off
+% substantially for circular envs (rawToFitCoords warns). Reload to fix.
 %
 % Syntax:
 %       objMap = scanpix.maps.makeOVMap(obj, trialInd)
@@ -72,19 +80,8 @@ objPos = [reshape(objPos(1:2:2*nObj),[],1), reshape(objPos(2:2:2*nObj),[],1)];
 if nObj > 1
     warning('scaNpix::maps::makeOVMap:Coordinates for several objects supplied. Will use first in list as reference. Multi object detection is not yet supported!');
 end
-objPos = objPos(1,:);
-
-% add scaling factor in case data is scaled to common ppm
-if obj.trialMetaData(trialInd).PosIsScaled
-    scaleFact = obj.trialMetaData(trialInd).ppm / obj.trialMetaData(trialInd).ppm_org;
-else
-    scaleFact = 1;
-end
-objPos = objPos .* scaleFact;
-% in case pos is fitted to visited environment need to adjust coordinates further
-if obj.trialMetaData(trialInd).PosIsFitToEnv{1}
-    objPos = objPos - reshape(obj.trialMetaData(trialInd).PosIsFitToEnv{2},1,[]);
-end
+% convert to the frame of the position data (scaling to common ppm and fit to environment)
+objPos = scanpix.maps.rawToFitCoords(obj, trialInd, objPos(1,:));
 
 %% speed filter
 if prms.speedFilterFlagOVMaps
@@ -169,7 +166,7 @@ for i = 1:length(spikeTimes)
     spkMaps{i}   = accumarray([spkTheta(ok) spkDist(ok)], 1, mapSz);
     % smoothed spikes / smoothed occupancy (circular in direction)
     objMap{i}            = smoothCircLin(spkMaps{i}, kernel, halfK) ./ occMap_sm;
-    objMap{i}(unVisPos)  = NaN;
+    objMap{i}(unVisPos)    = NaN;
 
     if prms.showWaitBar; waitbar(i/length(spikeTimes),hWait,sprintf('Making those Object Vector Maps... %i/%i done.',i,length(spikeTimes))); end
 end

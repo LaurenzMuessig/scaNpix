@@ -54,9 +54,9 @@ if length(options.envSzPix) == 1 || isnan(options.envSzPix(2))
 end
 
 if options.circleFlag
-    [XYScaled, lowerEdge] = scaleCircEnvs(obj,trialIndex,10,options.envSzPix(1),options.minoccrad,options.cenlim,options.cenoffset,options.radest);
+    [XYScaled, lowerEdge, fitTransform] = scaleCircEnvs(obj,trialIndex,10,options.envSzPix(1),options.minoccrad,options.cenlim,options.cenoffset,options.radest);
 else
-    [XYScaled, lowerEdge] = scaleRectEnvs(obj,trialIndex,options.minoccedge,options.envSzPix);
+    [XYScaled, lowerEdge, fitTransform] = scaleRectEnvs(obj,trialIndex,options.minoccedge,options.envSzPix);
 end
 
 % For consistency, make sure that all x=nan and all y= nan match up %
@@ -66,15 +66,19 @@ obj.posData.XY{trialIndex} = XYScaled;
 %
 obj.trialMetaData(trialIndex).PosIsFitToEnv{1,1} = true;
 obj.trialMetaData(trialIndex).PosIsFitToEnv{1,2} = lowerEdge;
+% full transform, i.e. XYfit = (XY - origin) .* scale + shift - use scanpix.maps.rawToFitCoords to convert other
+% coordinates (objects etc.) into the same frame as the position data
+obj.trialMetaData(trialIndex).PosIsFitToEnv{1,3} = fitTransform;
 
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [XYScaled, lowerEdge] = scaleRectEnvs(obj,trialIndex,minOccForEdge,envSzPix)
+function [XYScaled, lowerEdge, fitTransform] = scaleRectEnvs(obj,trialIndex,minOccForEdge,envSzPix)
 % scale path
-XYScaled  = nan(size(obj.posData.XY{trialIndex}));  % 
+XYScaled  = nan(size(obj.posData.XY{trialIndex}));  %
 lowerEdge = nan(1,2);
+fitScale  = nan(1,2);
 
 for j = 1:2
 
@@ -94,19 +98,22 @@ for j = 1:2
     tempPos( tempPos > upperEdge )     = NaN;
     tempPos( tempPos <= lowerEdge(j) ) = NaN;       % Doing <=lowerEdge, then subtracting lowerEdge (line 23), makes the lower limit zero, and therefore the first pixel 1.something.
     tempPos                            = tempPos - lowerEdge(j);
-    tempPos                            = tempPos .* ( envSzPix(j) / (upperEdge-lowerEdge(j)) );
+    fitScale(j)                        = envSzPix(j) / (upperEdge-lowerEdge(j));
+    tempPos                            = tempPos .* fitScale(j);
     %
     tempPos(tempPos > envSzPix(j))     = envSzPix(j);
     %
     XYScaled(:,j)                      = tempPos;
 
 end
+% transform: XYfit = (XY - origin) .* scale + shift
+fitTransform = struct('origin', lowerEdge, 'scale', fitScale, 'shift', [0 0]);
 
 end
         
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [XYScaled, lowerEdge] = scaleCircEnvs(obj,trialIndex,minOccForEdge,envSzPix,minOccForRad,cenFindIterLim,cenFindOffsetThr,radiusEstimateMethod)
+function [XYScaled, lowerEdge, fitTransform] = scaleCircEnvs(obj,trialIndex,minOccForEdge,envSzPix,minOccForRad,cenFindIterLim,cenFindOffsetThr,radiusEstimateMethod)
 %
 
 % First, to define the centre, find the edges at the cardinal compass points %
@@ -169,6 +176,11 @@ XYScaled    = [xCen + (envSzPix/2), yCen + (envSzPix/2)];
 % Set the pixels outside the radius limit to NaN %
 XYScaled(R > rLim,:) = NaN;
 lowerEdge            = [min(obj.posData.XY{trialIndex}(R <= rLim,1)) min(obj.posData.XY{trialIndex}(R <= rLim,2))];
+% transform: XYfit = (XY - origin) .* scale + shift. Note that the centre is estimated in rotated frames above, so
+% recover it in the original frame from the polar coords of the samples (same for all samples up to rounding errors)
+validInd             = ~isnan(R) & R <= rLim;
+centre               = median(obj.posData.XY{trialIndex}(validInd,:) - [R(validInd).*cos(TH(validInd)), R(validInd).*sin(TH(validInd))], 1);
+fitTransform         = struct('origin', centre, 'scale', ((envSzPix/2)/rLim) .* [1 1], 'shift', (envSzPix/2) .* [1 1]);
 
 % If requested, plot for testing purposes %
 % if prms.debugPlot

@@ -35,20 +35,14 @@ if ~isempty(objFieldStrs)
             radius(i,1) = obj.trialMetaData(trInd).(objFieldStrs{i})(3);
         end
     end
-    % add scaling factor in case data is scaled to common ppm
-    if obj.trialMetaData(trInd).PosIsScaled
-        scaleFact = obj.trialMetaData(trInd).ppm / obj.trialMetaData(trInd).ppm_org;
-    else
-        scaleFact = 1;
-    end
-    %
-    coords = coords .* scaleFact;
-    radius = radius .* scaleFact;
-   
-    % in case pos is fitted to visited environment or embedded in camera window need to adjust coordinates further
-    if obj.trialMetaData(trInd).PosIsFitToEnv{1}
-        coords = [coords(:,1:size(coords,2)/2) - obj.trialMetaData(trInd).PosIsFitToEnv{2}(1) coords(:,size(coords,2)/2+1:end) - obj.trialMetaData(trInd).PosIsFitToEnv{2}(2)];
-    end
+    % convert to frame of position data (scaling to common ppm and fit to environment)
+    % coords are [x1..xn y1..yn] per row, so convert as points and put back into same format
+    nPts                  = size(coords,2)/2;
+    X                     = coords(:,1:nPts);
+    Y                     = coords(:,nPts+1:end);
+    [xyConv, lenScale]    = scanpix.maps.rawToFitCoords(obj, trInd, [X(:) Y(:)]);
+    coords                = [reshape(xyConv(:,1),size(X)) reshape(xyConv(:,2),size(Y))];
+    radius                = radius .* mean(lenScale); % fit to env. scaling can differ slightly between x/y
     % also generate a binned version of the corrdinates (bin size of rate maps)
     binSizePix    = floor( obj.trialMetaData(trInd).ppm/100 * obj.mapParams.rate.binSizeSpat );
     coords_binned = coords ./ binSizePix;

@@ -322,17 +322,11 @@ switch rowFormat
             end
 
             if isfield(copyObj.trialMetaData,'objectPos') && ~isempty(copyObj.trialMetaData(i).objectPos)
-                if copyObj.trialMetaData(i).PosIsScaled
-                    copyObj.trialMetaData(i).objectPos = copyObj.trialMetaData(i).objectPos .* (copyObj.trialMetaData(i).ppm/copyObj.trialMetaData(i).ppm_org);
-                end
-                
-                if copyObj.trialMetaData(i).PosIsFitToEnv{1,1}
-                    tempObjPos = reshape(copyObj.trialMetaData(i).objectPos,[2 size(copyObj.trialMetaData(i).objectPos,2)/2]);
-                    tempObjPos = tempObjPos - [copyObj.trialMetaData(i).PosIsFitToEnv{1,2}(1); copyObj.trialMetaData(i).PosIsFitToEnv{1,2}(2)];
-                else
-                    tempObjPos = copyObj.trialMetaData(i).objectPos';
-                end
-                ResT.objectPos(:,tabInd(c)) = {tempObjPos(:)'};
+                % convert to frame of position data (scaling to common ppm and fit to environment); stored as X1Y1,X2Y2,...
+                tempObjPos = copyObj.trialMetaData(i).objectPos;
+                nObj       = floor(numel(tempObjPos)/2);
+                tempObjPos = scanpix.maps.rawToFitCoords(copyObj, i, [reshape(tempObjPos(1:2:2*nObj),[],1), reshape(tempObjPos(2:2:2*nObj),[],1)]);
+                ResT.objectPos(:,tabInd(c)) = {reshape(tempObjPos',1,[])};
             end
             c = c + 1;
         end

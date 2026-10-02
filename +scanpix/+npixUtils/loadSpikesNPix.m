@@ -79,7 +79,7 @@ if loadFromPhy
         good_clusts    = clu_info.cluster_id(goodLabel) + 1;
     end
     clu_Depth      = clu_info.depth(goodLabel);  % I think this amd the following seem to not give correct results in somce cases?? Phy Issue??
-    clu_Ch         = clu_info.ch(goodLabel) + 1; % this is 0 based
+    clu_Ch         = clu_info.ch(goodLabel) + 1; % this is 0 based; phy 'ch' is the sorted channel index (row of templates), not the channel_map value
     cluLabel       = string(clu_info.group);
     cluLabel       = cluLabel(goodLabel);
 else
@@ -94,8 +94,9 @@ else
     templates          = readNPY(fullfile(path2data_B,'templates.npy'));
     Winv               = readNPY(fullfile(path2data_B,'whitening_mat_inv.npy'));
     chanPos            = readNPY(fullfile(path2data_B,'channel_positions.npy'));
-    chanMapKS          = double(readNPY(fullfile(path2data_B,'channel_map.npy'))) + 1;  %
-    [clu_Depth,clu_Ch] = scanpix.npixUtils.getCluChDepthFromTemplates(templates, Winv, [chanMapKS(:) chanPos(:,2)]);
+    % pass sorted channel index (not channel_map.npy values) so clu_Ch is the row in templates/sorted data, same as phy 'ch'.
+    % Identical when sorting the drift corr. file (channel_map is 1:nSort), but not when sorting raw .ap.bin with the full chan map
+    [clu_Depth,clu_Ch] = scanpix.npixUtils.getCluChDepthFromTemplates(templates, Winv, [(1:size(chanPos,1))' chanPos(:,2)]);
 end
 
 % now we need to remove bad clusters and spike times outside trial
@@ -154,7 +155,8 @@ if reloadFlag || trialIterator == 1 || isempty(obj.cell_ID)
     clu_Ch         = clu_Ch(indSort);
     % likely at least the ref channel will have been removed before sorting - this will map channel ID back to raw data
     clu_Ch_mapped  = scanpix.npixUtils.mapChans(obj.chanMap(trialIterator).connected,clu_Ch);
-    
+
+    % cell_ID: [cluster ID, depth, sorted channel index (row in KS/drift corr. data), raw data channel]
     obj.cell_ID    = [good_clusts, clu_Depth, clu_Ch clu_Ch_mapped];
     obj.cell_Label = cluLabel;
 end
