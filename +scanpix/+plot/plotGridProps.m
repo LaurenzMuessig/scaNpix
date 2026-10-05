@@ -48,18 +48,18 @@ for i = 1:2
     %
     hold(ax,'on'); hold(ax2,'on');
 
-    % b. plot 3 grid axes
-    centralPoint = ceil(sizeAC/2);
+    % b. plot 3 grid axes (closestPeaksCoord are x,y pairs, i.e. col,row)
+    centralPoint = ceil(sizeAC/2); % row,col pair
     for k=1:3
-        plot(ax,[centralPoint(1) tmpProps.closestPeaksCoord(k,1)],[centralPoint(2) tmpProps.closestPeaksCoord(k,2)],'k','Linewidth',2);
-        plot(ax2,[centralPoint(1) tmpProps.closestPeaksCoord(k,1)],[centralPoint(2) tmpProps.closestPeaksCoord(k,2)],'k','Linewidth',2);
+        plot(ax,[centralPoint(2) tmpProps.closestPeaksCoord(k,1)],[centralPoint(1) tmpProps.closestPeaksCoord(k,2)],'k','Linewidth',2);
+        plot(ax2,[centralPoint(2) tmpProps.closestPeaksCoord(k,1)],[centralPoint(1) tmpProps.closestPeaksCoord(k,2)],'k','Linewidth',2);
     end
 
     % c. plot white horizontal/vertical lines as cartesian reference frame
-    plot(ax,[0.5 sizeAC(2)],centralPoint([1 1],[2 2]),'--w','Linewidth',2);
-    plot(ax,[centralPoint(1,1) centralPoint(1,1)],[0.5 sizeAC(2)],'--w','Linewidth',2);
-    plot(ax2,[0.5 sizeAC(2)],centralPoint([1 1],[2 2]),'--w','Linewidth',2);
-    plot(ax2,[centralPoint(1,1) centralPoint(1,1)],[0.5 sizeAC(2)],'--w','Linewidth',2);
+    plot(ax,[0.5 sizeAC(2)+0.5],centralPoint([1 1]),'--w','Linewidth',2);
+    plot(ax,centralPoint([2 2]),[0.5 sizeAC(1)+0.5],'--w','Linewidth',2);
+    plot(ax2,[0.5 sizeAC(2)+0.5],centralPoint([1 1]),'--w','Linewidth',2);
+    plot(ax2,centralPoint([2 2]),[0.5 sizeAC(1)+0.5],'--w','Linewidth',2);
 
     % d. plot a red curve to show the grid offset - depending on which wall grid is anchored to, we need to bake in a shift for y
     [minOffset,ind] = min(tmpProps.offsetFull);
@@ -87,15 +87,15 @@ for i = 1:2
 
     % e. add some annotations
     hold(ax,'off'); hold(ax2,'off');
-    axis(ax,'off');
-    lastBins = (fliplr(size(sac)));
-    text(ax,lastBins(2)+1, 0.5,num2str(round(tmpProps.gridness(1,1),3)));
-    text(ax,lastBins(2)+1, lastBins(2)*0.75,sprintf('%s\n%s','scale:',num2str(round(tmpProps.wavelength,2))));
-    text(ax,lastBins(2)+1, lastBins(1),sprintf('%s\n%s','orientation:',num2str(round(tmpProps.orientation*180/pi,2))));
+    axis(ax,'image','off'); axis(ax2,'image'); % keep aspect ratio in case AC isn't square
+    [nRows, nCols] = size(sac);
+    text(ax,nCols+1, 0.5,num2str(round(tmpProps.gridness(1,1),3)));
+    text(ax,nCols+1, nRows*0.75,sprintf('%s\n%s','scale:',num2str(round(tmpProps.wavelength,2))));
+    text(ax,nCols+1, nRows,sprintf('%s\n%s','orientation:',num2str(round(tmpProps.orientation*180/pi,2))));
     if ind ~= 1
-        text(ax,lastBins(2)/2-3.5, lastBins(1)+5,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
+        text(ax,nCols/2-3.5, nRows+5,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
     else
-        text(ax,lastBins(2)+1, lastBins(2)/2,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
+        text(ax,nCols+1, nRows/2,sprintf('%s\n%s','offset:',num2str(round(minOffset*180/pi,2))));
     end
 end
 options.axArray{1}.Title.String = 'spatial autocorr';

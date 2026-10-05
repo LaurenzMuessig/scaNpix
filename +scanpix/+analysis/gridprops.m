@@ -680,6 +680,14 @@ end
 % LM edit
 tmpSAC             = sac;
 tmpSAC(isnan(sac)) = 0; % leaving the nan's in sac makes them spread during the interpolation
+% LM edit - if AC isn't square, zero pad to square around centre bin so we can use the square code path
+% below ('loose' imrotate can return even sized images which shifts the centre bin)
+if size(tmpSAC,1) ~= size(tmpSAC,2)
+    sqSize   = max(size(tmpSAC)) + (rem(max(size(tmpSAC)),2) == 0); % keep odd
+    padPre   = ceil(sqSize/2) - ceil(size(tmpSAC)/2);
+    padPost  = sqSize - size(tmpSAC) - padPre;
+    tmpSAC   = padarray(padarray(tmpSAC,padPre,0,'pre'),padPost,0,'post');
+end
 
 %Grids aren't regular to start to regularise
 %1)First rotate so major axis aligns to x-axis
@@ -705,13 +713,8 @@ regSac=interp2(regSac, linspace(xStart,xEnd, sacSize(2)), linspace(yStart, yEnd,
 
 %4) Rotate back to original orientation
 % regSac=imrotate(regSac, orient, 'bilinear','crop');
-% LM edit - crop to keep size == odd
-if size(tmpSAC,1) == size(tmpSAC,2)
-    regSac=imrotate(regSac, orient, 'bilinear','crop');
-else
-    % in case ac isn't square we can't use crop
-    regSac=imrotate(regSac, orient, 'bilinear');
-end
+% LM edit - crop to keep size == odd (tmpSAC is always square here)
+regSac=imrotate(regSac, orient, 'bilinear','crop');
 
 %5) Finally keep only the central portion of the sac so that it matches
 %the original size
