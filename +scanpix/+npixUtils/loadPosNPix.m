@@ -35,7 +35,7 @@ fID = fopen(fullfile(fName.folder,fName.name),'rt');
 header = textscan(fID,'%s',1);
 nColumns = length(strsplit(header{1}{1},','));
 fmt = '%u%f%f%f%f%u%u%f';
-% allow for any n of additonal fields from Bonsai output
+% allow for any n of additional fields from Bonsai output
 if nColumns > 8; fmt = [fmt repmat('%u',nColumns-8,1)]; end
 
 csvData = textscan(fID,fmt,'HeaderLines',1,'delimiter',',');

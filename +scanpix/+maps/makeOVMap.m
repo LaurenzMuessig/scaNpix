@@ -165,8 +165,8 @@ for i = 1:length(spikeTimes)
     ok           = ~isnan(spkTheta);
     spkMaps{i}   = accumarray([spkTheta(ok) spkDist(ok)], 1, mapSz);
     % smoothed spikes / smoothed occupancy (circular in direction)
-    objMap{i}            = smoothCircLin(spkMaps{i}, kernel, halfK) ./ occMap_sm;
-    objMap{i}(unVisPos)    = NaN;
+    objMap{i}           = smoothCircLin(spkMaps{i}, kernel, halfK) ./ occMap_sm;
+    objMap{i}(unVisPos) = NaN;
 
     if prms.showWaitBar; waitbar(i/length(spikeTimes),hWait,sprintf('Making those Object Vector Maps... %i/%i done.',i,length(spikeTimes))); end
 end
