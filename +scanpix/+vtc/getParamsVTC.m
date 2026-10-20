@@ -20,15 +20,15 @@ prms.VTCscore.BFSortParam            = 'Area';   %  'MeanIntensity', 'Area'  % S
 prms.Zmaps.mode = prms.general.mapNormMode;
 
 %%
-prms.VectMaps.spatBinForVMap  = 10; 
+prms.VectMaps.binSizeSpat     = 2.5;  % cm; must match the rate map bin size (obj.mapParams.rate.binSizeSpat).
 prms.VectMaps.wallSegOverSamp = 10;   % Relative to spatial map bins.
 prms.VectMaps.vMapBinAng      = 6;    % Units = deg
 prms.VectMaps.vMapBinDist     = 1;    % Units = *spatial* map bins. IMPORTANT: see note May 2020 in bvcTrVectMap regarding this parameter (basically must always be 1).
-prms.VectMaps.maxEnvSz        = 75;  % Largest box dim = 150cm, limit max tuning to half this. ppm=400.
-prms.VectMaps.nBinsEdgeThr    = 15;
+prms.VectMaps.maxEnvSz        = 75;  % Largest box dim = 150cm, limit max tuning to half this (cm).
+prms.VectMaps.edgeThr         = 37.5; % cm
 prms.VectMaps.excOuterWall    = 1;
 prms.VectMaps.smoothVMap      = 1;
-prms.VectMaps.smoothKDist     = 5;   % Kernel size for distance, units=vector map bins.
+prms.VectMaps.smoothKDist     = 12.5; % Kernel size for distance, units=cm.
 prms.VectMaps.smoothKAng      = 30; 
 
 %%

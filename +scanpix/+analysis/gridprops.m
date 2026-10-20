@@ -165,8 +165,8 @@ if length(xyCoordMaxBin) == 7
     Props.orientationFull  = orientation;
 
     % wavelength
-    Props.wavelength       = mean(distFromCentre([sortInd(1:3)]),'omitnan'); % wavelength
-    Props.wavelengthFull   = distFromCentre([sortInd(1:3)]);
+    Props.wavelength       = mean(distFromCentre(sortInd(1:3)+1),'omitnan'); % wavelength
+    Props.wavelengthFull   = distFromCentre(sortInd(1:3)+1);
 
     % offset
     Props.offsetFull        = pi/4 - abs(mod(orientation(1:min([length(orientation), 3])),pi/2) - pi/4); % from Stensola et al. (2015)

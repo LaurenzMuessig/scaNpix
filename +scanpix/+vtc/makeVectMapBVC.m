@@ -27,20 +27,22 @@ arguments
     spkMap
     barrDataIn {mustBeNumeric}
     barrType (1,:) {mustBeMember(barrType,{'straight','circ'})} = 'straight';
-    options.spatBinForVMap (1,1) {mustBeNumeric} = 10;
+    options.binSizeSpat (1,1) {mustBeNumeric} = 2.5;  % Spatial bin size of input maps in cm, i.e. obj.mapParams.rate.binSizeSpat.
     options.wallSegOverSamp (1,1) {mustBeNumeric} = 10;   % Relative to spatial map bins.
     options.vMapBinAng (1,1) {mustBeNumeric} = 6;    % Units = deg
     options.vMapBinDist (1,1) {mustBeNumeric} = 1;    % Units = *spatial* map bins. IMPORTANT: see note May 2020 in bvcTrVectMap regarding this parameter (basically must always be 1).
-    options.maxEnvSz (1,1) {mustBeNumeric} = 75;  % Largest box dim = 150cm, limit max tuning to half this. ppm=400.
-    options.nBinsEdgeThr (1,1) {mustBeNumeric} = 15;
+    options.maxEnvSz (1,1) {mustBeNumeric} = 75;  % Largest box dim = 150cm, limit max tuning to half this (cm).
+    options.edgeThr (1,1) {mustBeNumeric} = 37.5;  % cm; a row/column of the map counts as inside the box if it has more than this length of visited bins.
     options.excOuterWall (1,1) {mustBeNumericOrLogical} = 1;
     options.smoothVMap (1,1) {mustBeNumericOrLogical} = 1;
-    options.smoothKDist (1,1) {mustBeNumeric} = 5;   % Kernel size for distance, units=vector map bins.
+    options.smoothKDist (1,1) {mustBeNumeric} = 12.5;   % Kernel size for distance, units=cm.
     options.smoothKAng (1,1) {mustBeNumeric} = 30;
 end
 
-nBinsDist       = ceil( ( options.maxEnvSz/(0.25*options.spatBinForVMap) )/options.vMapBinDist ) + 1; 
+nBinsDist       = ceil( ( options.maxEnvSz/options.binSizeSpat )/options.vMapBinDist ) + 1;
 nBinsAng        = 360/options.vMapBinAng;
+nBinsEdgeThr    = options.edgeThr/options.binSizeSpat;                      % cm -> spatial bins
+kDistBins       = options.smoothKDist/(options.binSizeSpat*options.vMapBinDist); % cm -> vector map distance bins
 % ---------------------------------------------------------------------------------- %
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -49,19 +51,19 @@ nBinsAng        = 360/options.vMapBinAng;
 if ~iscell(spkMap); spkMap = {spkMap}; end
 
 visMask = posMap>0;
-XL      = find( sum(visMask,1)>options.nBinsEdgeThr, 1, 'first' ) - 1;
-YL      = find( sum(visMask,2)>options.nBinsEdgeThr, 1, 'first' ) - 1;
+XL      = find( sum(visMask,1)>nBinsEdgeThr, 1, 'first' ) - 1;
+YL      = find( sum(visMask,2)>nBinsEdgeThr, 1, 'first' ) - 1;
 if XL == 0 || YL ==0
     posMap                = padarray(posMap,[1 1],NaN,'both');
     spkMap                = cellfun(@(x) padarray(x,[1 1],NaN,'both'), spkMap,'uni',false);
     barrDataIn(:,1:end-1) = barrDataIn(:,1:end-1) + 1;
     visMask               = posMap>0;
-    XL                    = find( sum(visMask,1)>options.nBinsEdgeThr, 1, 'first' ) - 1;
-    YL                    = find( sum(visMask,2)>options.nBinsEdgeThr, 1, 'first' ) - 1;
+    XL                    = find( sum(visMask,1)>nBinsEdgeThr, 1, 'first' ) - 1;
+    YL                    = find( sum(visMask,2)>nBinsEdgeThr, 1, 'first' ) - 1;
 end
 %
-XU      = find( sum(visMask,1)>options.nBinsEdgeThr, 1, 'last'  ) + 1;
-YU      = find( sum(visMask,2)>options.nBinsEdgeThr, 1, 'last'  ) + 1;
+XU      = find( sum(visMask,1)>nBinsEdgeThr, 1, 'last'  ) + 1;
+YU      = find( sum(visMask,2)>nBinsEdgeThr, 1, 'last'  ) + 1;
 %
 % barrData = [XL,YL, XL,YU, 0; ...
 %            XL,YU, XU,YU, 0; ...
@@ -318,7 +320,7 @@ end
 if options.smoothVMap
     % First make filter: guassian,different size+sigma for distance and dir, sigma always 1/3 kernel length.
     fHori         = fspecial( 'gaussian', [1    options.smoothKAng/options.vMapBinAng], (options.smoothKAng/3)/options.vMapBinAng );
-    fVert         = fspecial( 'gaussian', [ceil(options.smoothKDist/options.vMapBinDist)  1], (options.smoothKDist/3)/options.vMapBinDist );
+    fVert         = fspecial( 'gaussian', [ceil(kDistBins)  1], kDistBins/3 );
     k             = fVert*fHori;
     % Smooth
     visMaskSm = imfilter( repmat(double(visMask),1,3), k );  % Pad for circular smooth of angle (see below).

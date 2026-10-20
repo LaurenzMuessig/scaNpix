@@ -5,8 +5,8 @@ function [VMAng,VMDist,VMAngExt,VMDistExt,RP] = scoreVectMap(vMap, options)
 %%
 arguments
     vMap {mustBeNumeric}
-    options.binS_spat (1,1) {mustBeNumeric} = 2.5;
-    options.binS_ang (1,1) {mustBeNumeric}  = 6;
+    options.binSizeSpat (1,1) {mustBeNumeric} = 2.5;  % cm; spatial bin size of the rate maps the vMap was made from (= vMap distance bin, as vMapBinDist must be 1)
+    options.vMapBinAng (1,1) {mustBeNumeric}  = 6;    % deg
 end
 
 %%
@@ -39,12 +39,12 @@ RP.WeightedCentroid(:,1) = mod(RP.WeightedCentroid(:,1) + wrapBin, size(vMap,2) 
 
 %
 pkSubs           = fliplr( RP.WeightedCentroid );
-VMDist           = (pkSubs(1)*options.binS_spat) - options.binS_spat/2;                        % Subtract 1/2 bin to set distance to bin centre not edge.
-VMAng            = ( (pkSubs(2)*(options.binS_ang*pi/180))-((options.binS_ang/2)*pi/180) ) + pi/2;  % hard-code ang bin size 6 deg. Orientation of circular axis is E-S-W-N-E
-VMAng(VMAng>360) = VMAng(VMAng>360) - 360;
+VMDist           = (pkSubs(1)*options.binSizeSpat) - options.binSizeSpat/2;                        % Subtract 1/2 bin to set distance to bin centre not edge.
+VMAng            = ( (pkSubs(2)*(options.vMapBinAng*pi/180))-((options.vMapBinAng/2)*pi/180) ) + pi/2;  % radians; subtract 1/2 bin to get bin centre. Orientation of circular axis is E-S-W-N-E
+VMAng            = mod(VMAng, 2*pi);  % wrap to [0 2pi)
   %              
-VMAngExt         = RP.BoundingBox(1)*(options.binS_ang*pi/180);
-VMDistExt        = RP.BoundingBox(2)*options.binS_spat;
+VMAngExt         = RP.BoundingBox(3)*(options.vMapBinAng*pi/180);  % field width along angle (radians); widths are unaffected by the wrap
+VMDistExt        = RP.BoundingBox(4)*options.binSizeSpat;           % field width along distance
 
 
 end

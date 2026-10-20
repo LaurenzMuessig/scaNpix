@@ -248,7 +248,8 @@ switch rowFormat
         end
 
         % loop over trials
-        if scoreInd(3); gridPropsOptions = scanpix.helpers.struct2params(copyObj.mapParams.gridProps); end
+        % if scoreInd(3); gridPropsOptions = scanpix.helpers.struct2params(copyObj.mapParams.gridProps); end
+        if scoreInd(3); gridPropsOptions = scanpix.helpers.getGridPropsV2Params(copyObj.mapParams); end % gridprops_v2
         
         c = 1;
         for i = dataInd
@@ -284,11 +285,17 @@ switch rowFormat
                     copyObj.addMaps('sac',dataInd);
                 end
 
-                [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,gridPropsOptions{:}),copyObj.maps(1).sACs{i},'uni',0);
-                [~, ellProps]     = cellfun(@(x, y) scanpix.analysis.gridprops(x,true,gridPropsOptions{:},'peakCoords',y.peakCoords),copyObj.maps(1).sACs{i},props,'uni',0);
+                % [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,gridPropsOptions{:}),copyObj.maps(1).sACs{i},'uni',0);
+                % [~, ellProps]     = cellfun(@(x, y) scanpix.analysis.gridprops(x,true,gridPropsOptions{:},'peakCoords',y.peakCoords),copyObj.maps(1).sACs{i},props,'uni',0);
+                % % collect the basics
+                % gridProps     = cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0));
+                % gridProps_ell = cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0));
+                % gridprops_v2: one call returns regular and ellipse corrected properties
+                [~, props]        = cellfun(@(x) scanpix.analysis.gridprops_v2(x,gridPropsOptions{:}),copyObj.maps(1).sACs{i},'uni',0);
+                ellProps          = props; % acReg (ellipse corrected SAC) is a field of the same output
                 % collect the basics
-                gridProps     = cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0));
-                gridProps_ell = cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0));
+                gridProps     = cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],props,'uni',0));
+                gridProps_ell = cell2mat(cellfun(@(x) [x.gridnessEll,x.wavelengthEll,x.orientationEll],props,'uni',0));
                 % tmpGridProps                        = copyObj.getSpatialProps('gridprops', i);
                 ResT.gridness(:,tabInd(c))          = gridProps(:,1);
                 ResT.gridness_ell(:,tabInd(c))      = gridProps_ell(:,1);

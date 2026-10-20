@@ -12,8 +12,28 @@ end
 
 
 %%
-[~, Props]    = scanpix.analysis.gridprops(autoCorr,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz);
-[~, ellProps] = scanpix.analysis.gridprops(autoCorr,true,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz,'plotEllipse',true,'ax',options.axArray{2},'peakCoords', Props.peakCoords);
+% [~, Props]    = scanpix.analysis.gridprops(autoCorr,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz);
+% [~, ellProps] = scanpix.analysis.gridprops(autoCorr,true,'thr',options.thresh,'binAC',options.binAC,'nBinSteps',options.nBinSteps,'minPeakSz',options.minPeakSz,'plotEllipse',true,'ax',options.axArray{2},'peakCoords', Props.peakCoords);
+% gridprops_v2 (default params; thresh/binAC/nBinSteps/minPeakSz were gridprops options and are not used).
+% See also scanpix.plot.plotGridProps_v2
+gpArgs        = scanpix.helpers.getGridPropsV2Params();
+[~, Props]    = scanpix.analysis.gridprops_v2(autoCorr, gpArgs{:});
+% ellipse corrected properties in the same format as the regular ones
+ellProps      = struct('gridness', Props.gridnessEll, 'wavelength', Props.wavelengthEll, 'orientation', Props.orientationEll, ...
+    'orientationFull', Props.orientationFullEll, 'offset', Props.offsetEll, 'offsetFull', Props.offsetFullEll, ...
+    'closestPeaksCoord', Props.closestPeaksCoordEll, 'gridMask', Props.gridMaskEll, 'acReg', Props.acReg);
+% panel 2: SAC with the six peaks and the fitted ellipse (was drawn by gridprops 'plotEllipse')
+imagesc(options.axArray{2}, autoCorr); axis(options.axArray{2}, 'image', 'off'); hold(options.axArray{2}, 'on');
+if Props.latticeFound
+    pk = Props.peakCoords(2:end,:);
+    plot(options.axArray{2}, pk(:,1), pk(:,2), 'o', 'Color', 'r');
+    if all(isfinite(Props.ellAbScale))
+        th = linspace(0, 2*pi, 100); c = ceil(size(autoCorr)/2); o = Props.ellOrient;
+        xy = [cos(o) -sin(o); sin(o) cos(o)] * [Props.ellAbScale(1)*cos(th); Props.ellAbScale(2)*sin(th)];
+        plot(options.axArray{2}, c(2) + xy(1,:), c(1) + xy(2,:), 'r');
+    end
+end
+hold(options.axArray{2}, 'off'); title(options.axArray{2}, 'Ellipse fit');
 
 %%
 for i = 1:2

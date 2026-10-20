@@ -40,12 +40,16 @@ if length(nTrials) > 1 && isempty(strfind(p.Results.trialSel,'max'))
 end
 
 %%
-[~,gridPropsStruct] = cellfun(@(x) scanpix.analysis.gridprops(x,'getellgridness',true),spatACs,'uni',0);
+% [~,gridPropsStruct] = cellfun(@(x) scanpix.analysis.gridprops(x,'getellgridness',true),spatACs,'uni',0);
+[~,gridPropsStruct] = cellfun(@(x) scanpix.analysis.gridprops_v2(x),spatACs,'uni',0); % gridprops_v2: regular + ellipse corrected in one call
 %
 tmpGridProps = nan(size(spatACs,1),length(nTrials)*7,2);
-for i = 1:2
-    tmpGridProps(:,:,i)  = cell2mat(cellfun(@(x) [x.gridness(i)' x.wavelength(i)' x.orientation(i) x.offset(i)' x.ellOrient(1,2)' x.ellAbScale(1,3)' x.ellAbScale(1,4)'],gridPropsStruct(:,nTrials),'uni',0));
-end
+% for i = 1:2
+%     tmpGridProps(:,:,i)  = cell2mat(cellfun(@(x) [x.gridness(i)' x.wavelength(i)' x.orientation(i) x.offset(i)' x.ellOrient(1,2)' x.ellAbScale(1,3)' x.ellAbScale(1,4)'],gridPropsStruct(:,nTrials),'uni',0));
+% end
+% columns: gridness, scale, orientation, offset, ellipse orientation, ellipse major, ellipse minor semi axis; page 1 = regular, page 2 = ellipse corrected
+tmpGridProps(:,:,1) = cell2mat(cellfun(@(x) [x.gridness    x.wavelength    x.orientation    x.offset    x.ellOrient x.ellAbScale(1) x.ellAbScale(2)],gridPropsStruct(:,nTrials),'uni',0));
+tmpGridProps(:,:,2) = cell2mat(cellfun(@(x) [x.gridnessEll x.wavelengthEll x.orientationEll x.offsetEll x.ellOrient x.ellAbScale(1) x.ellAbScale(2)],gridPropsStruct(:,nTrials),'uni',0));
 spatACsReg = cellfun(@(x) x.acReg,gridPropsStruct(:,nTrials),'uni',0);
 
 if length(nTrials) == 1

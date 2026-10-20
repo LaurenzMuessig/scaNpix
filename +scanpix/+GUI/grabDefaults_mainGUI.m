@@ -48,6 +48,7 @@ switch lower(defType)
         defStruct.WF_loadMode      = 'file';
         defStruct.figExport        = 'python'; % 'python', 'image', 'vector'
         defStruct.save_VTCdata     = false;
+        defStruct.gridPropsVersion = 2;
     case 'maps'
         defStruct                     = scanpix.maps.defaultParamsRateMaps;
         defStruct.rate.showWaitBar    = true;

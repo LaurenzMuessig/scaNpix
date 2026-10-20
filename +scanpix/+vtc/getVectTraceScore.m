@@ -66,8 +66,8 @@ for i = 1:size(mapArray,1)
         % If requested, exclude as invalid any contiguous area that overlaps the bsl field.
         if options.BFInvalidIfBslFOverlap
             labelList = setdiff( unique(fLabels), 0 );
-            for i=1:length(labelList)
-                tempMask = fLabels==labelList(i);
+            for j=1:length(labelList)
+                tempMask = fLabels==labelList(j);
                 if any( tempMask(:) & BslFMask{i,1}(:) )
                     fLabels( tempMask ) = 0;
                 end

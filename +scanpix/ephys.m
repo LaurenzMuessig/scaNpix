@@ -1439,13 +1439,18 @@ classdef ephys < handle
                     
                     spatProps = nan(size(obj.cell_ID,1),6,length(trialInd));
                     % format params
-                    options = scanpix.helpers.struct2params(obj.mapParams.gridProps);
+                    % options = scanpix.helpers.struct2params(obj.mapParams.gridProps);
+                    options = scanpix.helpers.getGridPropsV2Params(obj.mapParams); % gridprops_v2 (falls back to defaults for older objects)
                     %
                     for i = trialInd
-                        [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,options{:}),obj.maps(1).sACs{i},'uni',0);
-                        [~, ellProps]     = cellfun(@(x, y) scanpix.analysis.gridprops(x,true,options{:},'peakCoords',y.peakCoords),obj.maps(1).sACs{i},props,'uni',0);
-                        % for now just output the basics
-                        spatProps(:,:,c) = [cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0)), cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0))];
+                        % [~, props]        = cellfun(@(x) scanpix.analysis.gridprops(x,options{:}),obj.maps(1).sACs{i},'uni',0);
+                        % [~, ellProps]     = cellfun(@(x, y) scanpix.analysis.gridprops(x,true,options{:},'peakCoords',y.peakCoords),obj.maps(1).sACs{i},props,'uni',0);
+                        % % for now just output the basics
+                        % spatProps(:,:,c) = [cell2mat(cellfun(@(x)[x.gridness,x.wavelength,x.orientation],props,'uni',0)), cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation],ellProps,'uni',0))];
+                        % gridprops_v2: one call returns regular and ellipse corrected properties
+                        [~, props]        = cellfun(@(x) scanpix.analysis.gridprops_v2(x,options{:}),obj.maps(1).sACs{i},'uni',0);
+                        % for now just output the basics: [gridness, scale, orientation, gridness_ell, scale_ell, orientation_ell]
+                        spatProps(:,:,c) = cell2mat(cellfun(@(x) [x.gridness,x.wavelength,x.orientation,x.gridnessEll,x.wavelengthEll,x.orientationEll],props,'uni',0));
                         c = c + 1;
                     end
                 case {'borderscore','bs'}

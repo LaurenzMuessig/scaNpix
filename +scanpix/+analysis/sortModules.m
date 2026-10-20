@@ -109,7 +109,8 @@ switch lower(method)
                     % meanAC       = mean(cat(3,selectACs{currModInd}),3,'omitnan');
                     meanAC       = mean(cat(3,tmpACs_reg{currModInd}),3,'omitnan');
 
-                    [~,tmpProps] = scanpix.analysis.gridprops(meanAC,'getellgridness', true);
+                    % [~,tmpProps] = scanpix.analysis.gridprops(meanAC,'getellgridness', true);
+                    [~,tmpProps] = scanpix.analysis.gridprops_v2(meanAC);
                     % [~,tmpMxInd] = max(tmpProps.gridness);
                     tmpScales(i) = tmpProps.wavelength(1);
                 end

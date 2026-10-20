@@ -96,7 +96,31 @@ prms.gridProps.nBinSteps         = 21;     % bin size = 0.1
 prms.gridProps.thresh            = 0;  % 
 prms.gridProps.minPeakSz         = 8;    % 
 prms.gridProps.plotEllipse       = false;         
-prms.gridProps.verbose           = false; 
+prms.gridProps.verbose           = false;
+
+%% grid props v2 (scanpix.analysis.gridprops_v2, plot: scanpix.plot.plotGridProps_v2)
+% Peaks are found via the troughs around the central peak: for a true neighbour peak P the minimum along
+% the ray centre->P sits at |P|/2 (any lattice, also elliptical). Candidate peaks failing that test are
+% dropped, the remaining ones are combined into the lattice (a1, a2, a1+-a2) with the best peak-vs-hole
+% contrast. Separate struct because scanpix.analysis.gridprops errors on unknown options.
+% Usage: gpArgs = scanpix.helpers.getGridPropsV2Params(prms); [g, P] = scanpix.analysis.gridprops_v2(sac, gpArgs{:});
+% peak finding
+prms.gridPropsV2.cRange          = [0.75 1.2]; % allowed |peak| / (2*trough) along a ray; <1 allowed as peaks cut off by the SAC edge read short
+prms.gridPropsV2.band            = [1.2 3.2];  % candidate peaks searched within this range x central trough radius
+prms.gridPropsV2.minSep          = 35;         % min angle (deg) between two lattice axes
+prms.gridPropsV2.wedge           = 3;          % angular average (deg) for the ray profiles
+prms.gridPropsV2.edgeTol         = 1;          % peaks within this many bins of the NaN edge of the SAC are flagged 'censored'
+% rejection rules (avoid fitting a lattice to noise -> then no peaks/scale/orientation, gridness still computed)
+prms.gridPropsV2.minProm         = 0.1;        % peak must exceed the trough on its ray by this (r)
+prms.gridPropsV2.minContrast     = 0.25;       % min SAC contrast (predicted peaks - predicted holes); 96% of grid cells (G>0.5) pass, ~half of non-grid cells don't
+prms.gridPropsV2.require3        = false;      % true: reject lattice unless all 3 axes have a detected peak (stricter; drops ~9% of grid cells, mostly large scale)
+% gridness
+prms.gridPropsV2.minAnnWidth     = 1.5;        % first outer annulus radius >= inner radius * (1 + minAnnWidth) (inner radius = trough ring)
+prms.gridPropsV2.maxEllRatio     = 1.5;        % ellipse correction always used up to this major/minor ratio ...
+prms.gridPropsV2.maxEllRatioSupported = 2.5;   % ... and up to this ratio if all 3 axes have a detected peak not cut off by the SAC edge (else gridnessEll = gridness)
+prms.gridPropsV2.ellMode         = 'compress'; % ellipse -> circle by compressing the major axis ('stretch' minor / 'area' both / 'v1' = gridprops style performed the same)
+prms.gridPropsV2.fastGridness    = true;       % cached sparse rotation matrices + one-pass annulus correlations (gridness step ~4-5x faster, same scores)
+prms.gridPropsV2.commonMask      = 'none';     % 'ell'/'all': compare all rotations on the same bins - tested, no improvement (fewer bins) 
 
 end
 

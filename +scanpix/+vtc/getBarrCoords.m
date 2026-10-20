@@ -44,8 +44,23 @@ if ~isempty(objFieldStrs)
     coords                = [reshape(xyConv(:,1),size(X)) reshape(xyConv(:,2),size(Y))];
     radius                = radius .* mean(lenScale); % fit to env. scaling can differ slightly between x/y
     % also generate a binned version of the corrdinates (bin size of rate maps)
+    % need to replicate the frame used in scanpix.maps.makeRateMaps: if position data are neither fit to the environment
+    % nor scaled to the camera window, the minimum (speed filtered) position is subtracted before binning
+    if ~obj.trialMetaData(trInd).PosIsFitToEnv{1} && ~(isKey(obj.params,'scalePos2CamWin') && obj.params('scalePos2CamWin'))
+        positions = obj.posData.XY{trInd};
+        if obj.mapParams.rate.speedFilterFlagRMaps
+            speedFilter              = obj.posData.speed{trInd} <= obj.mapParams.rate.speedFilterLimitLow | obj.posData.speed{trInd} > obj.mapParams.rate.speedFilterLimitHigh;
+            positions(speedFilter,:) = NaN;
+        end
+        minXY     = min(positions,[],1,'omitnan');
+        coordsMap = [coords(:,1:nPts)-minXY(1) coords(:,nPts+1:end)-minXY(2)];
+    else
+        coordsMap = coords;
+    end
+    % rate maps bin with ceil(XY/binSizePix), i.e. bin k spans ((k-1)*binSizePix, k*binSizePix], whereas vector maps
+    % treat integers as bin centres, so shift by 1/2 bin
     binSizePix    = floor( obj.trialMetaData(trInd).ppm/100 * obj.mapParams.rate.binSizeSpat );
-    coords_binned = coords ./ binSizePix;
+    coords_binned = coordsMap ./ binSizePix + 0.5;
     radius(:,2)   = radius(:,1) ./ binSizePix;
 else
     [coords,coords_binned, radius] = deal([]);

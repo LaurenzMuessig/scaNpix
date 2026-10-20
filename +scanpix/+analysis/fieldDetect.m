@@ -60,7 +60,7 @@ end
 fieldsLabel = watershed(-tmpMap);
 % special case if only a single field is present and the rest of the map is -Inf after thresholding - watershed returns all 1's in that cxase
 if all(fieldsLabel(:))
-    fieldsLabel = tmpMap ~= -Inf;
+    fieldsLabel = double(tmpMap ~= -Inf);   % double, so accumarray below works
     mergeFlag = false;
 else
     mergeFlag = true;
